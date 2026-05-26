@@ -1,15 +1,14 @@
-#define BAUD 115200
+#define BAUD 921600
 
 const int PIN_IR_START   = 2;
 const int PIN_IR_ADVANCE = 3;
-const int PIN_LED        = 13;
 
-const int SCORE_LEN = 32;
-const int myScore[SCORE_LEN] = {
-  60, 62, 64, 65,  64, 62, 60,  0,
-  64, 65, 67, 69,  67, 65, 64,  0,
-  60,  0, 60,  0,  60,  0, 60,  0,
-  60, 60, 62, 62,  64, 62, 60,  0
+const int melodyLength = 32;
+String myScore[] = {
+  "C4", "D4", "E4", "F4", "E4", "D4", "C4", "R",
+  "E4", "F4", "G4", "A4", "G4", "F4", "E4", "R",
+  "C4", "R",  "C4", "R",  "C4", "R",  "C4", "R",
+  "C4", "C4", "D4", "D4", "E4", "D4", "C4", "R"
 };
 
 int  idx         = 0;
@@ -21,7 +20,6 @@ void setup() {
   Serial.begin(BAUD);
   pinMode(PIN_IR_START,   INPUT_PULLUP);
   pinMode(PIN_IR_ADVANCE, INPUT_PULLUP);
-  pinMode(PIN_LED, OUTPUT);
 }
 
 void loop() {
@@ -29,8 +27,7 @@ void loop() {
   if (prevStart == HIGH && s == LOW) {
     isPlaying = true;
     idx = 0;
-    sendNote(myScore[idx]);
-    digitalWrite(PIN_LED, HIGH);
+    sendNote();
     delay(20);
   }
   prevStart = s;
@@ -38,15 +35,13 @@ void loop() {
   int a = digitalRead(PIN_IR_ADVANCE);
   if (isPlaying && prevAdvance == HIGH && a == LOW) {
     idx++;
-    if (idx >= SCORE_LEN) idx = 0;
-    sendNote(myScore[idx]);
-    digitalWrite(PIN_LED, (idx % 2) ? HIGH : LOW);
+    if (idx >= melodyLength) idx = 0;
+    sendNote();
     delay(20);
   }
   prevAdvance = a;
 }
 
-void sendNote(int note) {
-  Serial.print("P:");
-  Serial.println(note);
+void sendNote() {
+  Serial.println(myScore[idx]);
 }
