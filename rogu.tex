@@ -1,0 +1,189 @@
+\documentclass[a4paper,11pt]{ltjsarticle}
+
+% 日本語対応
+\usepackage{luatexja}
+\usepackage{geometry}
+\geometry{margin=25mm}
+
+% 表・色
+\usepackage{array}
+\usepackage{longtable}
+\usepackage[table]{xcolor}
+\usepackage{booktabs}
+
+% 箇条書き
+\usepackage{enumitem}
+
+% リンク
+\usepackage{hyperref}
+
+% セクションデザイン
+\usepackage{titlesec}
+\titleformat{\section}{\large\bfseries}{}{0em}{}
+
+\setlength{\parindent}{0pt}
+\setlist[itemize]{leftmargin=2em}
+
+\begin{document}
+
+\begin{center}
+    {\LARGE \textbf{作業ログ}}\\[1em]
+\end{center}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+報告者 & 手代木巧\\
+\hline
+報告日 & 5月26日\\
+\hline
+プロジェクト名 & 赤外線通信で歌うカエル\\
+\hline
+\end{tabular}
+
+\vspace{1em}
+
+%=====================================================
+\section{1. 進捗サマリー（要約）}
+
+\begin{itemize}
+    \item 全体進捗率：0％\
+    \item マイルストーン達成状況：０個
+    \item 主要成果：
+    \begin{itemize}
+        \item なし
+        \item \underline{\hspace{1cm}}
+    \end{itemize}
+    \item 重大課題（影響度：高）：
+    \begin{itemize}
+        \item 進捗が０なこと
+    \end{itemize}
+\end{itemize}
+
+%=====================================================
+\section{2. 作業ログ（詳細トラッキング）}
+
+\renewcommand{\arraystretch}{1.5}
+
+\begin{longtable}{|p{2.2cm}|p{1.8cm}|p{2cm}|p{2cm}|p{1.5cm}|p{3cm}|p{2.5cm}|}
+\hline
+\rowcolor[gray]{0.9}
+作業項目 & 開始日 & 予定完了日 & 状態 & 進捗率 & 依存関係・ブロッカー & コメント \\
+\hline
+回路作成 & 5/27& 6/3& 未着手 / 進行中 / レビュー中 / 完了 & & & \\
+\hline
+LEDマトリクスによるアニメーション & 6/3& 6/17& 未着手 / 進行中 / レビュー中 / 完了 & & & \\
+\hline
+\end{longtable}
+
+%=====================================================
+\section{3. 課題管理}
+
+\begin{longtable}{|p{2cm}|p{2.5cm}|p{1.5cm}|p{1.5cm}|p{3cm}|p{2cm}|p{2cm}|}
+\hline
+\rowcolor[gray]{0.9}
+課題 & 発生原因 & 影響度 & 優先度 & 対策 & 期限 & 状態 \\
+\hline
+課題1 & & 高 / 中 / 低 & 高 / 中 / 低 & & & 未対応 / 対応中 / 解決 \\
+\hline
+\end{longtable}
+
+\vspace{0.5em}
+※影響度＝プロジェクトへのインパクト\\
+※優先度＝対応の緊急性
+
+%=====================================================
+\section{4. AI利用状況と検証（再現性重視）}
+
+\subsection*{4.1 利用内容}
+
+\begin{itemize}
+    \item 利用目的：探索 / 設計 / 実装 / レビュー 等
+    \item 入力（プロンプト要旨）：
+    \begin{itemize}
+        \item 何をどのように聞いたか
+    \end{itemize}
+    \item 出力概要：
+    \begin{itemize}
+        \item 何が得られたか
+    \end{itemize}
+\end{itemize}
+
+\subsection*{4.2 検証方法}
+
+※第三者が再現できるレベルで記述
+
+\begin{itemize}
+    \item 検証手法：
+    \begin{itemize}
+        \item 実験 / 比較 / 理論確認 など
+    \end{itemize}
+    \item 参照資料：
+    \begin{itemize}
+        \item 論文・書籍・公式ドキュメント等
+    \end{itemize}
+    \item 検証手順：
+    \begin{enumerate}
+        \item 手順1
+        \item 手順2
+    \end{enumerate}
+\end{itemize}
+
+\subsection*{4.3 ファクトチェック結果}
+
+\begin{itemize}
+    \item 一致点：
+    \begin{itemize}
+        \item 既存知識と整合している部分
+    \end{itemize}
+    \item 不一致・疑義：
+    \begin{itemize}
+        \item 差異の内容
+    \end{itemize}
+    \item 最終判断：採用 / 保留 / 棄却
+    \item 根拠：
+    \begin{itemize}
+        \item 資料・理由
+    \end{itemize}
+\end{itemize}
+
+%=====================================================
+\section{5. 次回計画}
+
+\begin{itemize}
+    \item 目標：
+    \begin{itemize}
+        \item タスク内容
+    \end{itemize}
+    \item 達成基準：
+    \begin{itemize}
+        \item 検証可能な条件
+    \end{itemize}
+    \item 期限：
+    \begin{itemize}
+        \item 日付
+    \end{itemize}
+\end{itemize}
+
+%=====================================================
+\section{6. その他}
+
+\begin{itemize}
+    \item 連絡事項・懸念点など
+\end{itemize}
+
+%=====================================================
+\section{7. 付録}
+
+\begin{itemize}
+    \item 添付資料：
+    \begin{itemize}
+        \item ソースコード：ファイル or リポジトリURL
+        \item 回路図 / 設計図：ファイル
+    \end{itemize}
+    \item 添付範囲：
+    \begin{itemize}
+        \item 全体 / 差分（どちらか明記）
+    \end{itemize}
+\end{itemize}
+
+\end{document}
