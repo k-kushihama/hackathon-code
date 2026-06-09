@@ -1,0 +1,656 @@
+\documentclass[a4paper,11pt]{ltjsarticle}
+
+\usepackage{luatexja}
+\usepackage{geometry}
+\geometry{margin=25mm}
+
+\usepackage{array}
+\usepackage{longtable}
+\usepackage[table]{xcolor}
+\usepackage{booktabs}
+
+\usepackage{enumitem}
+
+\usepackage{hyperref}
+
+\usepackage{titlesec}
+\titleformat{\section}{\large\bfseries}{}{0em}{}
+
+\usepackage{listings}
+\lstset{
+  basicstyle=\ttfamily\small,
+  frame=single,
+  breaklines=true,
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  keepspaces=true,
+  showstringspaces=false,
+  columns=fullflexible,
+  tabsize=2,
+}
+
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning, calc, fit}
+
+\usepackage{float}
+
+\definecolor{ganttCell}{HTML}{4FC3D0}
+\definecolor{ganttEarly}{HTML}{FFB74D}
+
+\providecommand{\％}{\%}
+
+\setlength{\parindent}{0pt}
+\setlist[itemize]{leftmargin=2em}
+
+\begin{document}
+
+\begin{center}
+    {\LARGE \textbf{作業ログ（第7週末）}}\\[1em]
+\end{center}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+報告者 & 櫛濱 和輝 (25G1046)\\
+\hline
+報告日 & 2026年6月9日\\
+\hline
+プロジェクト名 & 赤外線通信で歌うカエル\\
+\hline
+担当パート & Processing（ピアノ演奏プログラム）／Arduino（ドラム子機）\\
+\hline
+本来の今週の位置づけ & 第7週末（子機プログラム実装週）\\
+\hline
+今週の主担当 & 210：ピアノのプログラム（Processing 連携）＋ ドラム子機 \texttt{.ino}（180 を久家と分担）\\
+\hline
+補足 & 第6週はログ未提出のため，本ログは第5週末ログ（5/27）からの続きとして記載\\
+\hline
+\end{tabular}
+
+\vspace{1em}
+
+%=====================================================
+\section{1. 進捗サマリー}
+
+\begin{itemize}
+    \item 現在地：第7週末（6/9）．実装フェーズの子機プログラム週．第6週はログ未提出だが，第5週末に先行着手していた 110（ピアノ音の作成）はその後完了済み
+    \item 今週は \textbf{210：ピアノのプログラム（Processing 連携）} と \textbf{ドラム子機の Arduino プログラム（\texttt{hack-drum.ino}）} を実装し，\textbf{いずれも実機で動作確認まで完了}
+    \item 親機（\texttt{hack-oya2.ino}）と統合し，\textbf{輪唱（カノン）＋ドラム伴奏が同期して鳴る}ところまで通った
+    \item 全体進捗率：45\％（音色作成フェーズ完了，子機・通信フェーズ進行中）
+    \item 主要成果：
+    \begin{itemize}
+        \item Processing 側（\texttt{hack\_ko2.pde}）が子機 Arduino からシリアルで届く MIDI 番号を受信し，\texttt{PianoInstrument} で発音．MIDI→周波数変換 $f=440\cdot2^{(m-69)/12}$ を実装
+        \item ドラム子機（\texttt{hack-drum.ino}）が NEC フレーム（\texttt{address==2}）のみを拾い，\texttt{command}（MIDI 番号）をシリアルへ中継．自前タイマを持たず\textbf{テンポは親機任せ}で可変 BPM に追従
+        \item 通信経路「親機 → 赤外線（NEC）→ 子機 → USB シリアル → Processing → 発音」が一気通貫で動作
+    \end{itemize}
+    \item 重大課題（影響度：高）：
+    \begin{itemize}
+        \item 音切り替え時のノイズ：現状 \texttt{noteOff()} が \texttt{unpatch} の即時切断のため，MOP5（フェードアウト）が未対応
+        \item 赤外線通信の成功率（MOP3：95\％以上）が未計測．取りこぼし時の挙動も未検証
+    \end{itemize}
+\end{itemize}
+
+%=====================================================
+\section{2. ガントチャート}
+
+計画書 v1.2（2026/5/29 版）でチーム全体のスケジュールが更新されたため，チーム全体・個人の両方について変更前後を併記する．橙色セル（\colorbox{ganttEarly}{\phantom{xx}}）は\textbf{前倒し・先行着手}した週，水色セル（\colorbox{ganttCell}{\phantom{xx}}）は計画通りの実施週を表す．
+
+\renewcommand{\arraystretch}{1.3}
+
+\begingroup
+\setlength{\tabcolsep}{3pt}
+
+\subsection*{2.1 チーム全体ガントチャート（変更前：第5週末提出版）}
+
+\begin{longtable}{|p{0.9cm}|p{2.0cm}|p{4.0cm}|p{1.5cm}|c|c|c|c|c|}
+\hline
+\rowcolor[gray]{0.9}
+管理 & 第2層 & 第3層タスク & 担当者 & 6週 & 7週 & 8週 & 9週 & 10週 \\
+\hline
+110 & 100 (Processing) & ピアノ音の作成 & 櫛濱和輝 & \cellcolor{ganttCell} & & & & \\
+\hline
+120 & 100 (Processing) & arduinoとの通信用関数（ピアノ） & 櫛濱和輝 & & & \cellcolor{ganttCell} & \cellcolor{ganttCell} & \\
+\hline
+130 & 100 (Processing) & フルート音の作成 & 家田祐希 & \cellcolor{ganttCell} & & & & \\
+\hline
+140 & 100 (Processing) & arduinoとの通信用関数（フルート） & 家田祐希 & & & \cellcolor{ganttCell} & \cellcolor{ganttCell} & \\
+\hline
+150 & 100 (Processing) & トランペット音の作成 & 木下遼介 & \cellcolor{ganttCell} & & & & \\
+\hline
+160 & 100 (Processing) & arduinoとの通信用関数（トランペット） & 木下遼介 & & & \cellcolor{ganttCell} & \cellcolor{ganttCell} & \\
+\hline
+170 & 100 (Processing) & ドラム音の作成（キック） & 久家力孔 & \cellcolor{ganttCell} & & & & \\
+\hline
+171 & 100 (Processing) & ドラム音の作成（シンバル） & 久家力孔 & \cellcolor{ganttCell} & & & & \\
+\hline
+180 & 100 (Processing) & arduinoとの通信用関数（ドラム） & 久家力孔 & & & \cellcolor{ganttCell} & \cellcolor{ganttCell} & \\
+\hline
+210 & 200 (子機) & ピアノのプログラム & 櫛濱和輝 & & \cellcolor{ganttCell} & & & \\
+\hline
+220 & 200 (子機) & フルートのプログラム & 家田祐希 & & \cellcolor{ganttCell} & & & \\
+\hline
+230 & 200 (子機) & トランペットのプログラム & 木下遼介 & & \cellcolor{ganttCell} & & & \\
+\hline
+240 & 200 (子機) & 楽譜の設定 & 渡邊乃斗 & \cellcolor{ganttCell} & & & & \\
+\hline
+310 & 300 (親機) & 赤外線管理プログラム & 渡邊乃斗 & & \cellcolor{ganttCell} & & & \\
+\hline
+320 & 300 (親機) & テンポ管理プログラム & 渡邊乃斗 & & & \cellcolor{ganttCell} & \cellcolor{ganttCell} & \\
+\hline
+410 & 400 (その他) & 回路作成 & 手代木巧 & \cellcolor{ganttCell} & & & & \\
+\hline
+420 & 400 (その他) & LEDマトリクス作成 & 手代木巧 & & \cellcolor{ganttCell} & \cellcolor{ganttCell} & \cellcolor{ganttCell} & \\
+\hline
+510 & 500 (包括) & 結合テスト & 全員 & & & & & \cellcolor{ganttCell} \\
+\hline
+\end{longtable}
+
+\subsection*{2.2 チーム全体ガントチャート（変更後：計画書 v1.2・第7週末時点）}
+
+計画書 v1.2 で 5 週列を追加し，先行着手・前倒し分を反映した．171（ドラムシンバル）は新規追加タスク．
+
+\begin{longtable}{|p{0.9cm}|p{2.0cm}|p{4.0cm}|p{1.5cm}|c|c|c|c|c|c|}
+\hline
+\rowcolor[gray]{0.9}
+管理 & 第2層 & 第3層タスク & 担当者 & 5週 & 6週 & 7週 & 8週 & 9週 & 10週 \\
+\hline
+110 & 100 (Processing) & ピアノ音の作成 & 櫛濱和輝 & \cellcolor{ganttEarly} & \cellcolor{ganttCell} & & & & \\
+\hline
+120 & 100 (Processing) & arduinoとの通信用関数（ピアノ） & 櫛濱和輝 & & & & \cellcolor{ganttCell} & \cellcolor{ganttCell} & \\
+\hline
+130 & 100 (Processing) & フルート音の作成 & 家田祐希 & \cellcolor{ganttEarly} & & & & & \\
+\hline
+140 & 100 (Processing) & arduinoとの通信用関数（フルート） & 家田祐希 & & & & \cellcolor{ganttCell} & \cellcolor{ganttCell} & \\
+\hline
+150 & 100 (Processing) & トランペット音の作成 & 木下遼介 & \cellcolor{ganttEarly} & & & & & \\
+\hline
+160 & 100 (Processing) & arduinoとの通信用関数（トランペット） & 木下遼介 & \cellcolor{ganttEarly} & & & \cellcolor{ganttCell} & \cellcolor{ganttCell} & \\
+\hline
+170 & 100 (Processing) & ドラム音の作成（キック） & 久家力孔 & & \cellcolor{ganttCell} & & & & \\
+\hline
+171 & 100 (Processing) & ドラム音の作成（シンバル）\textsuperscript{新規} & 久家力孔 & & \cellcolor{ganttCell} & & & & \\
+\hline
+180 & 100 (Processing) & arduinoとの通信用関数（ドラム） & 久家力孔 & & & & \cellcolor{ganttCell} & \cellcolor{ganttCell} & \\
+\hline
+210 & 200 (子機) & ピアノのプログラム & 櫛濱和輝 & & & \cellcolor{ganttCell} & & & \\
+\hline
+220 & 200 (子機) & フルートのプログラム & 家田祐希 & & & \cellcolor{ganttCell} & & & \\
+\hline
+230 & 200 (子機) & トランペットのプログラム & 木下遼介 & \cellcolor{ganttEarly} & & \cellcolor{ganttCell} & & & \\
+\hline
+240 & 200 (子機) & 楽譜の設定 & 渡邊乃斗 & & \cellcolor{ganttCell} & & & & \\
+\hline
+310 & 300 (親機) & 赤外線管理プログラム & 渡邊乃斗 & & & \cellcolor{ganttCell} & & & \\
+\hline
+320 & 300 (親機) & テンポ管理プログラム & 渡邊乃斗 & & & & \cellcolor{ganttCell} & \cellcolor{ganttCell} & \\
+\hline
+410 & 400 (その他) & 回路作成 & 手代木巧 & & \cellcolor{ganttCell} & & & & \\
+\hline
+420 & 400 (その他) & LEDマトリクス作成 & 手代木巧 & & & \cellcolor{ganttCell} & \cellcolor{ganttCell} & \cellcolor{ganttCell} & \\
+\hline
+510 & 500 (包括) & 結合テスト & 全員 & & & & & & \cellcolor{ganttCell} \\
+\hline
+\end{longtable}
+
+\endgroup
+
+\textbf{主な変更点（計画書 v1.1 → v1.2）：}
+\begin{itemize}
+    \item 110（ピアノ音の作成）：第6週予定 → 第5週末に先行着手（その後完了）
+    \item 130（フルート音）・150（トランペット音）：第6週予定 → 第5週末に前倒し完了
+    \item 160（トランペット通信用関数）・230（トランペット子機プログラム）：第7週予定 → 第5週末から先行着手
+    \item 171（ドラム音の作成・シンバル）：新規追加タスク
+    \item 130 の担当変更（渡邊 → 家田）
+\end{itemize}
+
+\subsection*{2.3 個人ガントチャート（変更前）}
+
+第5週末ログ時点の個人計画．210（ピアノのプログラム）は第7週に割り当てられていた．
+
+\begin{longtable}{|p{0.9cm}|p{2.0cm}|p{6.0cm}|c|c|c|c|c|c|}
+\hline
+\rowcolor[gray]{0.9}
+管理 & 第2層 & 第3層タスク & 5週 & 6週 & 7週 & 8週 & 9週 & 10週 \\
+\hline
+110 & 100 (Processing) & ピアノ音の作成 & \cellcolor{ganttCell} & \cellcolor{ganttCell} & & & & \\
+\hline
+210 & 200 (子機) & ピアノのプログラム & & & \cellcolor{ganttCell} & & & \\
+\hline
+120 & 100 (Processing) & arduinoとの通信用関数（ピアノ） & & & & \cellcolor{ganttCell} & \cellcolor{ganttCell} & \\
+\hline
+510 & 500 (包括) & 結合テスト（全員） & & & & & & \cellcolor{ganttCell} \\
+\hline
+\end{longtable}
+
+\subsection*{2.4 個人ガントチャート（変更後）}
+
+第7週で 210（ピアノのプログラム）を完了．加えて，ドラム担当（久家）の負荷分散として\textbf{ドラム子機の \texttt{.ino} を新たに分担}した（橙色）．Processing 側のシリアル受信処理を実装した関係で，120（通信用関数）の一部も第7週に前倒しで着手済み．
+
+\begin{longtable}{|p{0.9cm}|p{2.0cm}|p{6.0cm}|c|c|c|c|c|c|}
+\hline
+\rowcolor[gray]{0.9}
+管理 & 第2層 & 第3層タスク & 5週 & 6週 & 7週 & 8週 & 9週 & 10週 \\
+\hline
+110 & 100 (Processing) & ピアノ音の作成（完了） & \cellcolor{ganttCell} & \cellcolor{ganttCell} & & & & \\
+\hline
+210 & 200 (子機) & ピアノのプログラム（Processing 連携，完了） & & & \cellcolor{ganttCell} & & & \\
+\hline
+180 & 100 (Processing) & ドラム子機 \texttt{.ino}（久家と分担）\textsuperscript{追加} & & & \cellcolor{ganttEarly} & & & \\
+\hline
+120 & 100 (Processing) & arduinoとの通信用関数（ピアノ） & & & \cellcolor{ganttEarly} & \cellcolor{ganttCell} & \cellcolor{ganttCell} & \\
+\hline
+510 & 500 (包括) & 結合テスト（全員） & & & & & & \cellcolor{ganttCell} \\
+\hline
+\end{longtable}
+
+\subsection*{2.5 今週の作業位置づけ}
+
+\begin{itemize}
+    \item 現在地は第7週末（6/9）．本来は子機プログラム（210/220/230）の実装週．
+    \item 予定どおり \textbf{210：ピアノのプログラム}（Processing 側でシリアル受信→発音）を実装・動作確認まで完了．
+    \item さらに，ドラム子機の Arduino プログラム（\texttt{hack-drum.ino}）を分担し，親機統合で輪唱＋ドラムの同期発音まで到達．
+    \item 次週（第8週）は 120（通信用関数）の正式化と MOP5（フェードアウト）対応に移る．
+\end{itemize}
+
+%=====================================================
+\section{3. 作業ログ}
+
+\renewcommand{\arraystretch}{1.4}
+
+\begin{longtable}{|p{2.6cm}|p{1.4cm}|p{1.6cm}|p{1.4cm}|p{1cm}|p{2.4cm}|p{3.0cm}|}
+\hline
+\rowcolor[gray]{0.9}
+作業項目 & 開始日 & 予定完了日 & 状態 & 進捗率 & 依存関係・ブロッカー & コメント \\
+\hline
+ピアノのプログラム (210) & 6/3 & 6/9 & 完了 & 100\％ & 子機 Arduino（\texttt{hack-ko2.ino}）／親機 & Processing でシリアル受信した MIDI 番号を周波数へ変換し \texttt{PianoInstrument} で発音．波形描画も実装（付録 9.3.1） \\
+\hline
+ドラム子機 \texttt{.ino}（180 分担） & 6/4 & 6/9 & 完了 & 100\％ & 親機（\texttt{hack-oya2.ino}）の NEC 送出 & NEC（\texttt{address==2}）の \texttt{command} をシリアルへ中継．自前タイマなしでテンポは親機任せ（付録 9.3.2） \\
+\hline
+親機統合・動作確認 & 6/9 & 6/9 & 完了 & 100\％ & 全子機 \texttt{.ino}／Processing & 親機 → IR → 子機 → Processing の経路で輪唱＋ドラムの同期発音を確認（付録 9.3.3） \\
+\hline
+\end{longtable}
+
+%=====================================================
+\section{4. 評価事項}
+
+計画書 v1.2「1.5 テスト項目（修正版）」のうち，今週の実装（210 ピアノのプログラム，ドラム子機 \texttt{.ino}，通信経路）に対応する項目を整理する．
+
+\subsection*{4.1 対応する有効指標 MOE}
+
+\begin{longtable}{|p{1.2cm}|p{4cm}|p{8cm}|}
+\hline
+\rowcolor[gray]{0.9}
+No. & MOE & 評価基準 \\
+\hline
+MOE3 & 楽器音らしい音色 & 合成音がピアノとして聴衆に認識される \\
+\hline
+\end{longtable}
+
+\subsection*{4.2 対応する性能指標 MOP（計画書 v1.2）}
+
+\begin{longtable}{|p{1.2cm}|p{3.6cm}|p{9.0cm}|}
+\hline
+\rowcolor[gray]{0.9}
+No. & テスト名 & 内容 \\
+\hline
+MOP1 & 音色単体テスト（各楽器） & Processing 単体で各楽器音を出力・確認 \\
+\hline
+MOP2 & シリアル通信テスト & Arduino--Processing 間通信の正常動作確認 \\
+\hline
+MOP3 & 赤外線通信テスト & 親機→子機の通信成功率 95\％以上 \\
+\hline
+MOP5 & フェードアウトテスト\textsuperscript{新規} & 音切り替え時にノイズが生じないこと \\
+\hline
+MOP6 & 倍速演奏テスト\textsuperscript{新規} & スイッチによるテンポ切り替え動作確認 \\
+\hline
+\end{longtable}
+
+\subsection*{4.3 今週の自己評価}
+
+\begin{longtable}{|p{1.2cm}|p{3.5cm}|p{2cm}|p{8cm}|}
+\hline
+\rowcolor[gray]{0.9}
+No. & 項目 & 達成状況 & 備考 \\
+\hline
+MOE3 & 楽器音らしい音色 & OK & 倍音 [1.0，0.6，0.35，0.2，0.1，0.05] + ADSR で発音．聴感でピアノとして認識可 \\
+\hline
+MOP1 & 音色単体テスト & OK & Processing 単体で C4〜A4 の発音を確認 \\
+\hline
+MOP2 & シリアル通信テスト & OK & 921600bps で子機 → Processing の MIDI 受信．取りこぼしなく発音 \\
+\hline
+MOP3 & 赤外線通信テスト & 暫定OK & 親機 → ドラム子機（NEC \texttt{address==2}）の受信成功を確認．成功率の定量計測は未実施 \\
+\hline
+MOP5 & フェードアウト & 未対応 & \texttt{noteOff()} が即時 \texttt{unpatch} のため切り替えノイズの懸念．次週対応 \\
+\hline
+MOP6 & 倍速演奏 & 未対応 & 親機側スイッチとの連携が未実装 \\
+\hline
+\end{longtable}
+
+\subsection*{4.4 今後評価予定の項目（参考）}
+
+\begin{itemize}
+    \item MOP3：赤外線通信成功率 95\％以上の定量測定（取りこぼし時の挙動含む）
+    \item MOP4：音色認識テスト（聴衆過半数が各楽器と識別）
+    \item MOP5：音切り替え時のフェードアウト実装後に再評価
+    \item MOP6：親機スイッチ連携後のテンポ切り替え確認
+\end{itemize}
+
+%=====================================================
+\section{5. 課題管理}
+
+\begin{longtable}{|p{2.6cm}|p{2.8cm}|p{1cm}|p{1cm}|p{3.0cm}|p{1.6cm}|p{1.6cm}|}
+\hline
+\rowcolor[gray]{0.9}
+課題 & 発生原因 & 影響度 & 優先度 & 対策 & 期限 & 状態 \\
+\hline
+音切り替え時のノイズ & \texttt{noteOff()} が即時 \texttt{unpatch}（MOP5 未対応） & 高 & 高 & \texttt{Line} で 0.03 秒フェードアウト後に切断 & 6/16 & 未対応 \\
+\hline
+赤外線通信成功率が未計測 & MOP3（95\％目標）の定量試験未実施 & 中 & 中 & 一定回数の送受信でログ集計し成功率を算出 & 6/16 & 未対応 \\
+\hline
+取りこぼし時の無音・ズレ & ドラム子機は自前タイマを持たず親機任せ & 中 & 中 & 親機の \texttt{IR\_GAP\_MS} 調整と再送方針の検討 & 6/23 & 未対応 \\
+\hline
+\end{longtable}
+
+\vspace{0.5em}
+※影響度＝プロジェクトへのインパクト\\
+※優先度＝対応の緊急性
+
+%=====================================================
+\section{6. AI利用状況と検証}
+
+\subsection*{6.1 利用内容}
+
+\begin{itemize}
+    \item 利用目的：Processing 側のシリアル受信→MIDI→周波数変換→発音の実装，およびドラム子機 \texttt{.ino} の NEC 受信処理の実装
+    \item 入力（プロンプト要旨）：
+    \begin{itemize}
+        \item 親機が NEC で「\texttt{address}＝子機 ID，\texttt{command}＝MIDI 番号」を送る前提を提示し，Processing 側の受信・発音コードを依頼
+        \item 既存試作（第5週の \texttt{hackathon.pde}，音名文字列ベース）を MIDI 番号ベースへ移行する方針を指示
+        \item IRremote v4.x（NEC）でドラム子機が \texttt{address==2} のみ拾う最小実装を依頼
+    \end{itemize}
+    \item 出力概要：
+    \begin{itemize}
+        \item Processing 側 \texttt{hack\_ko2.pde}（MIDI 受信→\texttt{PianoInstrument} 発音）
+        \item ドラム子機 \texttt{hack-drum.ino}（NEC 受信→シリアル中継）
+    \end{itemize}
+\end{itemize}
+
+\subsection*{6.2 検証方法}
+
+\begin{itemize}
+    \item 検証手法：
+    \begin{itemize}
+        \item Processing 単体で MIDI 番号を流し込み，C4〜A4 が正しい音高で鳴るか聴感確認
+        \item 親機（\texttt{hack-oya2.ino}）と接続し，IR 経由で届く番号で発音されるか実機確認
+    \end{itemize}
+    \item 参照資料：
+    \begin{itemize}
+        \item 計画書・設計書 v1.2（2026/5/29 版）「1.2 PBS」「2.2 詳細設計」
+        \item Minim ライブラリ公式ドキュメント（\texttt{ddf.minim.ugens}）
+        \item IRremote ライブラリ（v4.x，NEC プロトコル）
+    \end{itemize}
+    \item 検証手順：
+    \begin{enumerate}
+        \item 親機・各子機・Processing を接続して起動
+        \item 親機の \texttt{melody[]} と \texttt{drumPattern[]} に沿って IR 送出
+        \item ピアノ子機・ドラム子機がそれぞれ MIDI 番号をシリアルへ中継し，Processing が発音するかを聴感と波形で確認
+    \end{enumerate}
+\end{itemize}
+
+\subsection*{6.3 ファクトチェック結果}
+
+\begin{itemize}
+    \item 一致点：
+    \begin{itemize}
+        \item MIDI→周波数変換 $f=440\cdot2^{(m-69)/12}$ が標準的な平均律の式と一致
+        \item シリアル速度 921600bps が設計書「2.1 基本設計の修正」の確定値と一致
+        \item NEC の \texttt{address}／\texttt{command} の対応（子機 ID／MIDI 番号）が親機実装と整合
+    \end{itemize}
+    \item 不一致・疑義：
+    \begin{itemize}
+        \item 設計書 2.1 が要求する「\texttt{noteOff} で 0.03 秒フェードアウト後に切断」が未実装（現状は即時 \texttt{unpatch}）．MOP5 の課題として残存
+    \end{itemize}
+    \item 最終判断：採用（今週の到達点としては妥当）
+    \item 根拠：
+    \begin{itemize}
+        \item 親機→IR→子機→Processing の経路で輪唱＋ドラムが同期発音し，子機プログラムの目的を満たしているため
+    \end{itemize}
+\end{itemize}
+
+%=====================================================
+\section{7. 次回計画}
+
+\begin{itemize}
+    \item 目標（第8週）：
+    \begin{itemize}
+        \item 120（通信用関数・ピアノ）の正式実装と整理（受信パースの堅牢化）
+        \item MOP5：\texttt{noteOff()} に \texttt{Line} フェードアウト（0.03 秒）を実装し，切り替えノイズを除去
+        \item MOP3：赤外線通信成功率の定量測定（95\％目標に対する実測）
+    \end{itemize}
+    \item 達成基準：
+    \begin{itemize}
+        \item 音切り替え時にノイズが聞こえないこと
+        \item 通信成功率を数値で提示できること
+        \item 他楽器子機と合わせた同期演奏が破綻しないこと
+    \end{itemize}
+    \item 期限：
+    \begin{itemize}
+        \item 6/16（第8週末）
+    \end{itemize}
+\end{itemize}
+
+%=====================================================
+\section{8. その他}
+
+\begin{itemize}
+    \item ドラム子機を分担したため，久家とドラムパターン（\texttt{drumPattern[]}）の最終仕様をすり合わせ予定
+    \item 親機担当（渡邊）と \texttt{IR\_GAP\_MS} や倍速演奏（MOP6）スイッチの連携仕様を確認する
+\end{itemize}
+
+%=====================================================
+\section{9. 付録}
+
+\subsection*{9.1 添付資料}
+
+\begin{itemize}
+    \item ソースコード：\texttt{hack\_ko2.pde}（ピアノ Processing プログラム），\texttt{hack-drum.ino}（ドラム子機 Arduino）
+    \item 参考：\texttt{hack-oya2.ino}（親機・統合用），\texttt{hack-ko2.ino}（ピアノ子機 Arduino）
+    \item リポジトリ：\url{https://github.com/k-kushihama/hackathon-code/}
+\end{itemize}
+
+\subsection*{9.2 添付範囲}
+
+\begin{itemize}
+    \item 210（ピアノのプログラム）に対応する Processing 側ソースの現時点スナップショット
+    \item 分担したドラム子機 Arduino のソース，および通信経路の構成図・回路図
+\end{itemize}
+
+\subsection*{9.3 ソースコード・図}
+
+\subsubsection*{9.3.1 ピアノ Processing プログラム（\texttt{hack\_ko2.pde}）}
+
+子機 Arduino からシリアルで届く MIDI 番号を受信し，$f=440\cdot2^{(m-69)/12}$ で周波数へ変換して \texttt{PianoInstrument} で発音する．音色は第5週に作成した倍音構造（\texttt{WavetableGenerator.gen10} の振幅配列 [1.0, 0.6, 0.35, 0.2, 0.1, 0.05]）と \texttt{Line} による ADSR をそのまま用いる．
+
+\begin{lstlisting}[language=Java]
+import processing.serial.*;
+Serial port;
+import ddf.minim.*;
+import ddf.minim.ugens.*;
+Waveform currentWaveform;
+Minim minim;
+AudioOutput out;
+int currentNote = 0;
+
+void setup() {
+  size(512, 200);
+  minim = new Minim(this);
+  out = minim.getLineOut();
+  out.setTempo(120);
+  currentWaveform = WavetableGenerator.gen10(4096, new float[] { 1.0f, 0.6f, 0.35f, 0.2f, 0.1f, 0.05f });
+  port = new Serial(this, "/dev/cu.usbmodem34B7DA64C6002", 921600);
+  port.clear();
+  port.bufferUntil('\n');
+}
+
+void draw() {
+  background(0);
+  stroke(255);
+  for (int i = 0; i < out.bufferSize() - 1; i++) {
+    line(i, 50 + out.left.get(i)*50, i+1, 50 + out.left.get(i+1)*50);
+  }
+  fill(255);
+  text("note: " + currentNote, 10, 180);
+}
+
+void serialEvent(Serial p) {
+  String inString = p.readStringUntil('\n');
+  if (inString != null) {
+    inString = trim(inString);
+    if (inString.length() == 0) return;
+    int midi = int(inString);
+    currentNote = midi;
+    if (midi > 0) {
+      playNote(midi);
+    }
+  }
+}
+
+void playNote(int midi) {
+  float freq = (float)(440.0 * Math.pow(2.0, (midi - 69) / 12.0));
+  out.playNote(0, 0.4f, new PianoInstrument(freq, 0.6f, currentWaveform));
+}
+
+class PianoInstrument implements Instrument {
+  Oscil wave;
+  Line ampEnv;
+  Oscil vib;
+  Summer freqSum;
+  Constant baseFreq;
+  float maxAmp;
+
+  PianoInstrument(float frequency, float maxAmp, Waveform wf) {
+    this.maxAmp = maxAmp;
+    freqSum = new Summer();
+    baseFreq = new Constant(frequency);
+    vib = new Oscil(5, 0, Waves.SINE);
+    baseFreq.patch(freqSum);
+    vib.patch(freqSum);
+    wave = new Oscil(frequency, 0, wf);
+    freqSum.patch(wave.frequency);
+    ampEnv = new Line();
+    ampEnv.patch(wave.amplitude);
+  }
+
+  void noteOn(float duration) {
+    ampEnv.activate(duration, this.maxAmp, 0);
+    wave.patch(out);
+  }
+
+  void noteOff() {
+    wave.unpatch(out);
+  }
+}
+\end{lstlisting}
+
+\subsubsection*{9.3.2 ドラム子機 Arduino プログラム（\texttt{hack-drum.ino}）}
+
+赤外線受光モジュールで NEC フレームを受信し，自分宛（\texttt{CHILD\_ID = 2}）のものだけを拾って \texttt{command}（MIDI 番号）をシリアルへ中継する．楽譜を持たずステートレスで，テンポはすべて親機任せのため可変 BPM に自動追従する．
+
+\begin{lstlisting}[language=C++]
+#define DECODE_NEC
+#include <IRremote.hpp>
+
+#define CHILD_ID 2
+
+const int PIN_IR_RECV = 2;
+const int LED_INDICATOR = 13;
+
+void setup() {
+  Serial.begin(921600);
+  IrReceiver.begin(PIN_IR_RECV);
+  pinMode(LED_INDICATOR, OUTPUT);
+}
+
+void loop() {
+  if (IrReceiver.decode()) {
+    if (IrReceiver.decodedIRData.protocol == NEC) {
+      uint16_t address = IrReceiver.decodedIRData.address;
+      if (address == CHILD_ID) {
+        uint8_t note = (uint8_t)IrReceiver.decodedIRData.command;
+        Serial.println(note);
+        digitalWrite(LED_INDICATOR, HIGH);
+        delay(15);
+        digitalWrite(LED_INDICATOR, LOW);
+      }
+    }
+    IrReceiver.resume();
+  }
+}
+\end{lstlisting}
+
+\subsubsection*{9.3.3 システム統合：データフロー}
+
+図~\ref{fig:dataflow} に，親機から発音までのデータフローを示す．親機（\texttt{hack-oya2.ino}）が \texttt{melody[]}／\texttt{drumPattern[]} に沿って NEC フレーム（\texttt{address}＝子機 ID，\texttt{command}＝MIDI 番号）を送出し，各子機は自分宛のフレームだけを拾って MIDI 番号をシリアルへ中継，Processing が受信して発音する．ピアノ子機は \texttt{CANON\_OFFSET\_TICKS} 分だけ遅れて開始することで輪唱（カノン）を実現する．
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  node distance=0.6cm and 1.0cm,
+  block/.style={rectangle, draw, rounded corners=2pt, minimum width=2.7cm, minimum height=1.1cm, align=center, font=\small},
+  io/.style={rectangle, draw, fill=gray!10, minimum width=2.3cm, minimum height=1.0cm, align=center, font=\small},
+  arrow/.style={-Stealth, thick}
+]
+  \node[block] (oya) {親機 Arduino\\\texttt{hack-oya2.ino}\\(NEC 送出)};
+  \node[block, right=of oya] (ko) {子機 Arduino\\\texttt{hack-ko2/hack-drum}\\(NEC 受信→中継)};
+  \node[block, right=of ko] (proc) {Processing\\\texttt{hack\_ko2.pde}\\(MIDI→発音)};
+  \node[io, right=of proc] (spk) {スピーカー};
+
+  \draw[arrow] (oya) -- node[above, font=\scriptsize]{IR / NEC} node[below, font=\scriptsize]{addr=ID, cmd=MIDI} (ko);
+  \draw[arrow] (ko) -- node[above, font=\scriptsize]{USB Serial} node[below, font=\scriptsize]{921600bps} (proc);
+  \draw[arrow] (proc) -- node[above, font=\scriptsize]{audio} (spk);
+\end{tikzpicture}
+\caption{システム統合のデータフロー（親機 → IR/NEC → 子機 → USB シリアル → Processing → 発音）}
+\label{fig:dataflow}
+\end{figure}
+
+\subsubsection*{9.3.4 ドラム子機 Arduino の回路図}
+
+図~\ref{fig:circuit} にドラム子機 Arduino の接続を示す．赤外線受光モジュール CHQ1838D を 1 つ用い，親機からの NEC フレームを受信する．D2 に受光信号，D13 に動作確認用 LED を接続し，USB を Processing 実行用 PC へつなぐ．
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  every node/.style={font=\small},
+  pin/.style={circle, draw, fill=black, inner sep=1.2pt},
+  module/.style={rectangle, draw, minimum width=2.4cm, minimum height=1.2cm, align=center},
+  arduino/.style={rectangle, draw, very thick, rounded corners=4pt, minimum width=3.8cm, minimum height=5.2cm, align=center},
+  wire/.style={thick}
+]
+  \node[arduino] (ard) at (0,0) {Arduino\\UNO R4\\(子機: ドラム)};
+
+  \node[pin, label=right:{\tiny D2}] (d2) at (1.9,1.2) {};
+  \node[pin, label=right:{\tiny D13(LED)}] (d13) at (1.9,0.0) {};
+  \node[pin, label=right:{\tiny 5V}] (vcc) at (1.9,-1.0) {};
+  \node[pin, label=right:{\tiny GND}] (gnd) at (1.9,-2.0) {};
+  \node[pin, label=left:{\tiny USB}] (usb) at (-1.9,0) {};
+
+  \node[module] (ir1) at (5.4,1.2) {IR 受光\\CHQ1838D\\(NEC 受信)};
+
+  \node[pin] (ir1out) at (4.2,1.2) {};
+  \node[pin] (ir1vcc) at (4.2,1.6) {};
+  \node[pin] (ir1gnd) at (4.2,0.8) {};
+
+  \draw[wire] (d2) -- (ir1out);
+
+  \draw[wire] (vcc) -- ++(0.7,0) coordinate (vbus) -- (vbus|-ir1vcc) -- (ir1vcc);
+  \draw[wire] (gnd) -- ++(1.1,0) coordinate (gbus) -- (gbus|-ir1gnd) -- (ir1gnd);
+
+  \node[rectangle, draw, dashed, minimum width=2cm, minimum height=1cm, align=center] (pc) at (-4.5,0) {PC\\(Processing)};
+  \draw[wire, -Stealth] (usb) -- node[above, font=\scriptsize]{USB / Serial} (pc.east);
+\end{tikzpicture}
+\caption{ドラム子機 Arduino の回路図．D2 に IR 受光モジュール，D13 に動作確認 LED を接続し，USB 経由で Processing 実行用 PC と通信する．}
+\label{fig:circuit}
+\end{figure}
+
+なお，赤外線受光モジュールは内部にプルアップを持つため，Arduino 側は \texttt{INPUT\_PULLUP} 相当で十分．電源は Arduino の 5V／GND を共用する．
+
+\end{document}
