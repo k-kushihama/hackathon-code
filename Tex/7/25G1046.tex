@@ -94,7 +94,7 @@
 %=====================================================
 \section{2. ガントチャート}
 
-計画書 v1.2（2026/5/29 版）でチーム全体のスケジュールが更新されたため，チーム全体・個人の両方について変更前後を併記する．橙色セル（\colorbox{ganttEarly}{\phantom{xx}}）は\textbf{前倒し・先行着手}した週，水色セル（\colorbox{ganttCell}{\phantom{xx}}）は計画通りの実施週を表す．
+計画書 v1.2（2026/5/29 版）でチーム全体のスケジュールが更新されたため，チーム全体・個人の両方について変更前後を併記する．着色セル（\colorbox{ganttCell}{\phantom{xx}}）は当該タスクの実施週を表す．
 
 \renewcommand{\arraystretch}{1.3}
 
@@ -146,62 +146,65 @@
 \hline
 \end{longtable}
 
-\subsection*{2.2 チーム全体ガントチャート（変更後：計画書 v1.2・第7週末時点）}
+\subsection*{2.2 チーム全体ガントチャート（変更後：計画書 v1.2）}
 
-計画書 v1.2 で 5 週列を追加し，先行着手・前倒し分を反映した．171（ドラムシンバル）は新規追加タスク．
+計画書 v1.2（2026/5/29 版）のチーム全体ガントチャートに合わせて更新した．担当者は楽器グループごとの 2 名体制に整理し，子機側プログラムを 210〜260 として再構成している．
 
-\begin{longtable}{|p{0.9cm}|p{2.0cm}|p{4.0cm}|p{1.5cm}|c|c|c|c|c|c|}
+\begin{longtable}{|p{6.2cm}|p{2.3cm}|c|c|c|c|c|c|}
 \hline
 \rowcolor[gray]{0.9}
-管理 & 第2層 & 第3層タスク & 担当者 & 5週 & 6週 & 7週 & 8週 & 9週 & 10週 \\
+第3層：活動タスク & 担当者 & 5週 & 6週 & 7週 & 8週 & 9週 & 10週 \\
 \hline
-110 & 100 (Processing) & ピアノ音の作成 & 櫛濱和輝 & \cellcolor{ganttEarly} & \cellcolor{ganttCell} & & & & \\
+110:ピアノ音の作成 & 櫛濱・久家 & \cellcolor{ganttCell} & \cellcolor{ganttCell} & & & & \\
 \hline
-120 & 100 (Processing) & arduinoとの通信用関数（ピアノ） & 櫛濱和輝 & & & & \cellcolor{ganttCell} & \cellcolor{ganttCell} & \\
+120:arduinoとの通信用関数（ピアノ） & 櫛濱・久家 & \cellcolor{ganttCell} & \cellcolor{ganttCell} & & & & \\
 \hline
-130 & 100 (Processing) & フルート音の作成 & 家田祐希 & \cellcolor{ganttEarly} & & & & & \\
+130:フルート音の作成 & 家田・渡邊 & \cellcolor{ganttCell} & \cellcolor{ganttCell} & & & & \\
 \hline
-140 & 100 (Processing) & arduinoとの通信用関数（フルート） & 家田祐希 & & & & \cellcolor{ganttCell} & \cellcolor{ganttCell} & \\
+140:arduinoとの通信用関数（フルート） & 家田・渡邊 & \cellcolor{ganttCell} & \cellcolor{ganttCell} & & & & \\
 \hline
-150 & 100 (Processing) & トランペット音の作成 & 木下遼介 & \cellcolor{ganttEarly} & & & & & \\
+150:トランペット音の作成 & 木下・手代木 & \cellcolor{ganttCell} & \cellcolor{ganttCell} & & & & \\
 \hline
-160 & 100 (Processing) & arduinoとの通信用関数（トランペット） & 木下遼介 & \cellcolor{ganttEarly} & & & \cellcolor{ganttCell} & \cellcolor{ganttCell} & \\
+160:arduinoとの通信用関数（トランペット） & 木下・手代木 & \cellcolor{ganttCell} & \cellcolor{ganttCell} & & & & \\
 \hline
-170 & 100 (Processing) & ドラム音の作成（キック） & 久家力孔 & & \cellcolor{ganttCell} & & & & \\
+170:ドラム音の作成（キック） & 櫛濱・久家 & & & & & & \\
 \hline
-171 & 100 (Processing) & ドラム音の作成（シンバル）\textsuperscript{新規} & 久家力孔 & & \cellcolor{ganttCell} & & & & \\
+171:ドラム音の作成（シンバル）\textsuperscript{新規} & 櫛濱・久家 & & & & & & \\
 \hline
-180 & 100 (Processing) & arduinoとの通信用関数（ドラム） & 久家力孔 & & & & \cellcolor{ganttCell} & \cellcolor{ganttCell} & \\
+180:arduinoとの通信用関数（ドラム） & 櫛濱・久家 & & & & & & \\
 \hline
-210 & 200 (子機) & ピアノのプログラム & 櫛濱和輝 & & & \cellcolor{ganttCell} & & & \\
+210:ピアノのプログラム & 櫛濱・久家 & \cellcolor{ganttCell} & & & & & \\
 \hline
-220 & 200 (子機) & フルートのプログラム & 家田祐希 & & & \cellcolor{ganttCell} & & & \\
+220:フルートのプログラム & 家田・渡邊 & \cellcolor{ganttCell} & & & & & \\
 \hline
-230 & 200 (子機) & トランペットのプログラム & 木下遼介 & \cellcolor{ganttEarly} & & \cellcolor{ganttCell} & & & \\
+230:トランペットのプログラム & 木下・手代木 & \cellcolor{ganttCell} & & & & & \\
 \hline
-240 & 200 (子機) & 楽譜の設定 & 渡邊乃斗 & & \cellcolor{ganttCell} & & & & \\
+240:ドラムのプログラム & 櫛濱・久家 & & \cellcolor{ganttCell} & & & & \\
 \hline
-310 & 300 (親機) & 赤外線管理プログラム & 渡邊乃斗 & & & \cellcolor{ganttCell} & & & \\
+260:楽譜進行プログラム & 家田・渡邊 & & & \cellcolor{ganttCell} & & & \\
 \hline
-320 & 300 (親機) & テンポ管理プログラム & 渡邊乃斗 & & & & \cellcolor{ganttCell} & \cellcolor{ganttCell} & \\
+310:赤外線管理プログラム & 家田・渡邊 & & & \cellcolor{ganttCell} & & & \\
 \hline
-410 & 400 (その他) & 回路作成 & 手代木巧 & & \cellcolor{ganttCell} & & & & \\
+320:テンポ管理プログラム & 家田・渡邊 & & & & \cellcolor{ganttCell} & & \\
 \hline
-420 & 400 (その他) & LEDマトリクス作成 & 手代木巧 & & & \cellcolor{ganttCell} & \cellcolor{ganttCell} & \cellcolor{ganttCell} & \\
+410:回路作成 & 木下・手代木 & & \cellcolor{ganttCell} & & & & \\
 \hline
-510 & 500 (包括) & 結合テスト & 全員 & & & & & & \cellcolor{ganttCell} \\
+420:LEDマトリクス作成 & 木下・手代木 & & \cellcolor{ganttCell} & \cellcolor{ganttCell} & & & \\
+\hline
+510:結合テスト & 全員 & & & & & \cellcolor{ganttCell} & \cellcolor{ganttCell} \\
 \hline
 \end{longtable}
 
 \endgroup
 
-\textbf{主な変更点（計画書 v1.1 → v1.2）：}
+\textbf{主な変更点（第5週末提出版 → 計画書 v1.2）：}
 \begin{itemize}
-    \item 110（ピアノ音の作成）：第6週予定 → 第5週末に先行着手（その後完了）
-    \item 130（フルート音）・150（トランペット音）：第6週予定 → 第5週末に前倒し完了
-    \item 160（トランペット通信用関数）・230（トランペット子機プログラム）：第7週予定 → 第5週末から先行着手
-    \item 171（ドラム音の作成・シンバル）：新規追加タスク
-    \item 130 の担当変更（渡邊 → 家田）
+    \item 担当を楽器グループごとの 2 名体制（櫛濱・久家／家田・渡邊／木下・手代木）に整理
+    \item 音色作成（110〜160）と通信用関数（120/140/160）を第5〜6週に集約
+    \item 子機プログラム（210/220/230）を第7週 → 第5週へ前倒し
+    \item ドラム子機を 240：ドラムのプログラム（第6週）として新設し，旧 240（楽譜の設定）を 260：楽譜進行プログラム（第7週）へ整理
+    \item 171（ドラムシンバル）は新規追加タスク
+    \item 結合テスト（510）を第9〜10週に設定
 \end{itemize}
 
 \subsection*{2.3 個人ガントチャート（変更前）}
@@ -225,22 +228,22 @@
 
 \subsection*{2.4 個人ガントチャート（変更後）}
 
-第7週で 210（ピアノのプログラム）を完了．加えて，ドラムは久家と作業を分け，\textbf{180：ドラムの通信用関数（\texttt{hack-drum.ino}）を櫛濱が担当}（橙色．音色 170/171 の \texttt{.pde} は久家の別タスク）．Processing 側のシリアル受信処理を実装した関係で，120（通信用関数・ピアノ）の一部も第7週に前倒しで着手済み．ただし 180 は第6週に対面できず\textbf{実機テストは未実施}（プログラム作成のみ）．
+計画書 v1.2 のチーム全体ガント（§2.2）から櫛濱担当分を抜き出した個人計画．音色作成（110）・通信用関数（120）を第5〜6週，ピアノのプログラム（210）を第5週，ドラムのプログラム（240，\texttt{hack-drum.ino}）を第6週に置く．なおドラムは第6週に対面できず\textbf{実機テストは未実施}（プログラム作成のみ）で，音色 170/171 の \texttt{.pde} は久家担当の別タスク．
 
 \begin{longtable}{|p{0.9cm}|p{2.0cm}|p{6.0cm}|c|c|c|c|c|c|}
 \hline
 \rowcolor[gray]{0.9}
 管理 & 第2層 & 第3層タスク & 5週 & 6週 & 7週 & 8週 & 9週 & 10週 \\
 \hline
-110 & 100 (Processing) & ピアノ音の作成（完了） & \cellcolor{ganttCell} & \cellcolor{ganttCell} & & & & \\
+110 & 100 (Processing) & ピアノ音の作成 & \cellcolor{ganttCell} & \cellcolor{ganttCell} & & & & \\
 \hline
-210 & 200 (子機) & ピアノのプログラム（Processing 連携，完了） & & & \cellcolor{ganttCell} & & & \\
+120 & 100 (Processing) & arduinoとの通信用関数（ピアノ） & \cellcolor{ganttCell} & \cellcolor{ganttCell} & & & & \\
 \hline
-180 & 100 (Processing) & ドラムの通信用関数 \texttt{hack-drum.ino}（音色は久家／未検証）\textsuperscript{追加} & & & \cellcolor{ganttEarly} & & & \\
+210 & 200 (子機) & ピアノのプログラム & \cellcolor{ganttCell} & & & & & \\
 \hline
-120 & 100 (Processing) & arduinoとの通信用関数（ピアノ） & & & \cellcolor{ganttEarly} & \cellcolor{ganttCell} & \cellcolor{ganttCell} & \\
+240 & 200 (子機) & ドラムのプログラム（\texttt{hack-drum.ino}） & & \cellcolor{ganttCell} & & & & \\
 \hline
-510 & 500 (包括) & 結合テスト（全員） & & & & & & \cellcolor{ganttCell} \\
+510 & 500 (包括) & 結合テスト（全員） & & & & & \cellcolor{ganttCell} & \cellcolor{ganttCell} \\
 \hline
 \end{longtable}
 
