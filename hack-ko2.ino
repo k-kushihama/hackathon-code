@@ -13,7 +13,7 @@ const int PIN_IR_RECV = 2;
 const int LED_INDICATOR = 13;
 
 void setup() {
-  Serial.begin(921600);
+  Serial.begin(115200);
   IrReceiver.begin(PIN_IR_RECV);
   pinMode(LED_INDICATOR, OUTPUT);
 }

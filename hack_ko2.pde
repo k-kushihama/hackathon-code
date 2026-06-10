@@ -13,7 +13,7 @@ void setup() {
   out = minim.getLineOut();
   out.setTempo(120);
   currentWaveform = WavetableGenerator.gen10(4096, new float[] { 1.0f, 0.6f, 0.35f, 0.2f, 0.1f, 0.05f });
-  port = new Serial(this, "/dev/cu.usbmodem34B7DA64C6002", 500000);
+  port = new Serial(this, "/dev/cu.usbmodem34B7DA64C6002", 115200);
   port.clear();
   port.bufferUntil('\n');
 }
