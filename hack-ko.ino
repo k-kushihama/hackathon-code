@@ -17,12 +17,13 @@ String myScore[] = {
 // idxがこの位置以降は「1音の間に2音」=半音価で発音させる範囲。
 // 最後のフレーズ(C4 C4 D4 D4 E4 E4 F4 F4 E4 R D4 R C4)の開始位置。
 const int DOUBLE_START = 24;
-// 16分音符の正確な間隔。親機tempoBpm=120 → 8分音符250ms → 16分音符125ms。
-// 1音目と2音目の間も、2音目と次の1音目(親機の次tickまで=125ms)も
-// 均等125ms間隔になり「どど どど」と聴こえる(62.5だと「どどっ」になっていた)。
-const unsigned long DOUBLE_DELAY_MS = 125;
 
 int idx = 0;
+
+// 直前のIR受信時刻と直近の受信間隔。親機テンポ(BPM)に依存せず
+// 「次の受信予測時刻までの半分」で2音目を出すために動的計測する。
+unsigned long lastReceiveMs = 0;
+unsigned long lastIntervalMs = 250;  // 親機tempoBpm=120相当の初期推定
 
 void setup() {
   Serial.begin(921600);
@@ -35,6 +36,18 @@ void loop() {
     if (IrReceiver.decodedIRData.protocol == NEC) {
       uint8_t mask = (uint8_t)IrReceiver.decodedIRData.command;
       if (mask & (1 << CHILD_ID)) {
+        // 親機テンポを動的に追従するため、受信間隔を更新する。
+        // 妥当な範囲(50ms〜2s)のみ採用し、Reset/Startの長い空白で
+        // 巨大値になるのを弾く。
+        unsigned long now = millis();
+        if (lastReceiveMs != 0) {
+          unsigned long interval = now - lastReceiveMs;
+          if (interval >= 50 && interval <= 2000) {
+            lastIntervalMs = interval;
+          }
+        }
+        lastReceiveMs = now;
+
         Serial.println(myScore[idx]);
         digitalWrite(LED_INDICATOR, (idx % 2) ? HIGH : LOW);
         int prevIdx = idx;
@@ -42,9 +55,11 @@ void loop() {
         if (idx >= melodyLength) idx = 0;
 
         // 最後のフレーズ範囲では1IR受信あたり2音まとめて出力する。
+        // 遅延は親機の直近テンポの半分で、1音目→2音目と2音目→次の1音目を
+        // 均等にし「どど どど」(16分音符相当)で聴こえるようにする。
         // ラップした場合(idx<=prevIdx)は次フレーズの先頭を巻き込まないようスキップ。
         if (prevIdx >= DOUBLE_START && idx > prevIdx) {
-          delay(DOUBLE_DELAY_MS);
+          delay(lastIntervalMs / 2);
           Serial.println(myScore[idx]);
           idx++;
           if (idx >= melodyLength) idx = 0;
