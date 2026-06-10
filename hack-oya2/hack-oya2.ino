@@ -121,7 +121,7 @@ void sendDrum() {
 }
 
 void setup() {
-  Serial.begin(115200);
+  Serial.begin(500000);
   IrSender.begin(IR_SEND_PIN);
   pinMode(LED_INDICATOR, OUTPUT);
   delay(1000);
