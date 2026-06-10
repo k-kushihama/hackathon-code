@@ -1,0 +1,463 @@
+\documentclass[a4paper,11pt]{ltjsarticle}
+
+\usepackage{luatexja}
+\usepackage{geometry}
+\geometry{margin=25mm}
+
+\usepackage{array}
+\usepackage{longtable}
+\usepackage[table]{xcolor}
+\usepackage{booktabs}
+
+\usepackage{enumitem}
+
+\usepackage{hyperref}
+
+\usepackage{titlesec}
+\titleformat{\section}{\large\bfseries}{}{0em}{}
+
+\usepackage{listings}
+\lstset{
+  basicstyle=\ttfamily\small,
+  frame=single,
+  breaklines=true,
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  keepspaces=true,
+  showstringspaces=false,
+  columns=fullflexible,
+  tabsize=2,
+}
+
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning, calc, fit}
+
+\usepackage{float}
+
+\definecolor{ganttCell}{HTML}{4FC3D0}
+\definecolor{ganttEarly}{HTML}{FFB74D}
+
+\providecommand{\％}{\%}
+
+\setlength{\parindent}{0pt}
+\setlist[itemize]{leftmargin=2em}
+
+\begin{document}
+
+\begin{center}
+    {\LARGE \textbf{作業ログ（第5週末）}}\\[1em]
+\end{center}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+報告者 & 櫛濱 和輝 (25G1046)\\
+\hline
+報告日 & 2026年5月27日\\
+\hline
+プロジェクト名 & 赤外線通信で歌うカエル\\
+\hline
+担当パート & Processing（ピアノ音色生成）\\
+\hline
+本来の今週の位置づけ & 第5週末（計画段階の最終週）\\
+\hline
+先行着手した課題 & 110：ピアノ音の作成（本来は第6週の課題）\\
+\hline
+\end{tabular}
+
+\vspace{1em}
+
+%=====================================================
+\section{1. 進捗サマリー}
+
+\begin{itemize}
+    \item 現在地：第5週末（5/27）．第6週（実装フェーズ初週）開始前の段階
+    \item 本来は計画段階だったが，第6週の課題である 110（ピアノ音の作成）に\textbf{先行着手}し，主要部分の試作を完了
+    \item 全体進捗率：10\％（計画段階終了直前．110 のみ先行で 60\％）
+    \item 主要成果：
+    \begin{itemize}
+        \item Processing 上でピアノ音色を倍音構造と ADSR エンベロープによって合成（本来第6週の作業）
+        \item 倍音比 [1.0，0.6，0.35，0.2，0.1，0.05] を採用し，基音と高次倍音のバランスを試聴で調整
+        \item C4〜A4 の音域で発音を確認し，「かえるのうた」に必要な音域をカバー
+    \end{itemize}
+    \item 重大課題（影響度：高）：
+    \begin{itemize}
+        \item 「ピアノらしさ」の評価が定性的にとどまっており，アンケート（MOP4）未実施
+        \item 計画より一週早く着手したため，他メンバとの進捗ずれが発生する可能性
+    \end{itemize}
+\end{itemize}
+
+%=====================================================
+\section{2. ガントチャート}
+
+\subsection*{2.1 チーム全体ガントチャート}
+
+\renewcommand{\arraystretch}{1.3}
+
+\begin{longtable}{|p{0.9cm}|p{2.0cm}|p{4.4cm}|p{1.5cm}|c|c|c|c|c|}
+\hline
+\rowcolor[gray]{0.9}
+管理 & 第2層 & 第3層タスク & 担当者 & 6週 & 7週 & 8週 & 9週 & 10週 \\
+\hline
+110 & 100 (Processing) & ピアノ音の作成 & 櫛濱和輝 & \cellcolor{ganttCell} & & & & \\
+\hline
+120 & 100 (Processing) & arduinoとの通信用関数（ピアノ） & 櫛濱和輝 & & & \cellcolor{ganttCell} & \cellcolor{ganttCell} & \\
+\hline
+130 & 100 (Processing) & フルート音の作成 & 家田祐希 & \cellcolor{ganttCell} & & & & \\
+\hline
+140 & 100 (Processing) & arduinoとの通信用関数（フルート） & 家田祐希 & & & \cellcolor{ganttCell} & \cellcolor{ganttCell} & \\
+\hline
+150 & 100 (Processing) & トランペット音の作成 & 木下遼介 & \cellcolor{ganttCell} & & & & \\
+\hline
+160 & 100 (Processing) & arduinoとの通信用関数（トランペット） & 木下遼介 & & & \cellcolor{ganttCell} & \cellcolor{ganttCell} & \\
+\hline
+170 & 100 (Processing) & ドラム音の作成（キック） & 久家力孔 & \cellcolor{ganttCell} & & & & \\
+\hline
+171 & 100 (Processing) & ドラム音の作成（シンバル） & 久家力孔 & \cellcolor{ganttCell} & & & & \\
+\hline
+180 & 100 (Processing) & arduinoとの通信用関数（ドラム） & 久家力孔 & & & \cellcolor{ganttCell} & \cellcolor{ganttCell} & \\
+\hline
+210 & 200 (子機) & ピアノのプログラム & 櫛濱和輝 & & \cellcolor{ganttCell} & & & \\
+\hline
+220 & 200 (子機) & フルートのプログラム & 家田祐希 & & \cellcolor{ganttCell} & & & \\
+\hline
+230 & 200 (子機) & トランペットのプログラム & 木下遼介 & & \cellcolor{ganttCell} & & & \\
+\hline
+240 & 200 (子機) & 楽譜の設定 & 渡邊乃斗 & \cellcolor{ganttCell} & & & & \\
+\hline
+310 & 300 (親機) & 赤外線管理プログラム & 渡邊乃斗 & & \cellcolor{ganttCell} & & & \\
+\hline
+320 & 300 (親機) & テンポ管理プログラム & 渡邊乃斗 & & & \cellcolor{ganttCell} & \cellcolor{ganttCell} & \\
+\hline
+410 & 400 (その他) & 回路作成 & 手代木巧 & \cellcolor{ganttCell} & & & & \\
+\hline
+420 & 400 (その他) & LEDマトリクス作成 & 手代木巧 & & \cellcolor{ganttCell} & \cellcolor{ganttCell} & \cellcolor{ganttCell} & \\
+\hline
+510 & 500 (包括) & 結合テスト & 全員 & & & & & \cellcolor{ganttCell} \\
+\hline
+\end{longtable}
+
+\subsection*{2.2 個人ガントチャート（修正前）}
+
+当初計画．110（ピアノ音の作成）は第6週のみに割り当てられていた．
+
+\begin{longtable}{|p{0.9cm}|p{2.0cm}|p{6.6cm}|c|c|c|c|c|}
+\hline
+\rowcolor[gray]{0.9}
+管理 & 第2層 & 第3層タスク & 6週 & 7週 & 8週 & 9週 & 10週 \\
+\hline
+110 & 100 (Processing) & ピアノ音の作成 & \cellcolor{ganttCell} & & & & \\
+\hline
+210 & 200 (子機) & ピアノのプログラム & & \cellcolor{ganttCell} & & & \\
+\hline
+120 & 100 (Processing) & arduinoとの通信用関数（ピアノ） & & & \cellcolor{ganttCell} & \cellcolor{ganttCell} & \\
+\hline
+510 & 500 (包括) & 結合テスト（全員） & & & & & \cellcolor{ganttCell} \\
+\hline
+\end{longtable}
+
+\subsection*{2.3 個人ガントチャート（修正後）}
+
+第5週末（5/27）時点で 110（ピアノ音の作成）に先行着手したため，5週列にも音源作成の項を追加．第6週は引き続き調整・最終化にあてる構成とした．他のタスクは当初計画のまま．
+
+\begin{longtable}{|p{0.9cm}|p{2.0cm}|p{6.0cm}|c|c|c|c|c|c|}
+\hline
+\rowcolor[gray]{0.9}
+管理 & 第2層 & 第3層タスク & 5週 & 6週 & 7週 & 8週 & 9週 & 10週 \\
+\hline
+110 & 100 (Processing) & ピアノ音の作成 & \cellcolor{ganttCell} & \cellcolor{ganttCell} & & & & \\
+\hline
+210 & 200 (子機) & ピアノのプログラム & & & \cellcolor{ganttCell} & & & \\
+\hline
+120 & 100 (Processing) & arduinoとの通信用関数（ピアノ） & & & & \cellcolor{ganttCell} & \cellcolor{ganttCell} & \\
+\hline
+510 & 500 (包括) & 結合テスト（全員） & & & & & & \cellcolor{ganttCell} \\
+\hline
+\end{longtable}
+
+\subsection*{2.4 今週の作業位置づけ}
+
+\begin{itemize}
+    \item 現在地は第5週末（5/27）．本来は計画段階の最終週で，実装フェーズは第6週から開始予定．
+    \item 本来 \textbf{110：ピアノ音の作成} は第6週の課題だが，今回は\textbf{一週早く着手}し，音色設計（倍音構造と ADSR）の試作までを実施．
+    \item この先行のため，第6週はピアノ音色の調整・アンケート準備にあて，210（ピアノのプログラム）の着手前倒しも検討する．
+\end{itemize}
+
+%=====================================================
+\section{3. 作業ログ}
+
+\renewcommand{\arraystretch}{1.4}
+
+\begin{longtable}{|p{2.4cm}|p{1.4cm}|p{1.6cm}|p{1.6cm}|p{1cm}|p{2.6cm}|p{3.2cm}|}
+\hline
+\rowcolor[gray]{0.9}
+作業項目 & 開始日 & 予定完了日 & 状態 & 進捗率 & 依存関係・ブロッカー & コメント \\
+\hline
+ピアノ音の作成 (110)（先行） & 5/26 & 6/2 & 進行中 & 60\％ & なし & 本来第6週課題を先行着手．倍音構造と ADSR を Processing で試作．パラメータの微調整と試聴を継続中 \\
+\hline
+設計図・回路図の作成 & 5/27 & 5/27 & 完了 & 100\％ & なし & ピアノ音色のシグナルフロー図（図~\ref{fig:signal-flow}）と子機 Arduino（ピアノ）の回路図（図~\ref{fig:circuit}）を作成．付録 9.3 参照 \\
+\hline
+\end{longtable}
+
+%=====================================================
+\section{4. 評価事項}
+
+設計書 1.4 V\&V 計画のうち，今週の課題（110：ピアノ音の作成）に対応する評価項目を中心に整理する．
+
+\subsection*{4.1 対応する有効指標 MOE}
+
+\begin{longtable}{|p{1.2cm}|p{4cm}|p{8cm}|}
+\hline
+\rowcolor[gray]{0.9}
+No. & MOE & 評価基準 \\
+\hline
+MOE3 & 楽器音らしい音色 & 合成音がピアノとして聴衆に認識される \\
+\hline
+\end{longtable}
+
+\subsection*{4.2 対応する性能指標 MOP}
+
+\begin{longtable}{|p{1.2cm}|p{3.6cm}|p{4cm}|p{6cm}|}
+\hline
+\rowcolor[gray]{0.9}
+No. & 性能指標 & 目標値 & 評価方法 \\
+\hline
+MOP4 & 音色の再現性（ピアノ） & 過半数が「ピアノ」と認識 & アンケート \\
+\hline
+\end{longtable}
+
+\subsection*{4.3 今週の自己評価}
+
+\begin{longtable}{|p{1.2cm}|p{3.5cm}|p{2cm}|p{8cm}|}
+\hline
+\rowcolor[gray]{0.9}
+No. & 項目 & 達成状況 & 備考 \\
+\hline
+MOE3 & 楽器音らしい音色 & 暫定OK & 倍音 [1.0，0.6，0.35，0.2，0.1，0.05] + ADSR でピアノ的減衰感を確認．主観評価のみ \\
+\hline
+MOP4 & 音色の再現性 & 未測定 & アンケート未実施．次週以降に予定 \\
+\hline
+\end{longtable}
+
+\subsection*{4.4 今後評価予定の項目（参考）}
+
+\begin{itemize}
+    \item MOP1：演奏タイミング誤差（210，120 完了後）
+    \item MOP2：同期信号の受信成功率（120 完了後）
+    \item MOP3：テンポ変更への追従時間（120 完了後）
+    \item TPM3：Processing 音声再生遅延（120 完了後）
+\end{itemize}
+
+%=====================================================
+\section{5. 課題管理}
+
+\begin{longtable}{|p{2.4cm}|p{2.8cm}|p{1cm}|p{1cm}|p{3.2cm}|p{1.8cm}|p{1.8cm}|}
+\hline
+\rowcolor[gray]{0.9}
+課題 & 発生原因 & 影響度 & 優先度 & 対策 & 期限 & 状態 \\
+\hline
+ピアノ音色の評価が主観的 & アンケート（MOP4）未実施 & 中 & 中 & アンケート実施 & 6/10 & 対応中 \\
+\hline
+基準とする「ピアノらしさ」が曖昧 & 比較対象となる参照音源未定 & 低 & 中 & 一般的なピアノ音源（DAWソフト:LogicPro）を参照音として用意 & 6/3 & 未対応 \\
+\hline
+
+\hline
+\end{longtable}
+
+\vspace{0.5em}
+※影響度＝プロジェクトへのインパクト\\
+※優先度＝対応の緊急性
+
+%=====================================================
+\section{6. AI利用状況と検証}
+
+\subsection*{6.1 利用内容}
+
+\begin{itemize}
+    \item 利用目的：ピアノ音色の倍音構造および ADSR パラメータの初期値設計
+    \item 入力（プロンプト要旨）：
+    \begin{itemize}
+        \item 設計書を提示し，ピアノに対応する音色生成の参考事例を依頼
+        \item 既存試作 \texttt{hackson.pde} のスタイル（\texttt{HackInstrument} 風クラス構成）を踏襲するよう指示
+    \end{itemize}
+    \item 出力概要：
+    \begin{itemize}
+        \item ピアノ音色用の倍音比とエンベロープパラメータ
+        \item Processing 側の音色生成クラス \texttt{PianoInstrument} の試作
+    \end{itemize}
+\end{itemize}
+
+\subsection*{6.2 検証方法}
+
+\begin{itemize}
+    \item 検証手法：
+    \begin{itemize}
+        \item Processing 単体で C4〜A4 の各音を順次発音し，聴感で確認
+        \item 既存試作 \texttt{hackson.pde} の波形と比較し，アタックと減衰の差を試聴
+    \end{itemize}
+    \item 参照資料：
+    \begin{itemize}
+        \item 「ハッカソン～計画書と設計書～」チーム 9
+        \item Minim ライブラリ公式ドキュメント（\texttt{ddf.minim.ugens}）
+    \end{itemize}
+    \item 検証手順：
+    \begin{enumerate}
+        \item Processing で \texttt{hackathon.pde} を起動
+        \item キー入力で代表音（C4，E4，G4 等）を発音
+        \item 画面上の波形と聴感の両面で，ピアノらしい減衰特性が得られているかを確認
+    \end{enumerate}
+\end{itemize}
+
+\subsection*{6.3 ファクトチェック結果}
+
+\begin{itemize}
+    \item 一致点：
+    \begin{itemize}
+        \item 倍音構造 + ADSR による楽器音生成が設計書 3.3.3 の指定と一致
+    \end{itemize}
+    \item 不一致・疑義：
+    \begin{itemize}
+        \item ピアノ実機ではアタックがさらに鋭く高次倍音が豊富なため，倍音比はさらに調整の余地あり
+    \end{itemize}
+    \item 最終判断：採用（今週の試作としては妥当）
+    \item 根拠：
+    \begin{itemize}
+        \item ピアノ的な減衰特性が得られており，輪唱演奏に必要な C4〜A4 の音域で発音可能なため
+    \end{itemize}
+\end{itemize}
+
+%=====================================================
+\section{7. 次回計画}
+
+\begin{itemize}
+    \item 目標（第6週・本来の 110 ピアノ音の作成期間）：
+    \begin{itemize}
+        \item 先行着手した 110 の最終調整（倍音比とADSRパラメータの確定）
+        \item ピアノ音色アンケート（MOP4）の雛形を作成し，他楽器担当と試聴会を実施
+        \item 余裕があれば 210（ピアノのプログラム）に前倒し着手
+    \end{itemize}
+    \item 達成基準：
+    \begin{itemize}
+        \item ピアノ音色のパラメータを確定し，変更しない状態にする
+        \item アンケート用の参照音源とフォーム素案を用意
+        \item チーム内で音色レビューを完了
+    \end{itemize}
+    \item 期限：
+    \begin{itemize}
+        \item 6/2（第6週末）
+    \end{itemize}
+\end{itemize}
+
+%=====================================================
+\section{8. その他}
+
+\begin{itemize}
+    \item 楽器担当メンバと音量バランスの基準値を打合せ予定
+    \item 親機担当とテンポ最速単位（8 分音符か 16 分音符か）の確認が必要
+\end{itemize}
+
+%=====================================================
+\section{9. 付録}
+
+\subsection*{9.1 添付資料}
+
+\begin{itemize}
+    \item ソースコード：\texttt{hackathon.pde}（ピアノ音色生成）
+    \item リポジトリ：\url{https://github.com/k-kushihama/hackathon-code/}
+    \item 設計図：ピアノ音色のシグナルフロー図（図~\ref{fig:signal-flow}）
+    \item 回路図：子機 Arduino（ピアノ）の回路図（図~\ref{fig:circuit}）
+\end{itemize}
+
+\subsection*{9.2 添付範囲}
+
+\begin{itemize}
+    \item 110（ピアノ音の作成）に関する \texttt{.pde} の現時点スナップショット
+    \item ピアノ音色のシグナルフロー図および子機 Arduino（ピアノ）の回路図
+\end{itemize}
+
+\subsection*{9.3 設計図・回路図}
+
+\subsubsection*{9.3.1 ピアノ音色のシグナルフロー図（設計図）}
+
+図~\ref{fig:signal-flow} に \texttt{PianoInstrument} クラスの内部結線を示す．基音周波数を保持する \texttt{Constant}（baseFreq）と微小なビブラート用 \texttt{Oscil}（vib）を \texttt{Summer}（freqSum）で合流させ，倍音波形を持つ \texttt{Oscil}（wave）の周波数入力とする．音量は \texttt{Line}（ampEnv）で時間方向に整形し，\texttt{AudioOutput} へ出力する．
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  node distance=0.6cm and 1.2cm,
+  block/.style={rectangle, draw, rounded corners=2pt, minimum width=2.6cm, minimum height=0.9cm, align=center, font=\small},
+  io/.style={rectangle, draw, fill=gray!10, minimum width=2.2cm, minimum height=0.8cm, align=center, font=\small},
+  arrow/.style={-Stealth, thick}
+]
+  \node[io] (note) {note (Hz)};
+  \node[block, right=1.2cm of note] (base) {\texttt{Constant}\\baseFreq};
+  \node[block, below=of base] (vib) {\texttt{Oscil} vib\\(5\,Hz, amp=0)};
+  \node[block, right=1.2cm of base] (sum) {\texttt{Summer}\\freqSum};
+  \node[block, right=1.2cm of sum] (wave) {\texttt{Oscil} wave\\(倍音 Waveform)};
+  \node[block, below=of wave] (env) {\texttt{Line}\\ampEnv};
+  \node[io, right=1.2cm of wave] (out) {\texttt{AudioOutput}\\out};
+
+  \draw[arrow] (note) -- (base);
+  \draw[arrow] (base) -- (sum);
+  \draw[arrow] (vib.east) -| (sum.south);
+  \draw[arrow] (sum) -- node[above, font=\scriptsize]{frequency} (wave);
+  \draw[arrow] (env.north) -- node[right, font=\scriptsize]{amplitude} (wave.south);
+  \draw[arrow] (wave) -- (out);
+\end{tikzpicture}
+\caption{ピアノ音色の信号フロー図（\texttt{PianoInstrument} クラスの内部結線）}
+\label{fig:signal-flow}
+\end{figure}
+
+倍音比は \texttt{WavetableGenerator.gen10} に与える振幅配列 [1.0, 0.6, 0.35, 0.2, 0.1, 0.05] で実装し，ADSR は \texttt{Line} の遷移時間によりピアノ的な減衰（速いアタック・緩やかな減衰）を再現する．
+
+\subsubsection*{9.3.2 子機 Arduino（ピアノ）の回路図}
+
+図~\ref{fig:circuit} にピアノを担当する子機 Arduino の接続を示す．赤外線受光モジュール OSRB38C9AA を 2 つ用い，それぞれ「演奏開始信号」と「楽譜進行信号」を受信する．Arduino のシリアル (USB) は Processing 実行用 PC に接続する．
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  every node/.style={font=\small},
+  pin/.style={circle, draw, fill=black, inner sep=1.2pt},
+  module/.style={rectangle, draw, minimum width=2.4cm, minimum height=1.2cm, align=center},
+  arduino/.style={rectangle, draw, very thick, rounded corners=4pt, minimum width=3.8cm, minimum height=5.2cm, align=center},
+  wire/.style={thick}
+]
+  \node[arduino] (ard) at (0,0) {Arduino\\UNO R4\\(子機: ピアノ)};
+
+  \node[pin, label=right:{\tiny D2}] (d2) at (1.9,1.8) {};
+  \node[pin, label=right:{\tiny D3}] (d3) at (1.9,0.6) {};
+  \node[pin, label=right:{\tiny 5V}] (vcc) at (1.9,-0.6) {};
+  \node[pin, label=right:{\tiny GND}] (gnd) at (1.9,-1.8) {};
+  \node[pin, label=left:{\tiny USB}] (usb) at (-1.9,0) {};
+
+  \node[module] (ir1) at (5.4,1.8) {IR 受光\\OSRB38C9AA\\(開始信号)};
+  \node[module] (ir2) at (5.4,0.0) {IR 受光\\OSRB38C9AA\\(進行信号)};
+
+  \node[pin] (ir1out) at (4.2,1.8) {};
+  \node[pin] (ir1vcc) at (4.2,2.2) {};
+  \node[pin] (ir1gnd) at (4.2,1.4) {};
+  \node[pin] (ir2out) at (4.2,0.0) {};
+  \node[pin] (ir2vcc) at (4.2,0.4) {};
+  \node[pin] (ir2gnd) at (4.2,-0.4) {};
+
+  \draw[wire] (d2) -- (ir1out);
+  \draw[wire] (d3) -- (ir2out);
+
+  \draw[wire] (vcc) -- ++(0.7,0) coordinate (vbus) -- (vbus|-ir1vcc) -- (ir1vcc);
+  \draw[wire] (vbus|-ir2vcc) -- (ir2vcc);
+  \draw[wire] (vbus) -- (vbus|-ir2vcc);
+
+  \draw[wire] (gnd) -- ++(1.1,0) coordinate (gbus) -- (gbus|-ir1gnd) -- (ir1gnd);
+  \draw[wire] (gbus|-ir2gnd) -- (ir2gnd);
+  \draw[wire] (gbus) -- (gbus|-ir2gnd);
+
+  \node[rectangle, draw, dashed, minimum width=2cm, minimum height=1cm, align=center] (pc) at (-4.5,0) {PC\\(Processing)};
+  \draw[wire, -Stealth] (usb) -- node[above, font=\scriptsize]{USB / Serial} (pc.east);
+\end{tikzpicture}
+\caption{子機 Arduino（ピアノ）の回路図．D2／D3 に赤外線受光モジュールを接続，USB 経由で Processing 実行用 PC と通信する．}
+\label{fig:circuit}
+\end{figure}
+
+なお，IR 受光モジュール OSRB38C9AA は内部にプルアップを持つため，Arduino 側は \texttt{INPUT\_PULLUP} のみで十分．電源は Arduino の 5V／GND を共用する．
+
+\end{document}

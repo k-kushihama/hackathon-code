@@ -1,7 +1,7 @@
 #define DECODE_NEC
 #include <IRremote.hpp>
 
-#define CHILD_ID 0
+#define CHILD_ID 2
 
 const int PIN_IR_RECV = 2;
 const int LED_INDICATOR = 13;
@@ -19,7 +19,9 @@ void loop() {
       if (address == CHILD_ID) {
         uint8_t note = (uint8_t)IrReceiver.decodedIRData.command;
         Serial.println(note);
-        digitalWrite(LED_INDICATOR, (note > 0) ? HIGH : LOW);
+        digitalWrite(LED_INDICATOR, HIGH);
+        delay(15);
+        digitalWrite(LED_INDICATOR, LOW);
       }
     }
     IrReceiver.resume();
