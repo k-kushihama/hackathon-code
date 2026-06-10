@@ -1,7 +1,10 @@
 #define DECODE_NEC
 #include <IRremote.hpp>
 
-#define CHILD_ID 0
+// この子機の役割ID。
+// -1 のままにすると全アドレスを受信する（1台で輪唱+ドラム全部鳴らすテスト用）
+// 複数台運用時は各機で 0/1/2 のいずれかに書き換えてアップロードする
+const int CHILD_ID = -1;
 
 const int PIN_IR_RECV = 2;
 const int LED_INDICATOR = 13;
@@ -15,8 +18,8 @@ void setup() {
 void loop() {
   if (IrReceiver.decode()) {
     if (IrReceiver.decodedIRData.protocol == NEC) {
-      uint16_t address = IrReceiver.decodedIRData.address;
-      if (address == CHILD_ID) {
+      int address = (int)IrReceiver.decodedIRData.address;
+      if (CHILD_ID < 0 || address == CHILD_ID) {
         uint8_t note = (uint8_t)IrReceiver.decodedIRData.command;
         Serial.println(note);
         digitalWrite(LED_INDICATOR, (note > 0) ? HIGH : LOW);

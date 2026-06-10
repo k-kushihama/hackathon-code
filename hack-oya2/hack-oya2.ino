@@ -8,7 +8,7 @@ int tempoBpm = 90;
 const int NUM_CHILDREN = 3;
 const int DRUM_CHILD_ID = 2;
 const int CANON_OFFSET_TICKS = 16;
-const unsigned long IR_GAP_MS = 50;
+const unsigned long IR_GAP_MS = 30;
 
 String melody[] = {
   "C4", "D4", "E4", "F4", "E4", "D4", "C4", "R",
