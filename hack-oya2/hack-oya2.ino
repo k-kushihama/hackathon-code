@@ -2,13 +2,32 @@
 #define IR_SEND_PIN 3
 #include <IRremote.hpp>
 
+// 親機: 1台で動作し、各パート（メロディ原譜 / カノン / ドラム）を
+// NECアドレスを変えて多重送信する。子機側は CHILD_ID == address のフレームだけ受ける。
+//
+// NUM_CHILDREN で動作モードを切り替える:
+//   1 -> 1台モード: メロディ原譜 (address=0) のみ送信。カノンもドラムも送らない
+//   2 -> 2台モード: メロディ原譜 + カノン (address=1)
+//   3 -> 3台モード: メロディ原譜 + カノン + ドラム (address=2)
+const int NUM_CHILDREN = 3;
+
 const int LED_INDICATOR = 13;
+
+// 90BPMでは16分音符 ≈ 166ms / NECフレーム ≈ 67ms + 安全マージンで100ms。
+// メロディとカノンを同tickに送るには 200ms 必要なので、16分音符連続部 (durations=1)
+// では帯域がギリギリ。2台以上モードで途切れる場合は 75 程度まで落とすと安定する。
 int tempoBpm = 90;
 
-const int NUM_CHILDREN = 3;
 const int DRUM_CHILD_ID = 2;
 const int CANON_OFFSET_TICKS = 16;
-const unsigned long IR_GAP_MS = 30;
+
+// NECフレーム+保護間隔。連続送信時の最低スペーシング。
+const unsigned long IR_FRAME_GAP_MS = 30;
+// カノンの送信時刻をメロディからずらす位相オフセット。
+// NEC 1フレーム送信時間 + 余裕を確保し、同時発火による IR 干渉を構造的に防ぐ。
+const unsigned long CANON_PHASE_MS = 100;
+// ドラムをさらに後ろにずらして三重衝突を避ける。
+const unsigned long DRUM_PHASE_MS = 200;
 
 String melody[] = {
   "C4", "D4", "E4", "F4", "E4", "D4", "C4", "R",
@@ -29,9 +48,10 @@ const uint8_t DRUM_CYMBAL = 49;
 const uint8_t drumPattern[] = { DRUM_KICK, DRUM_KICK, DRUM_KICK, DRUM_KICK };
 const int drumPatternLen = sizeof(drumPattern) / sizeof(drumPattern[0]);
 
-int idx[NUM_CHILDREN] = {0, 0, 0};
-unsigned long lastTickMs[NUM_CHILDREN] = {0, 0, 0};
-unsigned long lastNoteDuration[NUM_CHILDREN] = {0, 0, 0};
+// パート別の進行状態。0=メロディ原譜, 1=カノン, 2=ドラム。
+int idx[3] = {0, 0, 0};
+unsigned long lastTickMs[3] = {0, 0, 0};
+unsigned long lastNoteDuration[3] = {0, 0, 0};
 unsigned long lastIrEndMs = 0;
 uint16_t tickCount = 0;
 
@@ -71,7 +91,7 @@ unsigned long quarterMs() {
 }
 
 void waitGap() {
-  while (millis() - lastIrEndMs < IR_GAP_MS) { }
+  while (millis() - lastIrEndMs < IR_FRAME_GAP_MS) { }
 }
 
 void sendPiano(int c) {
@@ -105,38 +125,55 @@ void setup() {
   IrSender.begin(IR_SEND_PIN);
   pinMode(LED_INDICATOR, OUTPUT);
   delay(1000);
+
   unsigned long now = millis();
-  for (int c = 0; c < NUM_CHILDREN; c++) {
-    lastTickMs[c] = now;
-  }
+  // 子0(メロディ原譜)は即時開始。
+  lastTickMs[0] = now;
   lastNoteDuration[0] = 0;
-  lastNoteDuration[1] = (unsigned long)CANON_OFFSET_TICKS * sixteenthMs();
-  lastNoteDuration[DRUM_CHILD_ID] = 0;
+
+  // 子1(カノン)は CANON_OFFSET_TICKS だけ後ろに、さらに CANON_PHASE_MS だけ
+  // 位相シフトして「子0と同時刻に発火しない」よう構造的に分離する。
+  lastTickMs[1] = now;
+  lastNoteDuration[1] =
+      (unsigned long)CANON_OFFSET_TICKS * sixteenthMs() + CANON_PHASE_MS;
+
+  // 子2(ドラム)はさらに後ろに位相シフト。
+  lastTickMs[DRUM_CHILD_ID] = now;
+  lastNoteDuration[DRUM_CHILD_ID] = DRUM_PHASE_MS;
+
   lastIrEndMs = now;
-  Serial.println("hack-oya2 start");
+
+  Serial.print("hack-oya2 start NUM_CHILDREN=");
+  Serial.println(NUM_CHILDREN);
 }
 
 void loop() {
   unsigned long now = millis();
 
-  for (int c = 0; c < 2; c++) {
+  // メロディ原譜とカノンは独立のスケジューラで動かす。
+  // lastTickMs は「理想時刻」で進めるため、waitGap や sendNEC のブロッキング分が
+  // 後続tickに累積しない。これで「だんだん遅れる→途切れる」現象を抑える。
+  int pianoChildren = (NUM_CHILDREN >= 2) ? 2 : 1;
+  for (int c = 0; c < pianoChildren; c++) {
     if (now - lastTickMs[c] >= lastNoteDuration[c]) {
       sendPiano(c);
+      lastTickMs[c] += lastNoteDuration[c];
       lastNoteDuration[c] = noteIntervalMs(idx[c]);
       idx[c]++;
       if (idx[c] >= melodyLength) idx[c] = 0;
-      lastTickMs[c] = now;
       tickCount++;
       digitalWrite(LED_INDICATOR, (tickCount % 2) ? HIGH : LOW);
     }
   }
 
-  if (now - lastTickMs[DRUM_CHILD_ID] >= lastNoteDuration[DRUM_CHILD_ID]) {
-    sendDrum();
-    lastNoteDuration[DRUM_CHILD_ID] = quarterMs();
-    idx[DRUM_CHILD_ID]++;
-    lastTickMs[DRUM_CHILD_ID] = now;
-    tickCount++;
-    digitalWrite(LED_INDICATOR, (tickCount % 2) ? HIGH : LOW);
+  if (NUM_CHILDREN >= 3) {
+    if (now - lastTickMs[DRUM_CHILD_ID] >= lastNoteDuration[DRUM_CHILD_ID]) {
+      sendDrum();
+      lastTickMs[DRUM_CHILD_ID] += lastNoteDuration[DRUM_CHILD_ID];
+      lastNoteDuration[DRUM_CHILD_ID] = quarterMs();
+      idx[DRUM_CHILD_ID]++;
+      tickCount++;
+      digitalWrite(LED_INDICATOR, (tickCount % 2) ? HIGH : LOW);
+    }
   }
 }
