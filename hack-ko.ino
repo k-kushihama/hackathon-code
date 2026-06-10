@@ -17,9 +17,10 @@ String myScore[] = {
 // idxがこの位置以降は「1音の間に2音」=半音価で発音させる範囲。
 // 最後のフレーズ(C4 C4 D4 D4 E4 E4 F4 F4 E4 R D4 R C4)の開始位置。
 const int DOUBLE_START = 24;
-// 半音価のための連続2音目の遅延。親機tempoBpm=120 → 8分音符250msなので
-// その半分125msより少し短い100msで「ほぼ16分音符」相当の連続発音にする。
-const unsigned long DOUBLE_DELAY_MS = 100;
+// 16分音符の正確な間隔。親機tempoBpm=120 → 8分音符250ms → 16分音符125ms。
+// 1音目と2音目の間も、2音目と次の1音目(親機の次tickまで=125ms)も
+// 均等125ms間隔になり「どど どど」と聴こえる(62.5だと「どどっ」になっていた)。
+const unsigned long DOUBLE_DELAY_MS = 125;
 
 int idx = 0;
 
