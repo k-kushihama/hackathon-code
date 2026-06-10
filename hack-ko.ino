@@ -6,12 +6,12 @@
 const int PIN_IR_RECV = 2;
 const int LED_INDICATOR     = 13;
 
-const int melodyLength = 32;
+const int melodyLength = 35;
 String myScore[] = {
-  "C4", "D4", "E4", "F4", "E4", "D4", "C4", "R",
-  "E4", "F4", "G4", "A4", "G4", "F4", "E4", "R",
-  "C4", "C4", "C4", "C4",
-  "C4", "C4", "D4", "D4", "E4", "E4", "F4", "F4", "E4", "D4", "C4", "R"
+  "C4", "D4", "E4", "F4", "E4", "D4", "C4",
+  "E4", "F4", "G4", "A4", "G4", "F4", "E4",
+  "C4", "R",  "C4", "R",  "C4", "R",  "C4", "R",
+  "C4", "C4", "D4", "D4", "E4", "E4", "F4", "F4", "E4", "R", "D4", "R", "C4"
 };
 
 int idx = 0;
