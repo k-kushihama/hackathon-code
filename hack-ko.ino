@@ -34,9 +34,19 @@ unsigned long lastReceiveMs = 0;
 unsigned long lastIntervalMs = 250;  // 親機tempoBpm=120相当の初期推定
 
 void setup() {
-  Serial.begin(921600);
+  // 子機↔Processing(hack-ko.pde / hackdrum.pde) のボーレートは
+  // 必ず一致させる。両者を 115200 に統一している。
+  Serial.begin(115200);
   IrReceiver.begin(PIN_IR_RECV);
   pinMode(LED_INDICATOR, OUTPUT);
+  delay(100);
+  Serial.print("hack-ko ready CHILD_ID=");
+  Serial.print(CHILD_ID);
+  if (CHILD_ID == DRUM_CHILD_ID) {
+    Serial.println(" (DRUM)");
+  } else {
+    Serial.println(" (MELODY)");
+  }
 }
 
 void loop() {

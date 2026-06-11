@@ -64,6 +64,11 @@ void serialEvent(Serial p) {
   inString = trim(inString);
   if (inString.length() == 0) return;
 
+  // デバッグ用: 受信した文字列を毎回コンソール表示する。
+  // "hack-ko ready CHILD_ID=3 (DRUM)" のような起動メッセージや
+  // "C2" 連発が見えるはず。化けた文字列ならボーレート不一致を疑う。
+  println("rx: " + inString);
+
   if (inString.equals("C2")) {
     playKick();
     displayLogo = !displayLogo;  // 叩いた瞬間に画面パターンを反転させてビジュアライザ化
