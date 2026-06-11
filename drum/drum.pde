@@ -38,6 +38,12 @@ void setup() {
   out = minim.getLineOut();
 
   displayLogo = false;
+
+  // 起動テスト: Run直後にキックを1発鳴らす。これで「ドゥン」と聞こえれば
+  // 音生成系(Minim + KickInstrument + 音声出力)はすべて正常。聞こえなければ
+  // Macの音量・出力デバイスを確認する。
+  println("startup test kick");
+  out.playNote(0, 0.3f, new KickInstrument());
 }
 
 void draw() {
@@ -70,6 +76,7 @@ void serialEvent(Serial p) {
   println("rx: " + inString);
 
   if (inString.equals("C2")) {
+    println("matched C2 -> playKick");
     playKick();
     displayLogo = !displayLogo;  // 叩いた瞬間に画面パターンを反転させてビジュアライザ化
   }
