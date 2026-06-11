@@ -49,6 +49,8 @@ void loop() {
           // 受信のたびに固定キック音を1発出す(idxは進めない)。
           Serial.println(DRUM_NOTE);
           digitalWrite(LED_INDICATOR, HIGH);
+          delay(15);
+          digitalWrite(LED_INDICATOR, LOW);
         } else {
           // メロディ機: 親機テンポを動的に追従するため受信間隔を更新する。
           // 妥当な範囲(50ms〜2s)のみ採用し、Reset/Startの長い空白で
