@@ -13,6 +13,12 @@ const int LED_INDICATOR       = 13;
 const int OFFSET_TICKS  = 8;
 const uint16_t IR_ADDRESS = 0x00;
 
+// 子機3はドラム専用。輪唱には参加せずBPM(=四分音符=2tick)ごとに4つ打ちする。
+// 子機側hack-ko.inoの CHILD_ID==DRUM_CHILD_ID で固定のキック音(C2)を出す実装と
+// ペアになる定数。
+const int DRUM_CHILD_ID = 3;
+const long DRUM_INTERVAL_TICKS = 2;  // 8分音符tick基準なので2tick=四分音符=4つ打ち
+
 int  playOrder[NUM_CHILDREN] = {-1, -1, -1, -1};
 int  orderCount = 0;
 bool isPlaying  = false;
@@ -129,10 +135,19 @@ void handleStartButton() {
 void tick() {
   uint8_t mask = 0;
   for (int i = 0; i < orderCount; i++) {
-    int  childIdx       = playOrder[i];
-    long childStartTick = (long)i * OFFSET_TICKS;
-    if (tickCount >= childStartTick) {
-      mask |= (uint8_t)(1 << childIdx);
+    int childIdx = playOrder[i];
+    if (childIdx == DRUM_CHILD_ID) {
+      // ドラムは輪唱に参加せず、tickCountが四分音符の頭(=DRUM_INTERVAL_TICKSの倍数)
+      // のときだけ叩く。i番目に追加されても遅延ゼロで最初から4つ打ちが鳴る。
+      if (tickCount % DRUM_INTERVAL_TICKS == 0) {
+        mask |= (uint8_t)(1 << childIdx);
+      }
+    } else {
+      // メロディ機: PlayOrderのi番目はi*OFFSET_TICKS遅れて参加する輪唱動作。
+      long childStartTick = (long)i * OFFSET_TICKS;
+      if (tickCount >= childStartTick) {
+        mask |= (uint8_t)(1 << childIdx);
+      }
     }
   }
 
