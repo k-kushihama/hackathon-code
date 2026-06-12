@@ -26,12 +26,28 @@ String myScore[] = {
 // 最後のフレーズ(C4 C4 D4 D4 E4 E4 F4 F4 E4 R D4 R C4)の開始位置。
 const int DOUBLE_START = 24;
 
+// 音価と音量はino側で集中管理する。Processing(hack-ko.pde)はここで
+// 決めた値を受信フレームから読み取り、out.playNote()にそのまま渡す。
+// 通信フォーマット: "ピッチ名,duration秒,amplitude\n"
+const float NOTE_DURATION_DEFAULT = 0.40f;  // 8分音符相当の発音時間(秒)
+const float NOTE_DURATION_HALF    = 0.20f;  // 半音価(16分音符相当)の発音時間
+const float NOTE_AMPLITUDE        = 0.60f;  // 音量(0.0..1.0)
+
 int idx = 0;
 
 // 直前のIR受信時刻と直近の受信間隔。親機テンポ(BPM)に依存せず
 // 「次の受信予測時刻までの半分」で2音目を出すために動的計測する。
 unsigned long lastReceiveMs = 0;
 unsigned long lastIntervalMs = 250;  // 親機tempoBpm=120相当の初期推定
+
+// ピッチ名と音価/音量を1行のCSVでProcessingに送る共通関数。
+void sendNoteToHost(const String& pitch, float duration, float amplitude) {
+  Serial.print(pitch);
+  Serial.print(',');
+  Serial.print(duration, 3);
+  Serial.print(',');
+  Serial.println(amplitude, 3);
+}
 
 void setup() {
   // 子機↔Processing(hack-ko.pde / hackdrum.pde) のボーレートは
@@ -74,7 +90,7 @@ void loop() {
           }
           lastReceiveMs = now;
 
-          Serial.println(myScore[idx]);
+          sendNoteToHost(myScore[idx], NOTE_DURATION_DEFAULT, NOTE_AMPLITUDE);
           digitalWrite(LED_INDICATOR, (idx % 2) ? HIGH : LOW);
           int prevIdx = idx;
           idx++;
@@ -84,9 +100,10 @@ void loop() {
           // 遅延は親機の直近テンポの半分で、1音目→2音目と2音目→次の1音目を
           // 均等にし「どど どど」(16分音符相当)で聴こえるようにする。
           // ラップした場合(idx<=prevIdx)は次フレーズの先頭を巻き込まないようスキップ。
+          // この区間は音価も半分(NOTE_DURATION_HALF)で送る。
           if (prevIdx >= DOUBLE_START && idx > prevIdx) {
             delay(lastIntervalMs / 2);
-            Serial.println(myScore[idx]);
+            sendNoteToHost(myScore[idx], NOTE_DURATION_HALF, NOTE_AMPLITUDE);
             idx++;
             if (idx >= melodyLength) idx = 0;
           }

@@ -30,19 +30,28 @@ void draw() {
 
 void serialEvent(Serial p) {
   String inString = p.readStringUntil('\n');
-  if (inString != null) {
-    inString = trim(inString);
-    if (inString.length() == 0) return;
-    currentNote = inString;
-    if (!inString.equals("R")) {
-      playNote(inString);
-    }
+  if (inString == null) return;
+  inString = trim(inString);
+  if (inString.length() == 0) return;
+  currentNote = inString;
+
+  // ino側のフォーマット: "ピッチ名,duration秒,amplitude"
+  // それ以外(起動メッセージや旧フォーマット)はパース不能としてスキップ。
+  String[] parts = split(inString, ',');
+  if (parts.length < 3) {
+    println("non-note: " + inString);
+    return;
   }
+  String pitch = parts[0];
+  if (pitch.equals("R")) return;
+  float duration = float(parts[1]);
+  float amplitude = float(parts[2]);
+  playNote(pitch, duration, amplitude);
 }
 
-void playNote(String pitch) {
+void playNote(String pitch, float duration, float amplitude) {
   float freq = Frequency.ofPitch(pitch).asHz();
-  out.playNote(0, 0.4f, new PianoInstrument(freq, 0.6f, currentWaveform));
+  out.playNote(0, duration, new PianoInstrument(freq, amplitude, currentWaveform));
 }
 
 class PianoInstrument implements Instrument {
