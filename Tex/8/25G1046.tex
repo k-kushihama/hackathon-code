@@ -1,0 +1,471 @@
+\documentclass[a4paper,11pt]{ltjsarticle}
+
+\usepackage{luatexja}
+\usepackage{geometry}
+\geometry{margin=25mm}
+
+\usepackage{array}
+\usepackage{longtable}
+\usepackage[table]{xcolor}
+\usepackage{booktabs}
+
+\usepackage{enumitem}
+
+\usepackage{hyperref}
+
+\usepackage{titlesec}
+\titleformat{\section}{\large\bfseries}{}{0em}{}
+
+\usepackage{listings}
+\lstset{
+  basicstyle=\ttfamily\small,
+  frame=single,
+  breaklines=true,
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  keepspaces=true,
+  showstringspaces=false,
+  columns=fullflexible,
+  tabsize=2,
+}
+
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning, calc, fit}
+
+\usepackage{float}
+
+\definecolor{ganttCell}{HTML}{4FC3D0}
+\definecolor{ganttEarly}{HTML}{FFB74D}
+
+\providecommand{\％}{\%}
+
+\setlength{\parindent}{0pt}
+\setlist[itemize]{leftmargin=2em}
+
+\begin{document}
+
+\begin{center}
+    {\LARGE \textbf{作業ログ（第8週末）}}\\[1em]
+\end{center}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+報告者 & 櫛濱 和輝 (25G1046)\\
+\hline
+報告日 & 2026年6月16日\\
+\hline
+プロジェクト名 & 赤外線通信で歌うカエル\\
+\hline
+担当パート & Processing（ピアノ演奏プログラム）／Arduino（ドラム子機 hack-ko.ino，音価・音量の集中管理）\\
+\hline
+本来の今週の位置づけ & 第8週末（6/16）．計画書 v1.2 のガント上，第8週（6/10〜6/16）は櫛濱の割当タスクが直接は載っていないが，輪唱実験（実機統合）と通信仕様の見直しを実施した期間\\
+\hline
+報告対象 & 第7週末（6/10）以降に行った「音価・音量の Arduino 側への集中管理化」と，6/11（木）の輪唱実験，6/13（土）のドラム実機テスト\\
+\hline
+\end{tabular}
+
+\vspace{1em}
+
+%=====================================================
+\section{1. 進捗サマリー}
+
+\begin{itemize}
+    \item 現在地：第8週末（6/16）．第7週末時点で残課題だった「ドラムのプログラム（240）の実機テスト」と「通信仕様の整理」に着手した週
+    \item \textbf{音の強さ・音価・タイミングを Processing 側から Arduino（子機 .ino）側へ集中管理する方針に変更}．以前は Processing 側で発音時間や音量を決め打ちしていたが，子機 .ino 側で定数として管理し，1 行 CSV \texttt{"ピッチ名,duration秒,amplitude"} で Processing へ通知する形に統一した
+    \item 6/11（木）に 2 年生 3 名（櫛濱・家田・木下）で対面し，借用した赤外線受光モジュール 3 個を使った輪唱実験を試みた．\textbf{2 個が熱暴走（明らかに発熱）して動作せず}，正常な 1 個に入れ替えてようやく親機⇔子機の赤外線通信は確認できたが，\textbf{受光モジュールが 1 個しか確保できず複数子機での輪唱実験は物理的に実施不能}
+    \item 6/13（土）に \textbf{Arduino UNO R3 を追加購入}し，自分の Mac 環境で赤外線通信の単体動作を再現．久家が作成した \texttt{drum.pde} と組み合わせて\textbf{ドラム（キック）の実機テストを実施}し，受信→発音まで一気通貫で確認した
+    \item 全体進捗率：55\％（音色作成・子機プログラム・親機⇔子機通信完了，輪唱の実機統合と MOP3 定量計測が残）
+    \item 主要成果：
+    \begin{itemize}
+        \item 音価・音量を子機 .ino 側で \texttt{NOTE\_DURATION\_DEFAULT}／\texttt{NOTE\_DURATION\_HALF}／\texttt{NOTE\_AMPLITUDE} として一元管理し，受信側（Processing）は CSV を読んで \texttt{out.playNote()} に渡すだけの薄い実装へ整理
+        \item 子機↔Processing のボーレートを 115200 に統一し，CSV 通知形式で取りこぼし時のデバッグログ（受信文字列の生出力）も追加
+        \item ドラム子機（\texttt{CHILD\_ID==3}）を輪唱メロディから完全分離し，IR 受信ごとに固定キック音 \texttt{"C2"} を出す設計で，\texttt{drum.pde} 側の \texttt{KickInstrument}（80Hz→30Hz の急速ピッチ降下＋振幅減衰）と接続して発音を実機確認
+    \end{itemize}
+    \item 重大課題（影響度：高）：
+    \begin{itemize}
+        \item 借用赤外線受光モジュールの個体不良（熱暴走）により予備が確保できず，\textbf{複数子機での輪唱実験が未実施}．第9週に正常品を確保して再実験する
+        \item MOP5（フェードアウト）が依然未対応．第7週末ログ時点と同じ課題が持ち越し
+        \item MOP3（赤外線通信成功率 95\％）の定量計測が未実施
+    \end{itemize}
+\end{itemize}
+
+%=====================================================
+\section{2. ガントチャート}
+
+第8週末時点では計画書 v1.2（2026/5/29 版）から変更はないため，チーム全体・個人とも v1.2 のガントチャートのみを掲載する．着色セル（\colorbox{ganttCell}{\phantom{xx}}）は当該タスクの実施週を表す．
+
+\renewcommand{\arraystretch}{1.3}
+
+\begingroup
+\setlength{\tabcolsep}{3pt}
+
+\subsection*{2.1 チーム全体ガントチャート（計画書 v1.2）}
+
+\begin{longtable}{|p{6.2cm}|p{2.3cm}|c|c|c|c|c|c|}
+\hline
+\rowcolor[gray]{0.9}
+第3層：活動タスク & 担当者 & 5週 & 6週 & 7週 & 8週 & 9週 & 10週 \\
+\hline
+110:ピアノ音の作成 & 櫛濱・久家 & \cellcolor{ganttCell} & \cellcolor{ganttCell} & & & & \\
+\hline
+120:arduinoとの通信用関数（ピアノ） & 櫛濱・久家 & \cellcolor{ganttCell} & \cellcolor{ganttCell} & & & & \\
+\hline
+130:フルート音の作成 & 家田・渡邊 & \cellcolor{ganttCell} & \cellcolor{ganttCell} & & & & \\
+\hline
+140:arduinoとの通信用関数（フルート） & 家田・渡邊 & \cellcolor{ganttCell} & \cellcolor{ganttCell} & & & & \\
+\hline
+150:トランペット音の作成 & 木下・手代木 & \cellcolor{ganttCell} & \cellcolor{ganttCell} & & & & \\
+\hline
+160:arduinoとの通信用関数（トランペット） & 木下・手代木 & \cellcolor{ganttCell} & \cellcolor{ganttCell} & & & & \\
+\hline
+170:ドラム音の作成（キック） & 櫛濱・久家 & & \cellcolor{ganttCell} & & & & \\
+\hline
+171:ドラム音の作成（シンバル）\textsuperscript{新規} & 櫛濱・久家 & & \cellcolor{ganttCell} & & & & \\
+\hline
+180:arduinoとの通信用関数（ドラム） & 櫛濱・久家 & & \cellcolor{ganttCell} & & & & \\
+\hline
+210:ピアノのプログラム & 櫛濱・久家 & \cellcolor{ganttCell} & & & & & \\
+\hline
+220:フルートのプログラム & 家田・渡邊 & \cellcolor{ganttCell} & & & & & \\
+\hline
+230:トランペットのプログラム & 木下・手代木 & \cellcolor{ganttCell} & & & & & \\
+\hline
+240:ドラムのプログラム & 櫛濱・久家 & & \cellcolor{ganttCell} & & & & \\
+\hline
+260:楽譜進行プログラム & 家田・渡邊 & & \cellcolor{ganttCell} & \cellcolor{ganttCell} & & & \\
+\hline
+310:赤外線管理プログラム & 家田・渡邊 & & \cellcolor{ganttCell} & \cellcolor{ganttCell} & & & \\
+\hline
+320:テンポ管理プログラム & 家田・渡邊 & & & \cellcolor{ganttCell} & \cellcolor{ganttCell} & & \\
+\hline
+410:回路作成 & 木下・手代木 & & \cellcolor{ganttCell} & & & & \\
+\hline
+420:LEDマトリクス作成 & 木下・手代木 & & \cellcolor{ganttCell} & \cellcolor{ganttCell} & \cellcolor{ganttCell} & & \\
+\hline
+510:結合テスト & 全員 & & & & & \cellcolor{ganttCell} & \cellcolor{ganttCell} \\
+\hline
+\end{longtable}
+
+\endgroup
+
+\subsection*{2.2 個人ガントチャート（計画書 v1.2 から櫛濱担当分を抜粋）}
+
+計画書 v1.2 のチーム全体ガント（§2.1）から櫛濱担当分を抜き出した個人計画．音色作成（110）・通信用関数（120）を第5〜6週，ピアノのプログラム（210）を第5週，ドラムのプログラム（240）を第6週に置く．第8週は GC 上では櫛濱の割当タスクは載っていないが，実機統合（輪唱実験）と通信仕様見直しを行った期間．
+
+\begin{longtable}{|p{0.9cm}|p{2.0cm}|p{6.0cm}|c|c|c|c|c|c|}
+\hline
+\rowcolor[gray]{0.9}
+管理 & 第2層 & 第3層タスク & 5週 & 6週 & 7週 & 8週 & 9週 & 10週 \\
+\hline
+110 & 100 (Processing) & ピアノ音の作成 & \cellcolor{ganttCell} & \cellcolor{ganttCell} & & & & \\
+\hline
+120 & 100 (Processing) & arduinoとの通信用関数（ピアノ） & \cellcolor{ganttCell} & \cellcolor{ganttCell} & & & & \\
+\hline
+210 & 200 (子機) & ピアノのプログラム & \cellcolor{ganttCell} & & & & & \\
+\hline
+240 & 200 (子機) & ドラムのプログラム（hack-ko.ino／drum.pde） & & \cellcolor{ganttCell} & & & & \\
+\hline
+510 & 500 (包括) & 結合テスト（全員） & & & & & \cellcolor{ganttCell} & \cellcolor{ganttCell} \\
+\hline
+\end{longtable}
+
+\subsection*{2.3 今週の作業位置づけ}
+
+\begin{itemize}
+    \item 現在地は第8週末（6/16）．GC 上，第8週（6/10〜6/16）に櫛濱の割当タスクは載っていないが，第7週末ログで残課題としていた「ドラムのプログラム（240）の実機テスト」と「通信仕様の整理」を実施した．
+    \item 通信仕様について，音価・音量の決定主体を Processing 側から Arduino 側へ移し，子機 .ino を「音楽情報の源泉」，Processing を「再生エンジン」と役割分担し直した（CSV 経由の片方向通知）．
+    \item 6/11 の輪唱実験は，借用受光モジュールの個体不良により複数子機での同時実験ができず，6/13 に追加機材（UNO R3）を購入して単独でドラム経路の実機テストを行った．
+    \item 第9週は，正常な受光モジュールを確保した上で複数子機の輪唱実験を再試行し，MOP5（フェードアウト）・MOP3（成功率定量）に着手する．
+\end{itemize}
+
+%=====================================================
+\section{3. 作業ログ}
+
+\renewcommand{\arraystretch}{1.4}
+
+\begin{longtable}{|p{2.6cm}|p{1.4cm}|p{1.6cm}|p{1.4cm}|p{1cm}|p{2.4cm}|p{3.0cm}|}
+\hline
+\rowcolor[gray]{0.9}
+作業項目 & 開始日 & 予定完了日 & 状態 & 進捗率 & 依存関係・ブロッカー & コメント \\
+\hline
+音価・音量の Arduino 側集中管理化 & 6/10 & 6/13 & 完了 & 100\％ & 子機 .ino／Processing 受信パース & 子機 .ino に \texttt{NOTE\_DURATION\_*}／\texttt{NOTE\_AMPLITUDE} を定義し，CSV 形式で Processing へ通知．Processing 側はパラメータを保持せず受信値で発音 \\
+\hline
+ボーレート 115200 統一・デバッグ出力追加 & 6/10 & 6/11 & 完了 & 100\％ & 子機 .ino／hack\_ko.pde／drum.pde & 受信文字列をそのままコンソールに出すロギングを追加し，ボーレート不一致時の文字化けを即座に切り分けられる状態に整理 \\
+\hline
+6/11 輪唱実験（2 年生 3 名） & 6/11 & 6/11 & 一部実施 & 30\％ & 借用 IR 受光モジュール（3 個中 2 個不良） & 受光モジュール 2 個が熱暴走し動作せず．正常な 1 個に入れ替えて親機⇔子機 1 台間の IR 通信は確認．\textbf{複数子機の輪唱は機材不足で物理的に不可} \\
+\hline
+6/13 ドラム実機テスト（個人作業） & 6/13 & 6/13 & 完了 & 100\％ & UNO R3 追加購入／drum.pde（久家作成） & 自 Mac で親機→ドラム子機→Processing の経路を再現し，drum.pde の \texttt{KickInstrument} で「ドゥン」の発音を聴感確認．起動テストキックも実装 \\
+\hline
+\end{longtable}
+
+%=====================================================
+\section{4. 評価事項}
+
+計画書 v1.2「1.5 テスト項目（修正版）」のうち，今週の作業（通信仕様変更・ドラム実機テスト・輪唱実験試行）に対応する項目を整理する．
+
+\subsection*{4.1 対応する有効指標 MOE}
+
+\begin{longtable}{|p{1.2cm}|p{4cm}|p{8cm}|}
+\hline
+\rowcolor[gray]{0.9}
+No. & MOE & 評価基準 \\
+\hline
+MOE3 & 楽器音らしい音色 & 合成音がピアノ／ドラムとして聴衆に認識される \\
+\hline
+\end{longtable}
+
+\subsection*{4.2 対応する性能指標 MOP（計画書 v1.2）}
+
+\begin{longtable}{|p{1.2cm}|p{3.6cm}|p{9.0cm}|}
+\hline
+\rowcolor[gray]{0.9}
+No. & テスト名 & 内容 \\
+\hline
+MOP1 & 音色単体テスト（各楽器） & Processing 単体で各楽器音を出力・確認 \\
+\hline
+MOP2 & シリアル通信テスト & Arduino--Processing 間通信の正常動作確認 \\
+\hline
+MOP3 & 赤外線通信テスト & 親機→子機の通信成功率 95\％以上 \\
+\hline
+MOP5 & フェードアウトテスト\textsuperscript{新規} & 音切り替え時にノイズが生じないこと \\
+\hline
+MOP6 & 倍速演奏テスト\textsuperscript{新規} & スイッチによるテンポ切り替え動作確認 \\
+\hline
+\end{longtable}
+
+\subsection*{4.3 今週の自己評価}
+
+\begin{longtable}{|p{1.2cm}|p{3.5cm}|p{2cm}|p{8cm}|}
+\hline
+\rowcolor[gray]{0.9}
+No. & 項目 & 達成状況 & 備考 \\
+\hline
+MOE3 & 楽器音らしい音色 & OK & ピアノ（PianoInstrument）に加え，ドラム（KickInstrument）も聴感で打楽器として認識可能 \\
+\hline
+MOP1 & 音色単体テスト & OK & ドラムについても \texttt{drum.pde} 起動時のテストキックで発音を確認 \\
+\hline
+MOP2 & シリアル通信テスト & OK & 115200bps に統一し，CSV パース・キック受信（"C2"）ともに取りこぼしなく動作 \\
+\hline
+MOP3 & 赤外線通信テスト & 暫定OK（1 台のみ） & 親機↔子機 1 台での IR 通信は成功．\textbf{受光モジュール不足で複数子機の同時受信は未検証}．成功率の定量計測も未実施 \\
+\hline
+MOP5 & フェードアウト & 未対応 & noteOff() が即時 unpatch のままで持ち越し．第9週で対応 \\
+\hline
+MOP6 & 倍速演奏 & 未対応 & 親機側スイッチとの連携が未実装 \\
+\hline
+\end{longtable}
+
+\subsection*{4.4 今後評価予定の項目（参考）}
+
+\begin{itemize}
+    \item MOP3：複数子機を同時に動かしての赤外線通信成功率定量測定（受光モジュール確保後）
+    \item MOP4：音色認識テスト（聴衆過半数が各楽器と識別）
+    \item MOP5：音切り替え時のフェードアウト実装後に再評価
+    \item MOP6：親機スイッチ連携後のテンポ切り替え確認
+\end{itemize}
+
+%=====================================================
+\section{5. 課題管理}
+
+\begin{longtable}{|p{2.6cm}|p{2.8cm}|p{1cm}|p{1cm}|p{3.0cm}|p{1.6cm}|p{1.6cm}|}
+\hline
+\rowcolor[gray]{0.9}
+課題 & 発生原因 & 影響度 & 優先度 & 対策 & 期限 & 状態 \\
+\hline
+受光モジュールの熱暴走による機材不足 & 借用 3 個中 2 個が個体不良で発熱・動作停止 & 高 & 高 & 正常な受光モジュールを追加調達し，輪唱実験を再試行 & 6/23 & 未対応 \\
+\hline
+複数子機での輪唱実験が未実施 & 6/11 に受光モジュール不足のため物理的に不可能 & 高 & 高 & 機材確保後に 2〜3 子機で同時受信・カノン演奏を確認 & 6/23 & 未対応 \\
+\hline
+音切り替え時のノイズ & noteOff() が即時 unpatch（MOP5 未対応） & 高 & 高 & Line で 0.03 秒フェードアウト後に切断 & 6/23 & 未対応 \\
+\hline
+赤外線通信成功率が未計測 & MOP3（95\％目標）の定量試験未実施 & 中 & 中 & 一定回数の送受信でログ集計し成功率を算出 & 6/23 & 未対応 \\
+\hline
+\end{longtable}
+
+\vspace{0.5em}
+※影響度＝プロジェクトへのインパクト\\
+※優先度＝対応の緊急性
+
+%=====================================================
+\section{6. AI利用状況と検証}
+
+\subsection*{6.1 利用内容}
+
+\begin{itemize}
+    \item 利用目的：通信仕様変更（音価・音量の Arduino 側集中管理化）に伴う子機 .ino と Processing 受信パースの整理，および drum.pde のデバッグ出力追加
+    \item 入力（プロンプト要旨）：
+    \begin{itemize}
+        \item Processing 側で音価・音量を決めていた設計を，子機 .ino 側で定数管理し，CSV \texttt{"ピッチ名,duration,amplitude"} で Processing へ通知する方針を提示
+        \item ボーレート 115200 への統一と，文字化け切り分けのための生受信ログ追加を依頼
+        \item 子機 3（ドラム）が "C2" を送ったとき drum.pde 側で KickInstrument を発音する経路の起動テストを依頼
+    \end{itemize}
+    \item 出力概要：
+    \begin{itemize}
+        \item 子機 .ino（hack-ko.ino）：\texttt{NOTE\_DURATION\_*}／\texttt{NOTE\_AMPLITUDE} の定義と \texttt{sendNoteToHost()} による CSV 送出
+        \item drum.pde：起動テストキックと \texttt{serialEvent} 内の受信文字列ログ
+    \end{itemize}
+\end{itemize}
+
+\subsection*{6.2 検証方法}
+
+\begin{itemize}
+    \item 検証手法：
+    \begin{itemize}
+        \item 子機 .ino から CSV を送り，Processing コンソールで受信文字列を目視確認（化けていないこと，CSV パースが通ること）
+        \item drum.pde 起動時のテストキックでスピーカー側の音生成系（Minim + KickInstrument）の健全性を切り分け
+        \item 親機 → ドラム子機 → drum.pde の経路で "C2" 受信ごとに発音されることを聴感確認
+    \end{itemize}
+    \item 参照資料：
+    \begin{itemize}
+        \item 計画書・設計書 v1.2（2026/5/29 版）「2.1 基本設計の修正」「2.2 詳細設計」
+        \item Minim ライブラリ公式ドキュメント（ddf.minim.ugens：Oscil／Line）
+        \item IRremote ライブラリ（v4.x，NEC プロトコル）
+    \end{itemize}
+    \item 検証手順：
+    \begin{enumerate}
+        \item 親機・子機（ドラム）・Processing を接続し，子機を 115200bps に設定して起動
+        \item drum.pde 起動時のテストキックでスピーカー出力を確認
+        \item 親機の IR 送出に対して，drum.pde コンソールに "rx: C2" と "matched C2 -> playKick" が並ぶことを確認
+    \end{enumerate}
+\end{itemize}
+
+\subsection*{6.3 ファクトチェック結果}
+
+\begin{itemize}
+    \item 一致点：
+    \begin{itemize}
+        \item CSV 形式（pitch,duration,amplitude）が設計書「2.1 基本設計の修正」の一方向通知（子機 → Processing）と整合
+        \item ボーレート 115200 が設計書の確定値と一致（500000／921600 は廃止）
+        \item KickInstrument のピッチ降下＋振幅減衰によるキック合成が「楽器音らしい音色（MOE3）」の要件に合致
+    \end{itemize}
+    \item 不一致・疑義：
+    \begin{itemize}
+        \item 設計書 2.1 が要求する「noteOff で 0.03 秒フェードアウト後に切断」が未実装のまま（MOP5 持ち越し）
+        \item 借用受光モジュールの熱暴走は機材不良であり設計上の問題ではないが，調達計画の見直しが必要
+    \end{itemize}
+    \item 最終判断：採用（通信仕様変更とドラム実機テストの到達点として妥当）
+    \item 根拠：
+    \begin{itemize}
+        \item 子機 .ino を音楽情報の源泉，Processing を再生エンジンとする役割分担が明確になり，今後の楽器追加・テンポ変更時の修正範囲が局所化される
+        \item ドラム経路は \texttt{drum.pde} と組み合わせて実機で発音まで確認できたため，第7週末ログ時点の「未テスト」状態を解消
+    \end{itemize}
+\end{itemize}
+
+%=====================================================
+\section{7. 次回計画}
+
+\begin{itemize}
+    \item 目標（第9週）：
+    \begin{itemize}
+        \item 正常な赤外線受光モジュールを追加確保し，6/11 に物理的に実施できなかった\textbf{複数子機での輪唱実験を再試行}（メロディ 3 子機＋ドラム 1 子機の同時受信）
+        \item MOP5：noteOff() に Line フェードアウト（0.03 秒）を実装し，切り替えノイズを除去
+        \item MOP3：赤外線通信成功率の定量測定（95\％目標に対する実測）
+        \item 親機のシリアルコマンド（0〜3／s／r／t）と LED マトリクス側の表示連動を確認
+    \end{itemize}
+    \item 達成基準：
+    \begin{itemize}
+        \item 3 子機以上が同時に受信し，OFFSET\_TICKS 分ずれた輪唱として聴感で破綻なく聞こえること
+        \item 音切り替え時にノイズが聞こえないこと
+        \item 通信成功率を数値で提示できること
+    \end{itemize}
+    \item 期限：
+    \begin{itemize}
+        \item 6/23（第9週末）
+    \end{itemize}
+\end{itemize}
+
+%=====================================================
+\section{8. その他}
+
+\begin{itemize}
+    \item 借用受光モジュールの熱暴走は，同型の予備でも再現する可能性があるため，第9週は調達ルートを変える方向で家田・木下と相談する
+    \item 音価・音量の集中管理化に伴い，他楽器（フルート・トランペット）の子機 .ino も同様の CSV 通知形式に揃える必要がある．家田・木下と仕様すり合わせ予定
+    \item 親機担当（家田・渡邊）と IR\_GAP\_MS／倍速演奏（MOP6）スイッチの連携仕様も並行で詰める
+\end{itemize}
+
+%=====================================================
+\section{9. 付録}
+
+\subsection*{9.1 添付資料}
+
+\begin{itemize}
+    \item ソースコード：hack-ko.ino（ドラム子機 \texttt{CHILD\_ID==3}／メロディ子機共通），drum.pde（ドラム用 Processing スケッチ・久家作成），oya-another/oya-another.ino（親機）
+    \item 参考：hack\_ko.pde（メロディ用 Processing スケッチ）
+    \item リポジトリ：\url{https://github.com/k-kushihama/hackathon-code/}
+\end{itemize}
+
+\subsection*{9.2 添付範囲}
+
+\begin{itemize}
+    \item 第8週に変更した「音価・音量の Arduino 側集中管理化」に該当する子機 .ino のスナップショット
+    \item ドラム実機テストに使用した drum.pde のスナップショットと，親機（oya-another.ino）のシリアル操作実装
+\end{itemize}
+
+\subsection*{9.3 システム図}
+
+\subsubsection*{9.3.1 システム統合：データフロー（CSV 通知形式へ更新）}
+
+図~\ref{fig:dataflow} に，親機から発音までのデータフローを示す．第7週末時点の「子機が MIDI 番号 1 値だけを送る」設計から，本週で\textbf{子機が CSV \texttt{"ピッチ名,duration秒,amplitude"} を送る形式に変更}した（ドラム子機は固定値 "C2" のみを送る）．Processing は受信値を保持せず，\texttt{out.playNote()} にそのまま渡して発音する．
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  node distance=0.6cm and 1.0cm,
+  block/.style={rectangle, draw, rounded corners=2pt, minimum width=2.7cm, minimum height=1.1cm, align=center, font=\small},
+  io/.style={rectangle, draw, fill=gray!10, minimum width=2.3cm, minimum height=1.0cm, align=center, font=\small},
+  arrow/.style={-Stealth, thick}
+]
+  \node[block] (oya) {親機 Arduino\\oya-another.ino\\(NEC 送出)};
+  \node[block, right=of oya] (ko) {子機 Arduino\\hack-ko.ino\\(NEC 受信→CSV)};
+  \node[block, right=of ko] (proc) {Processing\\hack\_ko.pde / drum.pde\\(CSV→発音)};
+  \node[io, right=of proc] (spk) {スピーカー};
+
+  \draw[arrow] (oya) -- node[above, font=\scriptsize]{IR / NEC} node[below, font=\scriptsize]{cmd=子機mask} (ko);
+  \draw[arrow] (ko) -- node[above, font=\scriptsize]{USB Serial} node[below, font=\scriptsize]{115200bps, CSV} (proc);
+  \draw[arrow] (proc) -- node[above, font=\scriptsize]{audio} (spk);
+\end{tikzpicture}
+\caption{システム統合のデータフロー．子機が音価・音量を含む CSV を送り，Processing は受信値で発音する．}
+\label{fig:dataflow}
+\end{figure}
+
+\subsubsection*{9.3.2 ドラム子機 Arduino の回路図}
+
+図~\ref{fig:circuit} にドラム子機 Arduino の接続を示す．赤外線受光モジュール CHQ1838D を 1 つ用い，親機からの NEC フレームを受信する．D2 に受光信号，D13 に動作確認用 LED を接続し，USB を Processing 実行用 PC へつなぐ．6/13 のドラム実機テストではこの構成を Arduino UNO R3（追加購入分）で組み，自 Mac の drum.pde と接続した．
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  every node/.style={font=\small},
+  pin/.style={circle, draw, fill=black, inner sep=1.2pt},
+  module/.style={rectangle, draw, minimum width=2.4cm, minimum height=1.2cm, align=center},
+  arduino/.style={rectangle, draw, very thick, rounded corners=4pt, minimum width=3.8cm, minimum height=5.2cm, align=center},
+  wire/.style={thick}
+]
+  \node[arduino] (ard) at (0,0) {Arduino\\UNO R3\\(子機: ドラム)};
+
+  \node[pin, label=right:{\tiny D2}] (d2) at (1.9,1.2) {};
+  \node[pin, label=right:{\tiny D13(LED)}] (d13) at (1.9,0.0) {};
+  \node[pin, label=right:{\tiny 5V}] (vcc) at (1.9,-1.0) {};
+  \node[pin, label=right:{\tiny GND}] (gnd) at (1.9,-2.0) {};
+  \node[pin, label=left:{\tiny USB}] (usb) at (-1.9,0) {};
+
+  \node[module] (ir1) at (5.4,1.2) {IR 受光\\CHQ1838D\\(NEC 受信)};
+
+  \node[pin] (ir1out) at (4.2,1.2) {};
+  \node[pin] (ir1vcc) at (4.2,1.6) {};
+  \node[pin] (ir1gnd) at (4.2,0.8) {};
+
+  \draw[wire] (d2) -- (ir1out);
+
+  \draw[wire] (vcc) -- ++(0.7,0) coordinate (vbus) -- (vbus|-ir1vcc) -- (ir1vcc);
+  \draw[wire] (gnd) -- ++(1.1,0) coordinate (gbus) -- (gbus|-ir1gnd) -- (ir1gnd);
+
+  \node[rectangle, draw, dashed, minimum width=2cm, minimum height=1cm, align=center] (pc) at (-4.5,0) {PC\\(Processing)};
+  \draw[wire, -Stealth] (usb) -- node[above, font=\scriptsize]{USB / Serial} (pc.east);
+\end{tikzpicture}
+\caption{ドラム子機 Arduino の回路図．D2 に IR 受光モジュール，D13 に動作確認 LED を接続し，USB 経由で Processing 実行用 PC と通信する．}
+\label{fig:circuit}
+\end{figure}
+
+なお，6/11 の輪唱実験では借用した受光モジュール 3 個中 2 個が明らかに発熱し動作しなかった．残り 1 個に交換して D2 配線で IR 受信は確認できたが，複数子機分の受光モジュールを揃えられず，輪唱実験そのものは未実施である．
+
+\end{document}
