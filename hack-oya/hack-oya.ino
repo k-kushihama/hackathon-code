@@ -14,10 +14,13 @@
 const int NUM_CHILDREN = 4;
 
 // 子機側の楽譜は SCORE_LENGTH=37 音、うち index 24 以降は 1tick あたり 2 音(16分音符)で
-// 発音される(子機が双子音化する)。よって 1 ループに必要な親機 tick は:
+// 発音される(子機が双子音化する)。よって 1 ループの演奏に必要な親機 tick は:
 //   24 (通常区間) + ceil((37-24)/2) = 24 + 7 = 31 tick
-// loopOn 時はこの 31 を法に折り返す。
-const int TICK_LENGTH = 31;
+// loopOn 時はこの後ろに「1拍ぶんの休符」を入れてから次のループへ折り返す。
+// 1拍 = 四分音符 = 8分音符2個 = 2 tick (8分音符tick基準)
+const int MELODY_TICK_LENGTH = 31;
+const int LOOP_REST_TICKS    = 2;
+const int TICK_LENGTH        = MELODY_TICK_LENGTH + LOOP_REST_TICKS;  // 33
 
 // 各子機のカノン参加tick (0-indexed)。
 // 1回目に有効化された子機は 0tick (楽譜の頭) から参加し、
@@ -107,25 +110,27 @@ void sendTick() {
     long relTick = parentTick - canonOffset[i];
     if (relTick < 0) continue;                // まだエントリ点に達していない
 
+    // 1ループぶんの位置 (0..TICK_LENGTH-1)。
+    // loopOn なら相対tickをTICK_LENGTHで折り返し、loopOff なら相対tickそのまま。
+    // この位置が MELODY_TICK_LENGTH 以上の領域は「ループ後の休符(1拍)」期間で、
+    // メロディもドラムも何も送らない (=子機側は無音)。
+    long cyclePos;
+    if (loopOn) {
+      cyclePos = relTick % TICK_LENGTH;
+    } else {
+      if (relTick >= MELODY_TICK_LENGTH) continue;
+      cyclePos = relTick;
+    }
+    if (cyclePos >= MELODY_TICK_LENGTH) continue;  // ループ間の休符期間
+
     uint8_t cmd;
     if (i == DRUM_CHILD_ID) {
-      // ドラムは4つ打ち。loopOn なら relTick が無限に進んでも叩き続け、
-      // loopOn=false なら TICK_LENGTH を超えたら止める。
-      if (!loopOn && relTick >= TICK_LENGTH) continue;
-      if (relTick % DRUM_INTERVAL_TICKS != 0) continue;
+      // ドラムは4つ打ち。cyclePos基準にすることで毎ループ頭から再アライン。
+      if (cyclePos % DRUM_INTERVAL_TICKS != 0) continue;
       // command は重複抑止用キー。下位8bitだけで十分ユニーク。
-      cmd = (uint8_t)((relTick / DRUM_INTERVAL_TICKS) & 0xFF);
+      cmd = (uint8_t)((cyclePos / DRUM_INTERVAL_TICKS) & 0xFF);
     } else {
-      // メロディ機: loopOn なら TICK_LENGTH を法に折り返し、無限ループ。
-      // loopOn=false なら 1周(31tick)で停止する。
-      long pos;
-      if (loopOn) {
-        pos = relTick % TICK_LENGTH;
-      } else {
-        if (relTick >= TICK_LENGTH) continue;
-        pos = relTick;
-      }
-      cmd = (uint8_t)pos;
+      cmd = (uint8_t)cyclePos;
     }
 
     // 連続送信時のフレーム取りこぼし対策。子機受信機の resume を待つギャップ。
