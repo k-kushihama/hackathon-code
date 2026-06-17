@@ -1,6 +1,5 @@
 #define DECODE_NEC
 #include <IRremote.hpp>
-#include <EEPROM.h>
 
 // 単一ブロードキャスト方式: 親機は1tickあたりIR1フレームだけ送る。
 // フレーム内容 (NEC):
@@ -13,12 +12,7 @@
 // を計算して発音。configIdx==childId のとき自分の myOffset を更新する。
 // 1tick=1フレームなのでIR衝突しない (複数子機同時参加でも干渉しない)。
 
-// CHILD_ID は EEPROM[0] に保存して起動時にロードする。
-// 同じ.inoを全Arduinoに焼き、シリアル経由で個体ごとに違うIDを付ける運用。
-// 使い方: シリアルモニタで "id 0" / "id 1" / "id 2" / "id 3" を送信
-//         (改行付き)。値はEEPROMに永続保存され、次回起動時もそのまま使われる。
-// 未書き込み(0xFF)のEEPROMはデフォルト 0 として扱う。
-const int EEPROM_ADDR_CHILD_ID = 0;
+// 書き込む機体ごとに値を変えて Upload する: 0,1,2 = メロディ機, 3 = ドラム機。
 int childId = 1;
 
 const int DRUM_CHILD_ID = 3;
@@ -90,61 +84,17 @@ void printReady() {
   }
 }
 
-// シリアルから "id N\n" (N=0..3) を受け取ったらEEPROMに保存して反映する。
-// 行バッファ方式で改行(\n または \r)が来るまで蓄積する。
-void handleSerialIdCommand() {
-  static char buf[16];
-  static int  bufLen = 0;
-  while (Serial.available()) {
-    char c = (char)Serial.read();
-    if (c == '\n' || c == '\r') {
-      buf[bufLen] = 0;
-      if (bufLen >= 4 && buf[0] == 'i' && buf[1] == 'd' && buf[2] == ' ') {
-        int newId = buf[3] - '0';
-        if (newId >= 0 && newId <= 3) {
-          if (newId != childId) {
-            EEPROM.update(EEPROM_ADDR_CHILD_ID, (uint8_t)newId);
-            childId = newId;
-            lastPlayedPos = -1;  // ID変更後は再発音できるようにキャッシュをリセット
-            myOffset = -1;       // 新しいchildIdのconfig受信を待つ
-          }
-          Serial.print("[id] CHILD_ID=");
-          printReady();
-        } else {
-          Serial.println("[!] usage: id N  (N=0..3)");
-        }
-      }
-      bufLen = 0;
-    } else if (bufLen < (int)sizeof(buf) - 1) {
-      buf[bufLen++] = c;
-    } else {
-      bufLen = 0;  // バッファ溢れはリセット
-    }
-  }
-}
-
 void setup() {
   // 子機 ↔ Processing(hackko.pde / drum.pde) のボーレートは必ず 115200 に揃える。
   Serial.begin(115200);
   IrReceiver.begin(PIN_IR_RECV);
   pinMode(LED_INDICATOR, OUTPUT);
 
-  // EEPROMからCHILD_IDを復元。未書き込み(0xFF=255)はソースの初期値(上の
-  // `int childId = N;`)をそのまま使う。これにより「ソース編集で初期IDを
-  // 仮設定 → シリアル経由で個体ごとに上書き保存」の両方が自然に効く。
-  uint8_t stored = EEPROM.read(EEPROM_ADDR_CHILD_ID);
-  if (stored <= 3) {
-    childId = (int)stored;
-  }
-
   delay(100);
   printReady();
-  Serial.println("send 'id N' (N=0..3) over serial to change & save CHILD_ID");
 }
 
 void loop() {
-  handleSerialIdCommand();
-
   if (!IrReceiver.decode()) return;
 
   if (IrReceiver.decodedIRData.protocol == NEC) {
