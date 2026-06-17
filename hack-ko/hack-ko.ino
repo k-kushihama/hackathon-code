@@ -82,6 +82,13 @@ void printReady() {
 void setup() {
   // 子機 ↔ Processing(hackko.pde / drum.pde) のボーレートは必ず 115200 に揃える。
   Serial.begin(115200);
+
+  // UNO R4 等の native USB CDC は Serial.begin() 直後はホストと未接続のことがあり、
+  // setup() の Serial.print が Serial Monitor に届かない(=Monitorが空のまま)症状の原因。
+  // 最大3秒だけCDC接続完了を待つ。タイムアウト時はそのまま進む(standalone運用にも対応)。
+  unsigned long boot_t = millis();
+  while (!Serial && (millis() - boot_t) < 3000) { ; }
+
   IrReceiver.begin(PIN_IR_RECV);
   pinMode(LED_INDICATOR, OUTPUT);
 
