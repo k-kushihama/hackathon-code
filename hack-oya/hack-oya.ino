@@ -30,6 +30,12 @@ const int NUM_ENTRY_POINTS = sizeof(ENTRY_POINTS) / sizeof(ENTRY_POINTS[0]);
 const int DRUM_CHILD_ID = 3;
 const int DRUM_INTERVAL_TICKS = 2;
 
+// NECフレーム間の最小ギャップ(ms)。これより短いと子機側の受信機が
+// 前のフレームを処理しきる前に次のフレームが来て、取りこぼしや
+// バッファ破損で子機が音を見失う(child0演奏中にchild1を加えると
+// child0が止まる原因)。NEC規格の40msに余裕を見て35msとする。
+const int IR_INTERFRAME_DELAY_MS = 35;
+
 const int PIN_BTN_CHILD[NUM_CHILDREN] = {4, 5, 6, 7};
 const int PIN_BTN_START = 8;
 const int PIN_BTN_TEMPO = 9;
@@ -87,22 +93,26 @@ void loop() {
 }
 
 // 1tickごとに、有効な全子機へ localPos を個別に送信する。
-// 子機4台が同時に鳴ると最大4フレーム/tick。NECフレームは約67msなので、
-// BPM=120(tick=250ms) では timing 余裕がない。同時参加が多い場合は BPM を下げる。
+// 子機4台が同時に鳴ると最大4フレーム/tick。NECフレームは約67ms + gap 35ms。
+// 2子機: 2*67 + 35 = 169ms  (BPM=120 tick=250ms OK)
+// 3子機: 3*67 + 70 = 271ms  (BPM<=110 推奨)
+// 4子機: 4*67 + 105 = 373ms (BPM<=80 推奨)
 void sendTick() {
   digitalWrite(LED_INDICATOR, (parentTick % 2) ? HIGH : LOW);
+  bool needGap = false;  // 直前にIRを送ったか。送ったなら次のIR前にgapを入れる。
   for (int i = 0; i < NUM_CHILDREN; i++) {
     if (canonOffset[i] < 0) continue;        // 無効化中
     long relTick = parentTick - canonOffset[i];
     if (relTick < 0) continue;                // まだエントリ点に達していない
 
+    uint8_t cmd;
     if (i == DRUM_CHILD_ID) {
       // ドラムは4つ打ち。loopOn なら relTick が無限に進んでも叩き続け、
       // loopOn=false なら TICK_LENGTH を超えたら止める。
       if (!loopOn && relTick >= TICK_LENGTH) continue;
       if (relTick % DRUM_INTERVAL_TICKS != 0) continue;
       // command は重複抑止用キー。下位8bitだけで十分ユニーク。
-      IrSender.sendNEC((uint16_t)i, (uint8_t)((relTick / DRUM_INTERVAL_TICKS) & 0xFF), 0);
+      cmd = (uint8_t)((relTick / DRUM_INTERVAL_TICKS) & 0xFF);
     } else {
       // メロディ機: loopOn なら TICK_LENGTH を法に折り返し、無限ループ。
       // loopOn=false なら 1周(31tick)で停止する。
@@ -113,8 +123,13 @@ void sendTick() {
         if (relTick >= TICK_LENGTH) continue;
         pos = relTick;
       }
-      IrSender.sendNEC((uint16_t)i, (uint8_t)pos, 0);
+      cmd = (uint8_t)pos;
     }
+
+    // 連続送信時のフレーム取りこぼし対策。子機受信機の resume を待つギャップ。
+    if (needGap) delay(IR_INTERFRAME_DELAY_MS);
+    IrSender.sendNEC((uint16_t)i, cmd, 0);
+    needGap = true;
   }
 }
 
