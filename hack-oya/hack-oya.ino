@@ -22,12 +22,14 @@ const int MELODY_TICK_LENGTH = 31;
 const int LOOP_REST_TICKS    = 1;
 const int TICK_LENGTH        = MELODY_TICK_LENGTH + LOOP_REST_TICKS;  // 33
 
-// 各子機のカノン参加tick (0-indexed)。
-// 1回目に有効化された子機は 0tick (楽譜の頭) から参加し、
-// 2回目は 8tick (1-indexed の9配列目相当)、3回目は16、4回目は20で参加する。
-// ボタンを押した順番でカノンの遅延量が決まる。
-const int ENTRY_POINTS[] = {0, 8, 16, 20};
-const int NUM_ENTRY_POINTS = sizeof(ENTRY_POINTS) / sizeof(ENTRY_POINTS[0]);
+// 各子機のカノン参加tick (固定割当)。
+// child 0 -> entry 0  (リード)
+// child 1 -> entry 8  (1-indexed 9配列目相当)
+// child 2 -> entry 16 (1-indexed 17配列目)
+// child 3 -> entry 20 (1-indexed 21配列目, ドラム機としても運用可)
+// ボタン D4=child0, D5=child1, D6=child2, D7=child3 と固定対応するため、
+// 「どの順番で押しても D4 は必ずリード、D5 は必ず 8 から、…」となる。
+const int CHILD_ENTRY[NUM_CHILDREN] = {0, 8, 16, 20};
 
 // ドラム機(CHILD_ID==3)はカノンには参加せず、四分音符ごと(=2tick)に1発キックする。
 const int DRUM_CHILD_ID = 3;
@@ -210,11 +212,14 @@ void sendTickBroadcast() {
   IrSender.sendNEC(addr, cmd, 0);
 }
 
-// ボタンを押すたびに on/off をトグルする。
-// OFF -> ON: 未使用の entry point の最小値を「予約」する。即座には鳴り始めず、
-//            cyclePos がその entry に到達した瞬間に活性化して localPos=0 から発音する。
+// ボタンを押すたびに on/off をトグルする。固定割当:
+//   D4(i=0) -> CHILD_ENTRY[0]=0  (リード)
+//   D5(i=1) -> CHILD_ENTRY[1]=8
+//   D6(i=2) -> CHILD_ENTRY[2]=16
+//   D7(i=3) -> CHILD_ENTRY[3]=20
+// OFF -> ON: 該当 entry を「予約」する。cyclePos がその entry に到達した瞬間に
+//            活性化して localPos=0 から発音開始。
 // ON -> OFF: 参加中なら止める。予約中なら予約を取り消す。
-// OFF にすると当該 entry が解放され、次に ON する子機が同じ枠を再利用できる。
 void toggleChild(int i) {
   if (i < 0 || i >= NUM_CHILDREN) return;
   if (canonOffset[i] >= 0) {
@@ -228,29 +233,13 @@ void toggleChild(int i) {
     Serial.print(i);
     Serial.println("] OFF (pending canceled)");
   } else {
-    // 既に他の子機で使用中 or 予約中の entry を集計する
-    bool used[NUM_ENTRY_POINTS] = {false, false, false, false};
-    for (int k = 0; k < NUM_CHILDREN; k++) {
-      if (k == i) continue;
-      int off = (canonOffset[k] >= 0) ? canonOffset[k]
-              : (pendingOffset[k] >= 0) ? pendingOffset[k] : -1;
-      if (off < 0) continue;
-      for (int e = 0; e < NUM_ENTRY_POINTS; e++) {
-        if (ENTRY_POINTS[e] == off) { used[e] = true; break; }
-      }
-    }
-    // 最小の未使用 entry を選ぶ
-    int chosenIdx = 0;
-    for (int e = 0; e < NUM_ENTRY_POINTS; e++) {
-      if (!used[e]) { chosenIdx = e; break; }
-    }
-    pendingOffset[i] = ENTRY_POINTS[chosenIdx];
+    pendingOffset[i] = CHILD_ENTRY[i];
     globalPressCount++;
     Serial.print("[child ");
     Serial.print(i);
     Serial.print("] RESERVED entry=");
     Serial.print(pendingOffset[i]);
-    Serial.print(" (waiting for cyclePos to reach ");
+    Serial.print(" (waiting for cyclePos=");
     Serial.print(pendingOffset[i]);
     Serial.print(") total#");
     Serial.println(globalPressCount);
