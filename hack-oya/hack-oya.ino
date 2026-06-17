@@ -12,7 +12,12 @@
 //   command (8bit)  = その子機の楽譜index (localPos)
 
 const int NUM_CHILDREN = 4;
-const int SCORE_LENGTH = 40;     // hack-ko.ino の myScore[] と一致させる
+
+// 子機側の楽譜は SCORE_LENGTH=37 音、うち index 24 以降は 1tick あたり 2 音(16分音符)で
+// 発音される(子機が双子音化する)。よって 1 ループに必要な親機 tick は:
+//   24 (通常区間) + ceil((37-24)/2) = 24 + 7 = 31 tick
+// loopOn 時はこの 31 を法に折り返す。
+const int TICK_LENGTH = 31;
 
 // 各子機のカノン参加tick (0-indexed)。
 // 1回目に有効化された子機は 0tick (楽譜の頭) から参加し、
@@ -37,6 +42,7 @@ const int LED_INDICATOR = 13;
 int  canonOffset[NUM_CHILDREN] = {-1, -1, -1, -1};
 int  globalPressCount = 0;  // 「ON にした延べ回数」。ENTRY_POINTS のインデックスに使う。
 
+bool loopOn   = true;        // ループ再生のON/OFF (シリアル 'l' でトグル)
 bool isPlaying = false;
 long parentTick = 0;            // start時に0、tickごとに+1。
 unsigned long lastTickMs = 0;
@@ -91,14 +97,23 @@ void sendTick() {
     if (relTick < 0) continue;                // まだエントリ点に達していない
 
     if (i == DRUM_CHILD_ID) {
-      // ドラムは4つ打ち。relTick が DRUM_INTERVAL_TICKS の倍数のときだけ送る。
+      // ドラムは4つ打ち。loopOn なら relTick が無限に進んでも叩き続け、
+      // loopOn=false なら TICK_LENGTH を超えたら止める。
+      if (!loopOn && relTick >= TICK_LENGTH) continue;
       if (relTick % DRUM_INTERVAL_TICKS != 0) continue;
-      if (relTick >= SCORE_LENGTH) continue;
-      IrSender.sendNEC((uint16_t)i, (uint8_t)(relTick / DRUM_INTERVAL_TICKS), 0);
+      // command は重複抑止用キー。下位8bitだけで十分ユニーク。
+      IrSender.sendNEC((uint16_t)i, (uint8_t)((relTick / DRUM_INTERVAL_TICKS) & 0xFF), 0);
     } else {
-      // メロディ機: localPos がそのまま楽譜index。SCORE_LENGTH を超えたら停止。
-      if (relTick >= SCORE_LENGTH) continue;
-      IrSender.sendNEC((uint16_t)i, (uint8_t)relTick, 0);
+      // メロディ機: loopOn なら TICK_LENGTH を法に折り返し、無限ループ。
+      // loopOn=false なら 1周(31tick)で停止する。
+      long pos;
+      if (loopOn) {
+        pos = relTick % TICK_LENGTH;
+      } else {
+        if (relTick >= TICK_LENGTH) continue;
+        pos = relTick;
+      }
+      IrSender.sendNEC((uint16_t)i, (uint8_t)pos, 0);
     }
   }
 }
@@ -206,6 +221,10 @@ void handleSerialCommand() {
       if (tempoBpm > 150) tempoBpm = 60;
       Serial.print("[tempo] BPM=");
       Serial.println(tempoBpm);
+    } else if (c == 'l' || c == 'L') {
+      loopOn = !loopOn;
+      Serial.print("[loop] ");
+      Serial.println(loopOn ? "ON" : "OFF");
     } else if (c == '?') {
       printHelp();
     }
@@ -219,7 +238,10 @@ void printHelp() {
   Serial.println("s    : start");
   Serial.println("r    : reset (disable all children, parentTick=0)");
   Serial.println("t    : tempo cycle (60/90/120/150)");
+  Serial.println("l    : toggle loop on/off");
   Serial.println("?    : help");
   Serial.print("Current BPM=");
-  Serial.println(tempoBpm);
+  Serial.print(tempoBpm);
+  Serial.print(", loop=");
+  Serial.println(loopOn ? "ON" : "OFF");
 }

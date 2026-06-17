@@ -17,20 +17,23 @@ const int LED_INDICATOR = 13;
 
 // 楽譜は子機が保持する。全メロディ機が同じ楽譜を持ち、
 // 親機が割り当てる localPos の違い(=カノン遅延)だけで輪唱が成立する。
-// 末尾の R は最終音 C4 を最後のカノン声部までならし切るための余白。
-const int SCORE_LENGTH = 40;
+const int SCORE_LENGTH = 37;
 const String myScore[SCORE_LENGTH] = {
   "C4", "D4", "E4", "F4", "E4", "D4", "C4", "R",
   "E4", "F4", "G4", "A4", "G4", "F4", "E4", "R",
   "C4", "R",  "C4", "R",  "C4", "R",  "C4", "R",
   "C4", "C4", "D4", "D4", "E4", "E4", "F4", "F4",
-  "E4", "R",  "D4", "R",  "C4", "R",  "R",  "R"
+  "E4", "R",  "D4", "R",  "C4"
 };
+
+// index 24 以降は1IR=2音(16分音符相当)で発音する。親機の TICK_LENGTH=31 と整合。
+const int DOUBLE_START = 24;
 
 // 音価・音量は子機側で集中管理する (第8週末の変更を踏襲)。
 // Processing への通信フォーマット: "ピッチ名,duration秒,amplitude,localPos\n"
 // localPos は Processing 側のデバッグ表示用 (発音には使わない)。
-const float NOTE_DURATION_DEFAULT = 0.40f;
+const float NOTE_DURATION_DEFAULT = 0.40f;  // 8分音符相当
+const float NOTE_DURATION_HALF    = 0.20f;  // 16分音符相当
 const float NOTE_AMPLITUDE        = 0.60f;
 
 // ドラム機が drum.pde に送るキック合図。drum.pde は "C2" の1行だけを期待する。
@@ -38,6 +41,10 @@ const String DRUM_NOTE = "C2";
 
 // 同じフレームをNECが repeat 送出する/親機が連続送信する場合に二重発音しないための抑止キー。
 int lastPlayedPos = -1;
+
+// 親機tick間隔を動的に計測。双子音化区間で 1tick の半分を待つために使う。
+unsigned long lastReceiveMs = 0;
+unsigned long lastIntervalMs = 250;  // BPM=120 相当の初期推定
 
 void sendNoteToHost(const String& pitch, float duration, float amplitude, int pos) {
   Serial.print(pitch);
@@ -85,11 +92,35 @@ void loop() {
           lastPlayedPos = pos;
         }
       } else {
-        // メロディ機: pos をそのまま楽譜index として発音。
-        // 1音抜けても次の pos で正しい位置に復帰できる。
-        if (pos >= 0 && pos < SCORE_LENGTH && pos != lastPlayedPos) {
-          sendNoteToHost(myScore[pos], NOTE_DURATION_DEFAULT, NOTE_AMPLITUDE, pos);
-          digitalWrite(LED_INDICATOR, (pos % 2) ? HIGH : LOW);
+        // メロディ機: pos から楽譜index を決めて発音。
+        // pos < DOUBLE_START(24): 1tick=1音(8分)
+        // pos >= 24            : 1tick=2音(16分)。scoreIdx = 24 + 2*(pos-24)
+        // 1音抜けても次の pos が届けば正しい位置に復帰できる。
+        if (pos != lastPlayedPos) {
+          // 受信間隔を計測(双子音化区間の半tick遅延に使う)
+          unsigned long now = millis();
+          if (lastReceiveMs != 0) {
+            unsigned long interval = now - lastReceiveMs;
+            if (interval >= 50 && interval <= 2000) {
+              lastIntervalMs = interval;
+            }
+          }
+          lastReceiveMs = now;
+
+          if (pos >= 0 && pos < DOUBLE_START) {
+            sendNoteToHost(myScore[pos], NOTE_DURATION_DEFAULT, NOTE_AMPLITUDE, pos);
+            digitalWrite(LED_INDICATOR, (pos % 2) ? HIGH : LOW);
+          } else if (pos >= DOUBLE_START) {
+            int scoreIdx = DOUBLE_START + 2 * (pos - DOUBLE_START);
+            if (scoreIdx < SCORE_LENGTH) {
+              sendNoteToHost(myScore[scoreIdx], NOTE_DURATION_HALF, NOTE_AMPLITUDE, pos);
+              digitalWrite(LED_INDICATOR, (pos % 2) ? HIGH : LOW);
+            }
+            if (scoreIdx + 1 < SCORE_LENGTH) {
+              delay(lastIntervalMs / 2);
+              sendNoteToHost(myScore[scoreIdx + 1], NOTE_DURATION_HALF, NOTE_AMPLITUDE, pos);
+            }
+          }
           lastPlayedPos = pos;
         }
       }
