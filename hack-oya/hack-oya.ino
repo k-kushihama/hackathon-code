@@ -134,9 +134,10 @@ void sendTick() {
 }
 
 // ボタンを押すたびに on/off をトグルする。
-// OFF -> ON の遷移時に ENTRY_POINTS[globalPressCount % 4] を割り当て、
-// globalPressCount をインクリメントする。
-// 一度OFFにしてから再度ONにすると、その時点の press# に応じた次の遅延量で参加する。
+// OFF -> ON の遷移時は「他の子機で使われていない entry point の最小値」を割り当てる。
+// これにより、既に動いている子機(例: child0 offset=0)と同じ offset が当たることがなく、
+// 後から ON にした子機は必ずカノン位置({8,16,20} のどれか)で参加する。
+// OFF にすると当該 entry が解放され、次に ON する子機が同じ枠を再利用できる。
 void toggleChild(int i) {
   if (i < 0 || i >= NUM_CHILDREN) return;
   if (canonOffset[i] >= 0) {
@@ -145,13 +146,32 @@ void toggleChild(int i) {
     Serial.print(i);
     Serial.println("] OFF");
   } else {
-    canonOffset[i] = ENTRY_POINTS[globalPressCount % NUM_ENTRY_POINTS];
+    // 既に他の子機で使用中の entry を集計する
+    bool used[NUM_ENTRY_POINTS] = {false, false, false, false};
+    for (int k = 0; k < NUM_CHILDREN; k++) {
+      if (k == i) continue;
+      if (canonOffset[k] < 0) continue;
+      for (int e = 0; e < NUM_ENTRY_POINTS; e++) {
+        if (ENTRY_POINTS[e] == canonOffset[k]) {
+          used[e] = true;
+          break;
+        }
+      }
+    }
+    // 最小の未使用 entry を選ぶ
+    int chosenIdx = 0;
+    for (int e = 0; e < NUM_ENTRY_POINTS; e++) {
+      if (!used[e]) { chosenIdx = e; break; }
+    }
+    canonOffset[i] = ENTRY_POINTS[chosenIdx];
     globalPressCount++;
     Serial.print("[child ");
     Serial.print(i);
     Serial.print("] ON canonOffset=");
     Serial.print(canonOffset[i]);
-    Serial.print(" (press#");
+    Serial.print(" (entry#");
+    Serial.print(chosenIdx);
+    Serial.print(", total#");
     Serial.print(globalPressCount);
     Serial.println(")");
   }
