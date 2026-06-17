@@ -1,15 +1,21 @@
 #define DECODE_NEC
 #include <IRremote.hpp>
+#include <EEPROM.h>
 
 // 新方式: 親機は「自分(childid)が今いるべき楽譜のindex」をNECフレームで送ってくる。
-// address(16bit)=childid, command(8bit)=localPos。自分宛のフレーム(address==CHILD_ID)
+// address(16bit)=childid, command(8bit)=localPos。自分宛のフレーム(address==childId)
 // だけを拾い、command番目の音を発音する。
 //
 // 利点: 通信ロスで1音抜けても、次に届くフレームには「正しい次のpos」が入っているため、
 //       内部カウンタを進める旧方式と違い、子機は自然にカノン位置に復帰できる。
 
-// 書き込む機体ごとに変える: 0,1,2 = メロディ機, 3 = ドラム機。
-#define CHILD_ID 0
+// CHILD_ID は EEPROM[0] に保存して起動時にロードする。
+// 同じ.inoを全Arduinoに焼き、シリアル経由で個体ごとに違うIDを付ける運用。
+// 使い方: シリアルモニタで "id 0" / "id 1" / "id 2" / "id 3" を送信
+//         (改行付き)。値はEEPROMに永続保存され、次回起動時もそのまま使われる。
+// 未書き込み(0xFF)のEEPROMはデフォルト 0 として扱う。
+const int EEPROM_ADDR_CHILD_ID = 0;
+int childId = 0;
 
 const int DRUM_CHILD_ID = 3;
 const int PIN_IR_RECV = 2;
@@ -17,13 +23,13 @@ const int LED_INDICATOR = 13;
 
 // 楽譜は子機が保持する。全メロディ機が同じ楽譜を持ち、
 // 親機が割り当てる localPos の違い(=カノン遅延)だけで輪唱が成立する。
-const int SCORE_LENGTH = 37;
+const int SCORE_LENGTH = 40;
 const String myScore[SCORE_LENGTH] = {
   "C4", "D4", "E4", "F4", "E4", "D4", "C4", "R",
   "E4", "F4", "G4", "A4", "G4", "F4", "E4", "R",
   "C4", "R",  "C4", "R",  "C4", "R",  "C4", "R",
   "C4", "C4", "D4", "D4", "E4", "E4", "F4", "F4",
-  "E4", "R",  "D4", "R",  "C4"
+  "E4", "R",  "D4", "R",  "C4", "R" , "R" , "R"
 };
 
 // index 24 以降は1IR=2音(16分音符相当)で発音する。親機の TICK_LENGTH=31 と整合。
@@ -56,22 +62,66 @@ void sendNoteToHost(const String& pitch, float duration, float amplitude, int po
   Serial.println(pos);
 }
 
-void setup() {
-  // 子機 ↔ Processing(hackko.pde / drum.pde) のボーレートは必ず 115200 に揃える。
-  Serial.begin(115200);
-  IrReceiver.begin(PIN_IR_RECV);
-  pinMode(LED_INDICATOR, OUTPUT);
-  delay(100);
+void printReady() {
   Serial.print("hack-ko ready CHILD_ID=");
-  Serial.print(CHILD_ID);
-  if (CHILD_ID == DRUM_CHILD_ID) {
+  Serial.print(childId);
+  if (childId == DRUM_CHILD_ID) {
     Serial.println(" (DRUM)");
   } else {
     Serial.println(" (MELODY)");
   }
 }
 
+// シリアルから "id N\n" (N=0..3) を受け取ったらEEPROMに保存して反映する。
+// 行バッファ方式で改行(\n または \r)が来るまで蓄積する。
+void handleSerialIdCommand() {
+  static char buf[16];
+  static int  bufLen = 0;
+  while (Serial.available()) {
+    char c = (char)Serial.read();
+    if (c == '\n' || c == '\r') {
+      buf[bufLen] = 0;
+      if (bufLen >= 4 && buf[0] == 'i' && buf[1] == 'd' && buf[2] == ' ') {
+        int newId = buf[3] - '0';
+        if (newId >= 0 && newId <= 3) {
+          if (newId != childId) {
+            EEPROM.update(EEPROM_ADDR_CHILD_ID, (uint8_t)newId);
+            childId = newId;
+            lastPlayedPos = -1;  // ID変更後は再発音できるようにキャッシュをリセット
+          }
+          Serial.print("[id] CHILD_ID=");
+          printReady();
+        } else {
+          Serial.println("[!] usage: id N  (N=0..3)");
+        }
+      }
+      bufLen = 0;
+    } else if (bufLen < (int)sizeof(buf) - 1) {
+      buf[bufLen++] = c;
+    } else {
+      bufLen = 0;  // バッファ溢れはリセット
+    }
+  }
+}
+
+void setup() {
+  // 子機 ↔ Processing(hackko.pde / drum.pde) のボーレートは必ず 115200 に揃える。
+  Serial.begin(115200);
+  IrReceiver.begin(PIN_IR_RECV);
+  pinMode(LED_INDICATOR, OUTPUT);
+
+  // EEPROMからCHILD_IDを復元。未書き込み(0xFF=255)はデフォルト0として扱う。
+  uint8_t stored = EEPROM.read(EEPROM_ADDR_CHILD_ID);
+  childId = (stored <= 3) ? (int)stored : 0;
+
+  delay(100);
+  printReady();
+  Serial.println("send 'id N' (N=0..3) over serial to change & save CHILD_ID");
+}
+
 void loop() {
+  handleSerialIdCommand();
+
   if (!IrReceiver.decode()) return;
 
   if (IrReceiver.decodedIRData.protocol == NEC) {
@@ -79,9 +129,9 @@ void loop() {
     uint8_t  command = IrReceiver.decodedIRData.command;
 
     // 自分宛のフレームだけを処理する。それ以外の子機宛IRは無視。
-    if ((int)address == CHILD_ID) {
+    if ((int)address == childId) {
       int pos = (int)command;
-      if (CHILD_ID == DRUM_CHILD_ID) {
+      if (childId == DRUM_CHILD_ID) {
         // ドラム機: pos の中身はキック番号。値が違うフレームが来たら1発鳴らす。
         // 同じ pos が NEC repeat で届いた場合は鳴らさない。
         if (pos != lastPlayedPos) {
