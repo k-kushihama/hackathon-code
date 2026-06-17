@@ -60,11 +60,6 @@ unsigned long lastReceiveMs = 0;
 unsigned long lastIntervalMs = 250;  // BPM=120 相当の初期推定
 
 void sendNoteToHost(const String& pitch, float duration, float amplitude, int pos) {
-  // Processing が止まる/USBが詰まると Serial.print がブロックして main loop が
-  // 凍り、IR受信もできなくなる(="急にできなくなる"症状の主因)。
-  // 送信バッファに余裕がないときはこのフレームを捨てる(=1音欠ける程度の被害で済む)。
-  // 1行あたり最大20文字程度なので 32 バイト余裕があれば OK。
-  if (Serial.availableForWrite() < 32) return;
   Serial.print(pitch);
   Serial.print(',');
   Serial.print(duration, 3);
@@ -130,10 +125,7 @@ void loop() {
     if (childId == DRUM_CHILD_ID) {
       // ドラム機: posが変化したら1発鳴らす
       if (localPos != lastPlayedPos) {
-        // 同じくバッファ詰まり時はスキップ
-        if (Serial.availableForWrite() >= 8) {
-          Serial.println(DRUM_NOTE);
-        }
+        Serial.println(DRUM_NOTE);
         digitalWrite(LED_INDICATOR, HIGH);
         delay(15);
         digitalWrite(LED_INDICATOR, LOW);
