@@ -15,7 +15,7 @@
 //         (改行付き)。値はEEPROMに永続保存され、次回起動時もそのまま使われる。
 // 未書き込み(0xFF)のEEPROMはデフォルト 0 として扱う。
 const int EEPROM_ADDR_CHILD_ID = 0;
-int childId = 0;
+int childId = 1;
 
 const int DRUM_CHILD_ID = 3;
 const int PIN_IR_RECV = 2;
@@ -110,9 +110,13 @@ void setup() {
   IrReceiver.begin(PIN_IR_RECV);
   pinMode(LED_INDICATOR, OUTPUT);
 
-  // EEPROMからCHILD_IDを復元。未書き込み(0xFF=255)はデフォルト0として扱う。
+  // EEPROMからCHILD_IDを復元。未書き込み(0xFF=255)はソースの初期値(上の
+  // `int childId = N;`)をそのまま使う。これにより「ソース編集で初期IDを
+  // 仮設定 → シリアル経由で個体ごとに上書き保存」の両方が自然に効く。
   uint8_t stored = EEPROM.read(EEPROM_ADDR_CHILD_ID);
-  childId = (stored <= 3) ? (int)stored : 0;
+  if (stored <= 3) {
+    childId = (int)stored;
+  }
 
   delay(100);
   printReady();
