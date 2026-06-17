@@ -19,7 +19,7 @@ const int NUM_CHILDREN = 4;
 // loopOn 時はこの後ろに「1拍ぶんの休符」を入れてから次のループへ折り返す。
 // 1拍 = 四分音符 = 8分音符2個 = 2 tick (8分音符tick基準)
 const int MELODY_TICK_LENGTH = 31;
-const int LOOP_REST_TICKS    = 2;
+const int LOOP_REST_TICKS    = 1;
 const int TICK_LENGTH        = MELODY_TICK_LENGTH + LOOP_REST_TICKS;  // 33
 
 // 各子機のカノン参加tick (0-indexed)。
@@ -47,11 +47,13 @@ const int PIN_BTN_TEMPO = 9;
 const int PIN_BTN_RESET = 10;
 const int LED_INDICATOR = 13;
 
-// canonOffset[i] = -1: 子機 i は無効化中。送信しない。
-// canonOffset[i] >= 0: 子機 i は有効。parentTick >= canonOffset[i] になったら
-//                     localPos = parentTick - canonOffset[i] として送信する。
-int  canonOffset[NUM_CHILDREN] = {-1, -1, -1, -1};
-int  globalPressCount = 0;  // 「ON にした延べ回数」。ENTRY_POINTS のインデックスに使う。
+// canonOffset[i]: 参加中の遅延値(0/8/16/20)、-1 は不参加
+// pendingOffset[i]: 「予約済み」の遅延値。cyclePos がこの値に達した瞬間に
+//                   canonOffset[i] へ移行し localPos=0 から発音開始する。
+//                   ボタン押下時は pending に入れ、即時参加はしない。
+int  canonOffset[NUM_CHILDREN]   = {-1, -1, -1, -1};
+int  pendingOffset[NUM_CHILDREN] = {-1, -1, -1, -1};
+int  globalPressCount = 0;
 
 bool loopOn   = true;        // ループ再生のON/OFF (シリアル 'l' でトグル)
 bool isPlaying = false;
@@ -150,28 +152,40 @@ void sendTick() {
 //
 // 各子機は cyclePos と myOffset から localPos を計算して発音する。
 // 1tick=1フレームなのでIR衝突が起きず、複数子機同時参加でも干渉ゼロ。
+//
+// 重要な設計:
+// - 予約活性化: cyclePos == pendingOffset[i] になった瞬間に活性化
+//   (entry=8 を予約していれば cyclePos=8 で活性化、localPos=0 から発音開始)
+// - per-voice REST: 全体ではなく各子機の localPos が
+//   MELODY_TICK_LENGTH 以上のときその子機だけ休符。これで voice1 が
+//   自分のlocalPos=23,24 を抜け落とす旧バグを解消。
 void sendTickBroadcast() {
-  long cyclePos;
-  if (loopOn) {
-    cyclePos = parentTick % TICK_LENGTH;
-  } else {
-    if (parentTick >= MELODY_TICK_LENGTH) return;
-    cyclePos = parentTick;
-  }
-  if (cyclePos >= MELODY_TICK_LENGTH) return;  // 休符期間は何も送らない
+  long cyclePos = parentTick % TICK_LENGTH;  // 常に 0..TICK_LENGTH-1
+  // 非loopモードでは MELODY_TICK_LENGTH を超えたら全停止
+  if (!loopOn && parentTick >= MELODY_TICK_LENGTH) return;
 
   digitalWrite(LED_INDICATOR, (parentTick % 2) ? HIGH : LOW);
 
-  // 各子機の鳴り状態を mask に集約
+  // 予約された子機を、その cyclePos に到達した瞬間に活性化する
+  for (int i = 0; i < NUM_CHILDREN; i++) {
+    if (pendingOffset[i] >= 0 && (int)cyclePos == pendingOffset[i]) {
+      canonOffset[i] = pendingOffset[i];
+      pendingOffset[i] = -1;
+      Serial.print("[child ");
+      Serial.print(i);
+      Serial.print("] ACTIVATED at cyclePos=");
+      Serial.println(cyclePos);
+    }
+  }
+
+  // 各子機の鳴り状態を mask に集約 (per-voice REST: 各子機の localPos で判定)
   uint8_t enabledMask = 0;
   for (int i = 0; i < NUM_CHILDREN; i++) {
     if (canonOffset[i] < 0) continue;
-    if (parentTick < canonOffset[i]) continue;
+    long localPos = (cyclePos - canonOffset[i] + TICK_LENGTH) % TICK_LENGTH;
+    if (localPos >= MELODY_TICK_LENGTH) continue;  // この子機は休符中
     if (i == DRUM_CHILD_ID) {
-      long drumLocal = (parentTick - canonOffset[i]) % TICK_LENGTH;
-      if (drumLocal < MELODY_TICK_LENGTH && drumLocal % DRUM_INTERVAL_TICKS == 0) {
-        enabledMask |= (1 << i);
-      }
+      if (localPos % DRUM_INTERVAL_TICKS == 0) enabledMask |= (1 << i);
     } else {
       enabledMask |= (1 << i);
     }
@@ -187,22 +201,19 @@ void sendTickBroadcast() {
     }
   }
 
-  uint8_t cmd;
-  if (configIdx < 0) {
-    cmd = 0xFF;  // 全子機無効 (configなし)
-  } else {
-    uint8_t offsetEncoded = (uint8_t)(canonOffset[configIdx] & 0x3F);
-    cmd = (((uint8_t)configIdx & 0x03) << 6) | offsetEncoded;
-  }
+  // configIdx が無い(全子機無効)なら何も送らない
+  if (configIdx < 0) return;
 
+  uint8_t offsetEncoded = (uint8_t)(canonOffset[configIdx] & 0x3F);
+  uint8_t cmd = (((uint8_t)configIdx & 0x03) << 6) | offsetEncoded;
   uint16_t addr = ((uint16_t)(cyclePos & 0xFF) << 8) | (uint16_t)enabledMask;
   IrSender.sendNEC(addr, cmd, 0);
 }
 
 // ボタンを押すたびに on/off をトグルする。
-// OFF -> ON の遷移時は「他の子機で使われていない entry point の最小値」を割り当てる。
-// これにより、既に動いている子機(例: child0 offset=0)と同じ offset が当たることがなく、
-// 後から ON にした子機は必ずカノン位置({8,16,20} のどれか)で参加する。
+// OFF -> ON: 未使用の entry point の最小値を「予約」する。即座には鳴り始めず、
+//            cyclePos がその entry に到達した瞬間に活性化して localPos=0 から発音する。
+// ON -> OFF: 参加中なら止める。予約中なら予約を取り消す。
 // OFF にすると当該 entry が解放され、次に ON する子機が同じ枠を再利用できる。
 void toggleChild(int i) {
   if (i < 0 || i >= NUM_CHILDREN) return;
@@ -210,18 +221,22 @@ void toggleChild(int i) {
     canonOffset[i] = -1;
     Serial.print("[child ");
     Serial.print(i);
-    Serial.println("] OFF");
+    Serial.println("] OFF (active stopped)");
+  } else if (pendingOffset[i] >= 0) {
+    pendingOffset[i] = -1;
+    Serial.print("[child ");
+    Serial.print(i);
+    Serial.println("] OFF (pending canceled)");
   } else {
-    // 既に他の子機で使用中の entry を集計する
+    // 既に他の子機で使用中 or 予約中の entry を集計する
     bool used[NUM_ENTRY_POINTS] = {false, false, false, false};
     for (int k = 0; k < NUM_CHILDREN; k++) {
       if (k == i) continue;
-      if (canonOffset[k] < 0) continue;
+      int off = (canonOffset[k] >= 0) ? canonOffset[k]
+              : (pendingOffset[k] >= 0) ? pendingOffset[k] : -1;
+      if (off < 0) continue;
       for (int e = 0; e < NUM_ENTRY_POINTS; e++) {
-        if (ENTRY_POINTS[e] == canonOffset[k]) {
-          used[e] = true;
-          break;
-        }
+        if (ENTRY_POINTS[e] == off) { used[e] = true; break; }
       }
     }
     // 最小の未使用 entry を選ぶ
@@ -229,17 +244,16 @@ void toggleChild(int i) {
     for (int e = 0; e < NUM_ENTRY_POINTS; e++) {
       if (!used[e]) { chosenIdx = e; break; }
     }
-    canonOffset[i] = ENTRY_POINTS[chosenIdx];
+    pendingOffset[i] = ENTRY_POINTS[chosenIdx];
     globalPressCount++;
     Serial.print("[child ");
     Serial.print(i);
-    Serial.print("] ON canonOffset=");
-    Serial.print(canonOffset[i]);
-    Serial.print(" (entry#");
-    Serial.print(chosenIdx);
-    Serial.print(", total#");
-    Serial.print(globalPressCount);
-    Serial.println(")");
+    Serial.print("] RESERVED entry=");
+    Serial.print(pendingOffset[i]);
+    Serial.print(" (waiting for cyclePos to reach ");
+    Serial.print(pendingOffset[i]);
+    Serial.print(") total#");
+    Serial.println(globalPressCount);
   }
 }
 
@@ -258,7 +272,7 @@ void startPlay() {
 void resetAll() {
   isPlaying = false;
   parentTick = 0;
-  for (int i = 0; i < NUM_CHILDREN; i++) canonOffset[i] = -1;
+  for (int i = 0; i < NUM_CHILDREN; i++) { canonOffset[i] = -1; pendingOffset[i] = -1; }
   globalPressCount = 0;
   digitalWrite(LED_INDICATOR, LOW);
   Serial.println("[reset]");
