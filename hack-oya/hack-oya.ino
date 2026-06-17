@@ -32,9 +32,11 @@ const int DRUM_INTERVAL_TICKS = 2;
 
 // NECフレーム間の最小ギャップ(ms)。これより短いと子機側の受信機が
 // 前のフレームを処理しきる前に次のフレームが来て、取りこぼしや
-// バッファ破損で子機が音を見失う(child0演奏中にchild1を加えると
-// child0が止まる原因)。NEC規格の40msに余裕を見て35msとする。
-const int IR_INTERFRAME_DELAY_MS = 35;
+// バッファ破損で子機が音を見失う。
+// 35ms→50msに引き上げ(child1再生中にchild0追加でchild1が落ちる症状対策)。
+// 受光モジュールの個体差・距離で必要量が変わるため、ノイズが残るなら
+// さらに60〜80msまで上げて良い (その場合 BPM を下げる必要あり)。
+const int IR_INTERFRAME_DELAY_MS = 50;
 
 const int PIN_BTN_CHILD[NUM_CHILDREN] = {4, 5, 6, 7};
 const int PIN_BTN_START = 8;
@@ -93,10 +95,10 @@ void loop() {
 }
 
 // 1tickごとに、有効な全子機へ localPos を個別に送信する。
-// 子機4台が同時に鳴ると最大4フレーム/tick。NECフレームは約67ms + gap 35ms。
-// 2子機: 2*67 + 35 = 169ms  (BPM=120 tick=250ms OK)
-// 3子機: 3*67 + 70 = 271ms  (BPM<=110 推奨)
-// 4子機: 4*67 + 105 = 373ms (BPM<=80 推奨)
+// 子機N台が同時に鳴ると N*67ms + (N-1)*50ms かかる。
+// 2子機: 2*67 + 50  = 184ms  (BPM=120 tick=250ms OK)
+// 3子機: 3*67 + 100 = 301ms  (BPM<=100 推奨)
+// 4子機: 4*67 + 150 = 418ms  (BPM<=70 推奨)
 void sendTick() {
   digitalWrite(LED_INDICATOR, (parentTick % 2) ? HIGH : LOW);
   bool needGap = false;  // 直前にIRを送ったか。送ったなら次のIR前にgapを入れる。
