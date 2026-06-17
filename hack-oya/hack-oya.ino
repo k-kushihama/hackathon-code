@@ -2,31 +2,47 @@
 #define IR_SEND_PIN 3
 #include <IRremote.hpp>
 
-const int NUM_CHILDREN = 4;
+// 新方式: 親機は「再生中の場所(localPos)」を子機ごとに送り続ける。
+// 各子機は自分の楽譜を持っており、address(=childid)が自分宛のフレームだけを拾って
+// command(=localPos)番目の音を鳴らす。1音が通信ロスで抜けても、次のフレームには
+// 正しいposが入っているため、子機は自然に「何事もなかったように」演奏に復帰できる。
+//
+// IR フォーマット (NEC):
+//   address (16bit) = childid (0..NUM_CHILDREN-1)
+//   command (8bit)  = その子機の楽譜index (localPos)
 
-const int PIN_BTN_ORDER[NUM_CHILDREN] = {4, 5, 6, 7};
+const int NUM_CHILDREN = 4;
+const int SCORE_LENGTH = 40;     // hack-ko.ino の myScore[] と一致させる
+
+// 各子機のカノン参加tick (0-indexed)。
+// 1回目に有効化された子機は 0tick (楽譜の頭) から参加し、
+// 2回目は 8tick (1-indexed の9配列目相当)、3回目は16、4回目は20で参加する。
+// ボタンを押した順番でカノンの遅延量が決まる。
+const int ENTRY_POINTS[] = {0, 8, 16, 20};
+const int NUM_ENTRY_POINTS = sizeof(ENTRY_POINTS) / sizeof(ENTRY_POINTS[0]);
+
+// ドラム機(CHILD_ID==3)はカノンには参加せず、四分音符ごと(=2tick)に1発キックする。
+const int DRUM_CHILD_ID = 3;
+const int DRUM_INTERVAL_TICKS = 2;
+
+const int PIN_BTN_CHILD[NUM_CHILDREN] = {4, 5, 6, 7};
 const int PIN_BTN_START = 8;
 const int PIN_BTN_TEMPO = 9;
 const int PIN_BTN_RESET = 10;
-const int LED_INDICATOR       = 13;
+const int LED_INDICATOR = 13;
 
-const int OFFSET_TICKS  = 8;
-const uint16_t IR_ADDRESS = 0x00;
+// canonOffset[i] = -1: 子機 i は無効化中。送信しない。
+// canonOffset[i] >= 0: 子機 i は有効。parentTick >= canonOffset[i] になったら
+//                     localPos = parentTick - canonOffset[i] として送信する。
+int  canonOffset[NUM_CHILDREN] = {-1, -1, -1, -1};
+int  globalPressCount = 0;  // 「ON にした延べ回数」。ENTRY_POINTS のインデックスに使う。
 
-// 子機3はドラム専用。輪唱には参加せずBPM(=四分音符=2tick)ごとに4つ打ちする。
-// 子機側hack-ko.inoの CHILD_ID==DRUM_CHILD_ID で固定のキック音(C2)を出す実装と
-// ペアになる定数。
-const int DRUM_CHILD_ID = 3;
-const long DRUM_INTERVAL_TICKS = 2;  // 8分音符tick基準なので2tick=四分音符=4つ打ち
-
-int  playOrder[NUM_CHILDREN] = {-1, -1, -1, -1};
-int  orderCount = 0;
-bool isPlaying  = false;
-int  tempoBpm   = 120;
-long tickCount  = 0;
+bool isPlaying = false;
+long parentTick = 0;            // start時に0、tickごとに+1。
 unsigned long lastTickMs = 0;
+int  tempoBpm = 120;
 
-int prevBtnOrder[NUM_CHILDREN] = {HIGH, HIGH, HIGH, HIGH};
+int prevBtnChild[NUM_CHILDREN] = {HIGH, HIGH, HIGH, HIGH};
 int prevBtnStart = HIGH;
 int prevBtnTempo = HIGH;
 int prevBtnReset = HIGH;
@@ -34,73 +50,128 @@ int prevBtnReset = HIGH;
 void setup() {
   Serial.begin(115200);
   IrSender.begin(IR_SEND_PIN);
-
   for (int i = 0; i < NUM_CHILDREN; i++) {
-    pinMode(PIN_BTN_ORDER[i], INPUT_PULLUP);
+    pinMode(PIN_BTN_CHILD[i], INPUT_PULLUP);
   }
   pinMode(PIN_BTN_START, INPUT_PULLUP);
   pinMode(PIN_BTN_TEMPO, INPUT_PULLUP);
   pinMode(PIN_BTN_RESET, INPUT_PULLUP);
   pinMode(LED_INDICATOR, OUTPUT);
   digitalWrite(LED_INDICATOR, LOW);
-
-  Serial.println("hack-oya ready: 0-3=order, s=start, r=reset, t=tempo");
+  delay(100);
+  printHelp();
 }
 
 void loop() {
   handleSerialCommand();
-  handleOrderButtons();
-  handleResetButton();
-  handleTempoButton();
+  handleChildButtons();
   handleStartButton();
+  handleTempoButton();
+  handleResetButton();
 
   if (isPlaying) {
     unsigned long now = millis();
-    unsigned long interval = 60000UL / (unsigned long)tempoBpm / 2UL;
+    unsigned long interval = 60000UL / (unsigned long)tempoBpm / 2UL;  // 8分音符1個ぶんの時間
     if (now - lastTickMs >= interval) {
       lastTickMs = now;
-      tick();
-      tickCount++;
+      sendTick();
+      parentTick++;
     }
   }
 }
 
-void handleOrderButtons() {
-  if (isPlaying) return;
+// 1tickごとに、有効な全子機へ localPos を個別に送信する。
+// 子機4台が同時に鳴ると最大4フレーム/tick。NECフレームは約67msなので、
+// BPM=120(tick=250ms) では timing 余裕がない。同時参加が多い場合は BPM を下げる。
+void sendTick() {
+  digitalWrite(LED_INDICATOR, (parentTick % 2) ? HIGH : LOW);
   for (int i = 0; i < NUM_CHILDREN; i++) {
-    int s = digitalRead(PIN_BTN_ORDER[i]);
-    if (prevBtnOrder[i] == HIGH && s == LOW) {
-      if (orderCount < NUM_CHILDREN && !inOrder(i)) {
-        playOrder[orderCount++] = i;
-        Serial.print("order: ");
-        for (int k = 0; k < orderCount; k++) {
-          Serial.print(playOrder[k]);
-          Serial.print(" ");
-        }
-        Serial.println();
-      }
+    if (canonOffset[i] < 0) continue;        // 無効化中
+    long relTick = parentTick - canonOffset[i];
+    if (relTick < 0) continue;                // まだエントリ点に達していない
+
+    if (i == DRUM_CHILD_ID) {
+      // ドラムは4つ打ち。relTick が DRUM_INTERVAL_TICKS の倍数のときだけ送る。
+      if (relTick % DRUM_INTERVAL_TICKS != 0) continue;
+      if (relTick >= SCORE_LENGTH) continue;
+      IrSender.sendNEC((uint16_t)i, (uint8_t)(relTick / DRUM_INTERVAL_TICKS), 0);
+    } else {
+      // メロディ機: localPos がそのまま楽譜index。SCORE_LENGTH を超えたら停止。
+      if (relTick >= SCORE_LENGTH) continue;
+      IrSender.sendNEC((uint16_t)i, (uint8_t)relTick, 0);
+    }
+  }
+}
+
+// ボタンを押すたびに on/off をトグルする。
+// OFF -> ON の遷移時に ENTRY_POINTS[globalPressCount % 4] を割り当て、
+// globalPressCount をインクリメントする。
+// 一度OFFにしてから再度ONにすると、その時点の press# に応じた次の遅延量で参加する。
+void toggleChild(int i) {
+  if (i < 0 || i >= NUM_CHILDREN) return;
+  if (canonOffset[i] >= 0) {
+    canonOffset[i] = -1;
+    Serial.print("[child ");
+    Serial.print(i);
+    Serial.println("] OFF");
+  } else {
+    canonOffset[i] = ENTRY_POINTS[globalPressCount % NUM_ENTRY_POINTS];
+    globalPressCount++;
+    Serial.print("[child ");
+    Serial.print(i);
+    Serial.print("] ON canonOffset=");
+    Serial.print(canonOffset[i]);
+    Serial.print(" (press#");
+    Serial.print(globalPressCount);
+    Serial.println(")");
+  }
+}
+
+void startPlay() {
+  if (isPlaying) {
+    Serial.println("[!] already playing");
+    return;
+  }
+  isPlaying = true;
+  parentTick = 0;
+  lastTickMs = millis() - (60000UL / (unsigned long)tempoBpm / 2UL);
+  Serial.print("[start] BPM=");
+  Serial.println(tempoBpm);
+}
+
+void resetAll() {
+  isPlaying = false;
+  parentTick = 0;
+  for (int i = 0; i < NUM_CHILDREN; i++) canonOffset[i] = -1;
+  globalPressCount = 0;
+  digitalWrite(LED_INDICATOR, LOW);
+  Serial.println("[reset]");
+}
+
+void handleChildButtons() {
+  for (int i = 0; i < NUM_CHILDREN; i++) {
+    int s = digitalRead(PIN_BTN_CHILD[i]);
+    if (prevBtnChild[i] == HIGH && s == LOW) {
+      toggleChild(i);
       delay(30);
     }
-    prevBtnOrder[i] = s;
+    prevBtnChild[i] = s;
   }
 }
 
-bool inOrder(int childIdx) {
-  for (int i = 0; i < orderCount; i++) {
-    if (playOrder[i] == childIdx) return true;
+void handleStartButton() {
+  int s = digitalRead(PIN_BTN_START);
+  if (prevBtnStart == HIGH && s == LOW) {
+    startPlay();
+    delay(30);
   }
-  return false;
+  prevBtnStart = s;
 }
 
 void handleResetButton() {
   int s = digitalRead(PIN_BTN_RESET);
   if (prevBtnReset == HIGH && s == LOW) {
-    isPlaying  = false;
-    orderCount = 0;
-    for (int i = 0; i < NUM_CHILDREN; i++) playOrder[i] = -1;
-    tickCount = 0;
-    digitalWrite(LED_INDICATOR, LOW);
-    Serial.println("reset");
+    resetAll();
     delay(30);
   }
   prevBtnReset = s;
@@ -111,93 +182,44 @@ void handleTempoButton() {
   if (prevBtnTempo == HIGH && s == LOW) {
     tempoBpm += 30;
     if (tempoBpm > 150) tempoBpm = 60;
-    Serial.print("tempo=");
+    Serial.print("[tempo] BPM=");
     Serial.println(tempoBpm);
     delay(30);
   }
   prevBtnTempo = s;
 }
 
-void handleStartButton() {
-  int s = digitalRead(PIN_BTN_START);
-  if (prevBtnStart == HIGH && s == LOW) {
-    if (!isPlaying && orderCount > 0) {
-      isPlaying  = true;
-      tickCount  = 0;
-      lastTickMs = millis() - (60000UL / (unsigned long)tempoBpm / 2UL);
-      Serial.println("start");
-    }
-    delay(30);
-  }
-  prevBtnStart = s;
-}
-
-void tick() {
-  uint8_t mask = 0;
-  for (int i = 0; i < orderCount; i++) {
-    int childIdx = playOrder[i];
-    if (childIdx == DRUM_CHILD_ID) {
-      // ドラムは輪唱に参加せず、tickCountが四分音符の頭(=DRUM_INTERVAL_TICKSの倍数)
-      // のときだけ叩く。i番目に追加されても遅延ゼロで最初から4つ打ちが鳴る。
-      if (tickCount % DRUM_INTERVAL_TICKS == 0) {
-        mask |= (uint8_t)(1 << childIdx);
-      }
-    } else {
-      // メロディ機: PlayOrderのi番目はi*OFFSET_TICKS遅れて参加する輪唱動作。
-      long childStartTick = (long)i * OFFSET_TICKS;
-      if (tickCount >= childStartTick) {
-        mask |= (uint8_t)(1 << childIdx);
-      }
-    }
-  }
-
-  // 赤外線を実際に送信したタイミングだけLEDを光らせて、IR出力を目視確認できるようにする。
-  if (mask != 0) {
-    digitalWrite(LED_INDICATOR, HIGH);
-    IrSender.sendNEC(IR_ADDRESS, mask, 0);
-    digitalWrite(LED_INDICATOR, LOW);
-  }
-}
-
-// シリアル入力をボタン押下と同じ扱いで処理する。
-// '0'..'3' = Order(子機追加), 's'/'S' = Start, 'r'/'R' = Reset, 't'/'T' = Tempo。
-// 改行や空白文字は無視するので、シリアルモニタの改行設定はどれでもよい。
+// シリアルコマンドは旧仕様(0..3=順番登録)から「0..3=トグル」に変更した。
+// 's'/'r'/'t'/'?' は従来通り。
 void handleSerialCommand() {
   while (Serial.available()) {
     char c = (char)Serial.read();
     if (c == '\r' || c == '\n' || c == ' ') continue;
-
     if (c >= '0' && c <= ('0' + NUM_CHILDREN - 1)) {
-      if (isPlaying) continue;
-      int childIdx = c - '0';
-      if (orderCount < NUM_CHILDREN && !inOrder(childIdx)) {
-        playOrder[orderCount++] = childIdx;
-        Serial.print("order(serial): ");
-        for (int k = 0; k < orderCount; k++) {
-          Serial.print(playOrder[k]);
-          Serial.print(" ");
-        }
-        Serial.println();
-      }
+      toggleChild(c - '0');
     } else if (c == 's' || c == 'S') {
-      if (!isPlaying && orderCount > 0) {
-        isPlaying  = true;
-        tickCount  = 0;
-        lastTickMs = millis() - (60000UL / (unsigned long)tempoBpm / 2UL);
-        Serial.println("start(serial)");
-      }
+      startPlay();
     } else if (c == 'r' || c == 'R') {
-      isPlaying  = false;
-      orderCount = 0;
-      for (int i = 0; i < NUM_CHILDREN; i++) playOrder[i] = -1;
-      tickCount = 0;
-      digitalWrite(LED_INDICATOR, LOW);
-      Serial.println("reset(serial)");
+      resetAll();
     } else if (c == 't' || c == 'T') {
       tempoBpm += 30;
       if (tempoBpm > 150) tempoBpm = 60;
-      Serial.print("tempo(serial)=");
+      Serial.print("[tempo] BPM=");
       Serial.println(tempoBpm);
+    } else if (c == '?') {
+      printHelp();
     }
   }
+}
+
+void printHelp() {
+  Serial.println("=== hack-oya help (canon-broadcast mode) ===");
+  Serial.println("0..3 : toggle child on/off");
+  Serial.println("       press order decides canon entry tick: 1st=0, 2nd=8, 3rd=16, 4th=20");
+  Serial.println("s    : start");
+  Serial.println("r    : reset (disable all children, parentTick=0)");
+  Serial.println("t    : tempo cycle (60/90/120/150)");
+  Serial.println("?    : help");
+  Serial.print("Current BPM=");
+  Serial.println(tempoBpm);
 }
