@@ -91,7 +91,7 @@ void loop() {
     unsigned long interval = 60000UL / (unsigned long)tempoBpm / 2UL;  // 8分音符1個ぶんの時間
     if (now - lastTickMs >= interval) {
       lastTickMs = now;
-      sendTick();
+      sendTickBroadcast();   // 単一ブロードキャスト方式に切り替え (per-child は廃止)
       parentTick++;
     }
   }
@@ -138,6 +138,65 @@ void sendTick() {
     IrSender.sendNEC((uint16_t)i, cmd, 0);
     needGap = true;
   }
+  // (旧 per-child 方式。新 sendTickBroadcast() に置き換え予定)
+}
+
+// 単一ブロードキャスト方式の sendTick。1tickあたり IR 1フレームのみ送る。
+// フレーム内容 (NEC, 16bit address + 8bit command):
+//   address[15:8] = cyclePos     (0..TICK_LENGTH-1, 共通の進行位置)
+//   address[7:0]  = enabledMask  (bit i = 子機 i が今このtickで鳴るか)
+//   command[7:6]  = configIdx    (このフレームで設定を送る子機の番号 0..3)
+//   command[5:0]  = canonOffset  (configIdx の子機の遅延値 0..63)
+//
+// 各子機は cyclePos と myOffset から localPos を計算して発音する。
+// 1tick=1フレームなのでIR衝突が起きず、複数子機同時参加でも干渉ゼロ。
+void sendTickBroadcast() {
+  long cyclePos;
+  if (loopOn) {
+    cyclePos = parentTick % TICK_LENGTH;
+  } else {
+    if (parentTick >= MELODY_TICK_LENGTH) return;
+    cyclePos = parentTick;
+  }
+  if (cyclePos >= MELODY_TICK_LENGTH) return;  // 休符期間は何も送らない
+
+  digitalWrite(LED_INDICATOR, (parentTick % 2) ? HIGH : LOW);
+
+  // 各子機の鳴り状態を mask に集約
+  uint8_t enabledMask = 0;
+  for (int i = 0; i < NUM_CHILDREN; i++) {
+    if (canonOffset[i] < 0) continue;
+    if (parentTick < canonOffset[i]) continue;
+    if (i == DRUM_CHILD_ID) {
+      long drumLocal = (parentTick - canonOffset[i]) % TICK_LENGTH;
+      if (drumLocal < MELODY_TICK_LENGTH && drumLocal % DRUM_INTERVAL_TICKS == 0) {
+        enabledMask |= (1 << i);
+      }
+    } else {
+      enabledMask |= (1 << i);
+    }
+  }
+
+  // 設定送信のラウンドロビン: 有効な子機を順番に巡回
+  int configIdx = -1;
+  for (int r = 0; r < NUM_CHILDREN; r++) {
+    int idx = ((int)(parentTick % NUM_CHILDREN) + r) % NUM_CHILDREN;
+    if (canonOffset[idx] >= 0) {
+      configIdx = idx;
+      break;
+    }
+  }
+
+  uint8_t cmd;
+  if (configIdx < 0) {
+    cmd = 0xFF;  // 全子機無効 (configなし)
+  } else {
+    uint8_t offsetEncoded = (uint8_t)(canonOffset[configIdx] & 0x3F);
+    cmd = (((uint8_t)configIdx & 0x03) << 6) | offsetEncoded;
+  }
+
+  uint16_t addr = ((uint16_t)(cyclePos & 0xFF) << 8) | (uint16_t)enabledMask;
+  IrSender.sendNEC(addr, cmd, 0);
 }
 
 // ボタンを押すたびに on/off をトグルする。
