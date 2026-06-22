@@ -22,6 +22,8 @@ const int DRUM_CHILD_ID = 3;
 const int DRUM_INTERVAL_TICKS = 2;
 
 const int PIN_BTN_CHILD[NUM_CHILDREN] = {4, 5, 6, 7};
+// 各子機ボタン横のLED (D4→A0, D5→A1, D6→A2, D7→A3)。トグル状態を可視化する。
+const int PIN_LED_CHILD[NUM_CHILDREN] = {A0, A1, A2, A3};
 const int PIN_BTN_START = 8;
 const int PIN_BTN_TEMPO = 9;
 const int PIN_BTN_RESET = 10;
@@ -49,6 +51,8 @@ void setup() {
   IrSender.begin(IR_SEND_PIN);
   for (int i = 0; i < NUM_CHILDREN; i++) {
     pinMode(PIN_BTN_CHILD[i], INPUT_PULLUP);
+    pinMode(PIN_LED_CHILD[i], OUTPUT);
+    digitalWrite(PIN_LED_CHILD[i], LOW);
   }
   pinMode(PIN_BTN_START, INPUT_PULLUP);
   pinMode(PIN_BTN_TEMPO, INPUT_PULLUP);
@@ -144,6 +148,9 @@ void toggleChild(int i) {
     Serial.print(" total#");
     Serial.println(globalPressCount);
   }
+  // active/pending いずれかが立っていれば点灯、両方解除なら消灯
+  bool on = (canonOffset[i] >= 0) || (pendingOffset[i] >= 0);
+  digitalWrite(PIN_LED_CHILD[i], on ? HIGH : LOW);
 }
 
 void startPlay() {
@@ -161,7 +168,11 @@ void startPlay() {
 void resetAll() {
   isPlaying = false;
   parentTick = 0;
-  for (int i = 0; i < NUM_CHILDREN; i++) { canonOffset[i] = -1; pendingOffset[i] = -1; }
+  for (int i = 0; i < NUM_CHILDREN; i++) {
+    canonOffset[i] = -1;
+    pendingOffset[i] = -1;
+    digitalWrite(PIN_LED_CHILD[i], LOW);
+  }
   globalPressCount = 0;
   digitalWrite(LED_INDICATOR, LOW);
   Serial.println("[reset]");
