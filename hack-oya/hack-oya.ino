@@ -42,6 +42,9 @@ unsigned long lastTickMs = 0;
 int  tempoBpm = 120;
 
 int prevBtnChild[NUM_CHILDREN] = {HIGH, HIGH, HIGH, HIGH};
+// 立ち下がりエッジを受け付けた最終時刻。チャタリング(接点バウンス)で同一押下が二重発火するのを防ぐ。
+unsigned long lastBtnChildMs[NUM_CHILDREN] = {0, 0, 0, 0};
+const unsigned long BTN_DEBOUNCE_MS = 50;
 int prevBtnStart = HIGH;
 int prevBtnTempo = HIGH;
 int prevBtnReset = HIGH;
@@ -179,11 +182,12 @@ void resetAll() {
 }
 
 void handleChildButtons() {
+  unsigned long now = millis();
   for (int i = 0; i < NUM_CHILDREN; i++) {
     int s = digitalRead(PIN_BTN_CHILD[i]);
-    if (prevBtnChild[i] == HIGH && s == LOW) {
+    if (prevBtnChild[i] == HIGH && s == LOW && (now - lastBtnChildMs[i]) > BTN_DEBOUNCE_MS) {
       toggleChild(i);
-      delay(30);
+      lastBtnChildMs[i] = now;
     }
     prevBtnChild[i] = s;
   }
