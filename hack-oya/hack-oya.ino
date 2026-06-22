@@ -41,9 +41,12 @@ long parentTick = 0;
 unsigned long lastTickMs = 0;
 int  tempoBpm = 120;
 
-int prevBtnChild[NUM_CHILDREN] = {HIGH, HIGH, HIGH, HIGH};
-// 立ち下がりエッジを受け付けた最終時刻。チャタリング(接点バウンス)で同一押下が二重発火するのを防ぐ。
-unsigned long lastBtnChildMs[NUM_CHILDREN] = {0, 0, 0, 0};
+// stable=確定済みの値、lastRaw=直近の生値、lastChangeMs=生値が変化した時刻。
+// 長押し中の瞬間バウンス(LOW→HIGH→LOW)でエッジを再検出しないよう、
+// 「同じ生値がBTN_DEBOUNCE_MS以上続いたら確定状態を更新する」方式にする。
+int stableBtnChild[NUM_CHILDREN] = {HIGH, HIGH, HIGH, HIGH};
+int lastRawBtnChild[NUM_CHILDREN] = {HIGH, HIGH, HIGH, HIGH};
+unsigned long lastBtnChangeMs[NUM_CHILDREN] = {0, 0, 0, 0};
 const unsigned long BTN_DEBOUNCE_MS = 50;
 int prevBtnStart = HIGH;
 int prevBtnTempo = HIGH;
@@ -185,11 +188,16 @@ void handleChildButtons() {
   unsigned long now = millis();
   for (int i = 0; i < NUM_CHILDREN; i++) {
     int s = digitalRead(PIN_BTN_CHILD[i]);
-    if (prevBtnChild[i] == HIGH && s == LOW && (now - lastBtnChildMs[i]) > BTN_DEBOUNCE_MS) {
-      toggleChild(i);
-      lastBtnChildMs[i] = now;
+    if (s != lastRawBtnChild[i]) {
+      lastRawBtnChild[i] = s;
+      lastBtnChangeMs[i] = now;
     }
-    prevBtnChild[i] = s;
+    // 生値が安定して BTN_DEBOUNCE_MS 続いたら確定状態を更新。
+    // これにより長押し中の瞬間バウンスでは stableBtnChild が HIGH に戻らず、再発火しない。
+    if ((now - lastBtnChangeMs[i]) > BTN_DEBOUNCE_MS && s != stableBtnChild[i]) {
+      stableBtnChild[i] = s;
+      if (s == LOW) toggleChild(i);
+    }
   }
 }
 
