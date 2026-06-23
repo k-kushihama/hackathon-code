@@ -164,6 +164,15 @@ void startPlay() {
     Serial.println("[!] already playing");
     return;
   }
+  // 子機ボタン(D4~D7)が1つも押されていない=全員inactiveなら開始しない
+  bool anySelected = false;
+  for (int i = 0; i < NUM_CHILDREN; i++) {
+    if (canonOffset[i] >= 0 || pendingOffset[i] >= 0) { anySelected = true; break; }
+  }
+  if (!anySelected) {
+    Serial.println("[!] no child selected -- press D4-D7 first");
+    return;
+  }
   isPlaying = true;
   parentTick = 0;
   lastTickMs = millis() - (60000UL / (unsigned long)tempoBpm / 2UL);
