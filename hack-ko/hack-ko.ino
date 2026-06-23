@@ -8,7 +8,7 @@
 // configIdx==childId のとき myOffset を更新する。
 
 // 書き込む機体ごとに値を変えて Upload する: 0,1,2 = メロディ機, 3 = ドラム機。
-int childId = 1;
+int childId = 2;
 
 const int DRUM_CHILD_ID = 3;
 const int PIN_IR_RECV = 2;
@@ -28,7 +28,7 @@ const int DOUBLE_START = 24;
 
 // 親機の TICK_LENGTH と必ず一致させる。
 const int MELODY_TICK_LENGTH = 31;
-const int LOOP_REST_TICKS    = 2;
+const int LOOP_REST_TICKS    = 1;
 const int TICK_LENGTH        = MELODY_TICK_LENGTH + LOOP_REST_TICKS;
 
 // Processing への通信フォーマット: "ピッチ名,duration秒,amplitude,localPos\n"
