@@ -15,8 +15,10 @@ const int MELODY_TICK_LENGTH = 31;
 const int LOOP_REST_TICKS    = 1;
 const int TICK_LENGTH        = MELODY_TICK_LENGTH + LOOP_REST_TICKS;
 
-// 各子機のカノン参加tick (固定割当)。D4=child0/0, D5=child1/8, D6=child2/16, D7=child3/20。
-const int CHILD_ENTRY[NUM_CHILDREN] = {0, 8, 16, 20};
+// 押下順N番目に割り当てるカノン参加tick。
+// 1番目に押された子機 → 0 (リードとして最初から)、2番目 → 8、3番目 → 16、4番目 → 20。
+// どのボタン(D4~D7=child0~3)を最初に押しても、その子機がpos0から流れ出すように動的割当する。
+const int CANON_ENTRY_BY_ORDER[NUM_CHILDREN] = {0, 8, 16, 20};
 
 const int DRUM_CHILD_ID = 3;
 const int DRUM_INTERVAL_TICKS = 2;
@@ -31,8 +33,10 @@ const int LED_INDICATOR = 13;
 
 // canonOffset: 参加中の遅延値、-1 は不参加
 // pendingOffset: 予約済み。cyclePos が一致した瞬間に canonOffset へ昇格する。
+// pressOrder: 押下順 (0=1番目, 1=2番目, ...)。-1=未押下。Off時にリセット。
 int  canonOffset[NUM_CHILDREN]   = {-1, -1, -1, -1};
 int  pendingOffset[NUM_CHILDREN] = {-1, -1, -1, -1};
+int  pressOrder[NUM_CHILDREN]    = {-1, -1, -1, -1};
 int  globalPressCount = 0;
 
 bool loopOn   = true;
@@ -136,20 +140,36 @@ void toggleChild(int i) {
   if (i < 0 || i >= NUM_CHILDREN) return;
   if (canonOffset[i] >= 0) {
     canonOffset[i] = -1;
+    pressOrder[i] = -1;
     Serial.print("[child ");
     Serial.print(i);
     Serial.println("] OFF (active stopped)");
   } else if (pendingOffset[i] >= 0) {
     pendingOffset[i] = -1;
+    pressOrder[i] = -1;
     Serial.print("[child ");
     Serial.print(i);
     Serial.println("] OFF (pending canceled)");
   } else {
-    pendingOffset[i] = CHILD_ENTRY[i];
+    // 現在使われていない最小の押下順番号を割り当てる(0=リード, 1=2番目..)。
+    int order = 0;
+    while (order < NUM_CHILDREN) {
+      bool used = false;
+      for (int j = 0; j < NUM_CHILDREN; j++) {
+        if (pressOrder[j] == order) { used = true; break; }
+      }
+      if (!used) break;
+      order++;
+    }
+    if (order >= NUM_CHILDREN) order = NUM_CHILDREN - 1;
+    pressOrder[i] = order;
+    pendingOffset[i] = CANON_ENTRY_BY_ORDER[order];
     globalPressCount++;
     Serial.print("[child ");
     Serial.print(i);
-    Serial.print("] RESERVED entry=");
+    Serial.print("] RESERVED order=");
+    Serial.print(order);
+    Serial.print(" entry=");
     Serial.print(pendingOffset[i]);
     Serial.print(" total#");
     Serial.println(globalPressCount);
@@ -186,6 +206,7 @@ void resetAll() {
   for (int i = 0; i < NUM_CHILDREN; i++) {
     canonOffset[i] = -1;
     pendingOffset[i] = -1;
+    pressOrder[i] = -1;
     digitalWrite(PIN_LED_CHILD[i], LOW);
   }
   globalPressCount = 0;
@@ -267,7 +288,7 @@ void handleSerialCommand() {
 
 void printHelp() {
   Serial.println("=== hack-oya help ===");
-  Serial.println("0..3 : toggle child on/off (D4=child0/entry0, D5=child1/8, D6=child2/16, D7=child3/20)");
+  Serial.println("0..3 : toggle child on/off (entryは押下順に動的割当: 1st=0, 2nd=8, 3rd=16, 4th=20)");
   Serial.println("s    : start");
   Serial.println("r    : reset");
   Serial.println("t    : tempo cycle (60/90/120/150)");
