@@ -7,6 +7,7 @@ Minim minim;
 AudioOutput out;
 String currentNote = "";
 int currentPos = -1;  // 親機が割り当ててきた localPos (デバッグ表示用)
+PianoInstrument currentInstrument = null;  // 直近に鳴らした音を保持。Rを受信したらnoteOff()で即停止する。
 
 void setup() {
   size(512, 200);
@@ -53,13 +54,23 @@ void serialEvent(Serial p) {
   if (parts.length >= 4) {
     currentPos = int(parts[3]);
   }
-  if (pitch.equals("R")) return;
+  // R は休符: 直前の音の余韻が次のtickまで残らないよう、即noteOff()で打ち切る。
+  // (NOTE_DURATION_DEFAULT=0.40s は tick間隔(120BPMで0.25s)より長いので、
+  //  R が来た時点で前音がまだ鳴っているのを止めないと休符に聞こえない。)
+  if (pitch.equals("R")) {
+    if (currentInstrument != null) {
+      currentInstrument.noteOff();
+      currentInstrument = null;
+    }
+    return;
+  }
   playNote(pitch, duration, amplitude);
 }
 
 void playNote(String pitch, float duration, float amplitude) {
   float freq = Frequency.ofPitch(pitch).asHz();
-  out.playNote(0, duration, new PianoInstrument(freq, amplitude, currentWaveform));
+  currentInstrument = new PianoInstrument(freq, amplitude, currentWaveform);
+  out.playNote(0, duration, currentInstrument);
 }
 
 class PianoInstrument implements Instrument {
