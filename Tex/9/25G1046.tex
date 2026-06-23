@@ -1,0 +1,538 @@
+\documentclass[a4paper,11pt]{ltjsarticle}
+
+\usepackage{luatexja}
+\usepackage{geometry}
+\geometry{margin=25mm}
+
+\usepackage{array}
+\usepackage{longtable}
+\usepackage[table]{xcolor}
+\usepackage{booktabs}
+
+\usepackage{enumitem}
+
+\usepackage{hyperref}
+
+\usepackage{titlesec}
+\titleformat{\section}{\large\bfseries}{}{0em}{}
+
+\usepackage{listings}
+\lstset{
+  basicstyle=\ttfamily\small,
+  frame=single,
+  breaklines=true,
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  keepspaces=true,
+  showstringspaces=false,
+  columns=fullflexible,
+  tabsize=2,
+}
+
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning, calc, fit}
+
+\usepackage{float}
+
+\definecolor{ganttCell}{HTML}{4FC3D0}
+\definecolor{ganttEarly}{HTML}{FFB74D}
+
+\providecommand{\％}{\%}
+
+\setlength{\parindent}{0pt}
+\setlist[itemize]{leftmargin=2em}
+
+\begin{document}
+
+\begin{center}
+    {\LARGE \textbf{第9回事前課題}}\\[0.4em]
+    {\large 作業ログ（第9週末）}\\[1em]
+\end{center}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+報告者 & 櫛濱 和輝 (25G1046)\\
+\hline
+報告日 & 2026年6月23日\\
+\hline
+チーム & チーム9\\
+\hline
+プロジェクト名 & 赤外線通信で歌うカエル\\
+\hline
+担当パート & Arduino（親機 hack-oya.ino／子機 hack-ko.ino），Processing（hackko.pde の休符処理），輪唱システム回路の組み立て\\
+\hline
+本来の今週の位置づけ & 第9週末（6/23）．計画書 v1.2 のガント上，第9週（6/17〜6/23）は 510:輪唱機能作成（全員）の最終週かつ 520:結合テスト（全員）の開始週．櫛濱は親機ファーム・子機ファーム・親機回路 UI を担当\\
+\hline
+報告対象 & 第8週末（6/16）以降に実施した\textbf{複数 Arduino による輪唱システムの実機完成}．具体的には親機回路の UI 改良（子機ボタン横の LED 可視化／start ボタン追加），親機ファーム（hack-oya.ino）の押下順カノン・誤操作ガード・チャタリング対策，子機ファーム（hack-ko.ino）の親機との TICK\_LENGTH 整合，Processing（hackko.pde）の休符即時停止\\
+\hline
+作業時間 & 計10時間\\
+\hline
+\end{tabular}
+
+\vspace{1em}
+
+%=====================================================
+\section{1. 進捗サマリー}
+
+\begin{itemize}
+    \item 現在地：第9週末（6/23）．第8週末で持ち越していた「複数子機での輪唱実機実験」を実施し，\textbf{4 子機（メロディ 3＋ドラム 1）の同時受信・カノン演奏が成立}した
+    \item \textbf{親機 hack-oya.ino の主要改良}：
+    \begin{itemize}
+        \item 子機ボタン（D4〜D7）の隣にトグル状態表示 LED（A0〜A3）を追加し，どの子機が参加予約／参加中なのかを物理的に可視化．従来は親機 Serial Monitor を見ないと状態が分からなかったのが，回路上で一目で判別できるようになった
+        \item start ボタン（D8）に「子機が 1 つも選択されていない状態では演奏を開始しない」ガードを追加．無音 tick を撒き続ける誤操作を防止
+        \item 子機ボタンのチャタリング対策を \texttt{delay(30)} 方式から \texttt{millis()} ベースの状態継続式 debounce（50ms 安定継続で確定）に置換．長押し中の瞬間バウンスによる二重トグル発火を抑止
+        \item \textbf{押下順カノン}：従来は CHILD\_ENTRY[i]＝\{0,8,16,20\} を子機固有値として扱っていたが，これを「押下順 N 番目に割り当てる遅延値」に変更．どのボタンを最初に押してもその子機が pos0 から流れ出し，2 番目以降が 8, 16, 20 で遅延参加する本来のカノン形になった
+    \end{itemize}
+    \item \textbf{子機 hack-ko.ino の修正}：親機側 \texttt{LOOP\_REST\_TICKS=1}（TICK\_LENGTH=32）に対し子機側が 2（TICK\_LENGTH=33）のまま残っており，ループ折り返しで子機 localPos が 1tick 飛ぶ症状（child2 で pos16，child1 で pos24 が抜ける）が発生していた．子機側 \texttt{LOOP\_REST\_TICKS} を 1 に揃え，両者の周期を 32 に統一して根絶
+    \item \textbf{Processing hackko.pde の修正}：\texttt{NOTE\_DURATION\_DEFAULT=0.40s} が tick 間隔（120BPM で 0.25s）より長く，R（休符）の tick でも前音の余韻が次拍まで残り休符として聞こえない症状があった．\texttt{PianoInstrument} を保持しておき，R 受信時に \texttt{noteOff()} で即停止することで休符を聴感上機能させた
+    \item 全体進捗率：75\％（複数子機輪唱の実機統合完了，残課題は MOP5 フェードアウト・MOP3 定量・双子音処理の非ブロック化）
+    \item 主要成果：
+    \begin{itemize}
+        \item \textbf{複数 Arduino による輪唱システムが実機で稼働した}．親機 1 台＋子機 4 台（メロディ 3＋ドラム 1）の構成で，押下順に従ったカノン演奏を聴感で確認
+        \item 親機回路に物理 UI（トグル LED・start ボタン）を実装し，リハーサル時の操作性が大きく向上．Serial Monitor を見ずに「どの子機を参加させたか」「いま再生中か」が判別できる状態になった
+        \item 親機・子機間の TICK\_LENGTH 不整合という長期間潜伏していたバグを発見・修正．以後 pos16／pos24 抜けの再発なし
+    \end{itemize}
+    \item 重大課題（影響度：高）：
+    \begin{itemize}
+        \item 子機 hack-ko.ino の双子音処理（\texttt{DOUBLE\_START=24} 以降）に \texttt{delay(lastIntervalMs/2)} が残っており，その間 IR 受信ループが止まる．pos25 付近の取りこぼし要因として残存．millis() ベースの遅延発火に置換予定
+        \item MOP5（フェードアウト）は今週ようやく R の即時 noteOff() を導入したが，本来要求の「0.03 秒フェードアウト」は未実装
+        \item MOP3（赤外線通信成功率 95\％）の定量計測は依然未実施
+    \end{itemize}
+\end{itemize}
+
+%=====================================================
+\section{2. ガントチャート}
+
+第9週末時点では計画書 v1.2（2026/5/29 版）から変更はないため，チーム全体・個人とも v1.2 のガントチャートのみを掲載する．着色セル（\colorbox{ganttCell}{\phantom{xx}}）は当該タスクの実施週を表す．
+
+\renewcommand{\arraystretch}{1.3}
+
+\begingroup
+\setlength{\tabcolsep}{3pt}
+
+\subsection*{2.1 チーム全体ガントチャート}
+
+\begin{longtable}{|p{6.2cm}|p{2.3cm}|c|c|c|c|c|c|}
+\hline
+\rowcolor[gray]{0.9}
+第3層：活動タスク & 担当者 & 5週 & 6週 & 7週 & 8週 & 9週 & 10週 \\
+\hline
+110:ピアノ音の作成 & 櫛濱・久家 & \cellcolor{ganttCell} & & \cellcolor{ganttCell} & & & \\
+\hline
+120:arduinoとの通信用関数（ピアノ） & 櫛濱・久家 & \cellcolor{ganttCell} & & & & & \\
+\hline
+130:フルート音の作成 & 家田・渡邊 & \cellcolor{ganttCell} & & & & & \\
+\hline
+140:arduinoとの通信用関数（フルート） & 家田・渡邊 & \cellcolor{ganttCell} & & & & & \\
+\hline
+150:トランペット音の作成 & 木下・手代木 & \cellcolor{ganttCell} & & & & & \\
+\hline
+160:arduinoとの通信用関数（トランペット） & 木下・手代木 & \cellcolor{ganttCell} & & & & & \\
+\hline
+170:ドラム音の作成（キック） & 櫛濱・久家 & & \cellcolor{ganttCell} & & & & \\
+\hline
+171:ドラム音の作成（シンバル） & 櫛濱・久家 & & \cellcolor{ganttCell} & & & & \\
+\hline
+180:arduinoとの通信用関数（ドラム） & 櫛濱・久家 & & \cellcolor{ganttCell} & & & & \\
+\hline
+210:ピアノのプログラム & 櫛濱・久家 & \cellcolor{ganttCell} & & & & & \\
+\hline
+220:フルートのプログラム & 家田・渡邊 & \cellcolor{ganttCell} & & & & & \\
+\hline
+230:トランペットのプログラム & 木下・手代木 & \cellcolor{ganttCell} & & & & & \\
+\hline
+240:ドラムのプログラム & 櫛濱・久家 & & \cellcolor{ganttCell} & & & & \\
+\hline
+250:楽譜進行プログラム & 家田・渡邊 & & \cellcolor{ganttCell} & \cellcolor{ganttCell} & \cellcolor{ganttCell} & & \\
+\hline
+310:赤外線管理プログラム & 家田・渡邊 & & \cellcolor{ganttCell} & \cellcolor{ganttCell} & \cellcolor{ganttCell} & & \\
+\hline
+320:テンポ管理プログラム & 家田・渡邊 & & \cellcolor{ganttCell} & & & & \\
+\hline
+410:回路作成 & 木下・手代木 & & \cellcolor{ganttCell} & & & & \\
+\hline
+420:LEDマトリクス作成 & 木下・手代木 & & \cellcolor{ganttCell} & \cellcolor{ganttCell} & \cellcolor{ganttCell} & & \\
+\hline
+510:輪唱機能作成 & 全員 & & & \cellcolor{ganttCell} & \cellcolor{ganttCell} & & \\
+\hline
+520:結合テスト & 全員 & & & & & \cellcolor{ganttCell} & \cellcolor{ganttCell} \\
+\hline
+\end{longtable}
+
+\endgroup
+
+\subsection*{2.2 個人ガントチャート（計画書 v1.2 から櫛濱担当分を抜粋）}
+
+§2.1 のチーム全体ガントから櫛濱担当分（櫛濱・久家／全員）を抜き出した個人計画．第9週は 510:輪唱機能作成（全員）の最終週かつ 520:結合テスト（全員）の開始週．本週は親機ファーム・子機ファーム・親機回路 UI の整備で 510／520 双方に踏み込んだ作業を実施．
+
+\begin{longtable}{|p{0.9cm}|p{2.0cm}|p{6.0cm}|c|c|c|c|c|c|}
+\hline
+\rowcolor[gray]{0.9}
+管理 & 第2層 & 第3層タスク & 5週 & 6週 & 7週 & 8週 & 9週 & 10週 \\
+\hline
+110 & 100 (Processing) & ピアノ音の作成 & \cellcolor{ganttCell} & & \cellcolor{ganttCell} & & & \\
+\hline
+120 & 100 (Processing) & arduinoとの通信用関数（ピアノ） & \cellcolor{ganttCell} & & & & & \\
+\hline
+170 & 100 (Processing) & ドラム音の作成（キック） & & \cellcolor{ganttCell} & & & & \\
+\hline
+171 & 100 (Processing) & ドラム音の作成（シンバル） & & \cellcolor{ganttCell} & & & & \\
+\hline
+180 & 100 (Processing) & arduinoとの通信用関数（ドラム） & & \cellcolor{ganttCell} & & & & \\
+\hline
+210 & 200 (子機) & ピアノのプログラム & \cellcolor{ganttCell} & & & & & \\
+\hline
+240 & 200 (子機) & ドラムのプログラム & & \cellcolor{ganttCell} & & & & \\
+\hline
+510 & 500 (包括) & 輪唱機能作成（全員） & & & \cellcolor{ganttCell} & \cellcolor{ganttCell} & & \\
+\hline
+520 & 500 (包括) & 結合テスト（全員） & & & & & \cellcolor{ganttCell} & \cellcolor{ganttCell} \\
+\hline
+\end{longtable}
+
+\subsection*{2.3 今週の作業位置づけ}
+
+\begin{itemize}
+    \item 現在地は第9週末（6/23）．GC 上，第9週（6/17〜6/23）は 510:輪唱機能作成（全員）の最終週かつ 520:結合テスト（全員）の開始週．第8週末で物理的に実施できていなかった「複数子機の輪唱実機実験」を今週で完遂した．
+    \item 親機回路を UI 観点でブラッシュアップ（子機ボタン横 LED ＋ start ボタン）し，リハーサル中に Serial Monitor を見なくても運用できる形に整えた．
+    \item 親機ファームと子機ファームの間で長期間潜伏していた TICK\_LENGTH 不一致を発見・修正し，pos16／pos24 抜けの再発を防止．
+    \item 第10週は 520 結合テスト本体に入り，MOP5 のフェードアウト実装と MOP3 の定量計測を進める．
+\end{itemize}
+
+%=====================================================
+\section{3. 作業ログ}
+
+\renewcommand{\arraystretch}{1.4}
+
+\begin{longtable}{|p{2.8cm}|p{1.4cm}|p{1.6cm}|p{1.4cm}|p{1cm}|p{2.4cm}|p{2.8cm}|}
+\hline
+\rowcolor[gray]{0.9}
+作業項目 & 開始日 & 予定完了日 & 状態 & 進捗率 & 依存関係・ブロッカー & コメント \\
+\hline
+親機回路の組み立て（子機ボタン横 LED ／ start ボタン） & 6/17 & 6/19 & 完了 & 100\％ & D4--D7 ボタン／A0--A3 LED／D8 start ボタン & ブレッドボード上で子機ボタンの隣に LED を配置．D4--D7 と中央溝をまたいだ向こう側に A0--A3 から各 LED アノードを配線．\textbf{ボタン操作中も状態が一目で分かる UI} になり，運用性が大幅向上 \\
+\hline
+ボタン入力の debounce 強化（hack-oya.ino） & 6/19 & 6/20 & 完了 & 100\％ & 物理ボタンのバウンス特性 & \texttt{delay(30)} 方式から \texttt{millis()} ベースの状態継続式（50ms 安定継続で確定）に置換．長押し中の瞬間バウンスで二重 toggle 発火する症状を解消 \\
+\hline
+start 空打ち抑止（hack-oya.ino） & 6/20 & 6/20 & 完了 & 100\％ & start ボタン UI／canonOffset・pendingOffset 管理 & 子機が 1 つも選択されていない（canonOffset／pendingOffset 全 -1）状態で start を押しても \texttt{isPlaying} に遷移しないガードを追加 \\
+\hline
+親機⇔子機 TICK\_LENGTH 整合（hack-ko.ino） & 6/22 & 6/22 & 完了 & 100\％ & 親機側 LOOP\_REST\_TICKS=1 & 子機側 \texttt{LOOP\_REST\_TICKS} を 2→1 に揃え，両者の TICK\_LENGTH を 32 に統一．child2 で pos16，child1 で pos24 等の特定 localPos が抜ける症状を根絶 \\
+\hline
+押下順カノンへの変更（hack-oya.ino） & 6/22 & 6/22 & 完了 & 100\％ & 既存 CHILD\_ENTRY 設計 & \texttt{CHILD\_ENTRY[i]} を子機固有値から「押下順 N 番目に割り当てる遅延値」 \texttt{CANON\_ENTRY\_BY\_ORDER[order]} に再解釈．どのボタンを最初に押してもその子機が pos0 から流れ出すよう動的割当に変更 \\
+\hline
+休符 R の即時 noteOff（hackko.pde） & 6/22 & 6/22 & 完了 & 100\％ & PianoInstrument の保持 & \texttt{NOTE\_DURATION\_DEFAULT=0.40s} が tick 間隔より長く R が休符に聞こえない症状を，R 受信時の \texttt{noteOff()} 即時停止で解消 \\
+\hline
+複数子機輪唱の実機テスト & 6/23 & 6/23 & 完了 & 100\％ & 親機ファーム／子機ファーム×4／drum.pde／hackko.pde & 親機 1 台＋子機 4 台（メロディ 3＋ドラム 1）の構成で，押下順カノンと TICK\_LENGTH 整合後の輪唱演奏を聴感で確認．pos 抜けの再発なし \\
+\hline
+\end{longtable}
+
+%=====================================================
+\section{4. 評価事項}
+
+計画書 v1.2「1.5 テスト項目（修正版）」のうち，今週の作業（輪唱実機統合・親機 UI 改良・各種ファーム修正）に対応する項目を整理する．
+
+\subsection*{4.1 対応する有効指標 MOE}
+
+\begin{longtable}{|p{1.2cm}|p{4cm}|p{8cm}|}
+\hline
+\rowcolor[gray]{0.9}
+No. & MOE & 評価基準 \\
+\hline
+MOE1 & 輪唱として成立すること & 複数子機が時間差で同一メロディを再生し，輪唱として聴感で破綻なく聞こえる \\
+\hline
+MOE3 & 楽器音らしい音色 & 合成音がピアノ／ドラムとして聴衆に認識される \\
+\hline
+\end{longtable}
+
+\subsection*{4.2 対応する性能指標 MOP（計画書 v1.2）}
+
+\begin{longtable}{|p{1.2cm}|p{3.6cm}|p{9.0cm}|}
+\hline
+\rowcolor[gray]{0.9}
+No. & テスト名 & 内容 \\
+\hline
+MOP1 & 音色単体テスト（各楽器） & Processing 単体で各楽器音を出力・確認 \\
+\hline
+MOP2 & シリアル通信テスト & Arduino--Processing 間通信の正常動作確認 \\
+\hline
+MOP3 & 赤外線通信テスト & 親機→子機の通信成功率 95\％以上 \\
+\hline
+MOP5 & フェードアウトテスト\textsuperscript{新規} & 音切り替え時にノイズが生じないこと \\
+\hline
+MOP6 & 倍速演奏テスト\textsuperscript{新規} & スイッチによるテンポ切り替え動作確認 \\
+\hline
+\end{longtable}
+
+\subsection*{4.3 今週の自己評価}
+
+\begin{longtable}{|p{1.2cm}|p{3.5cm}|p{2cm}|p{8cm}|}
+\hline
+\rowcolor[gray]{0.9}
+No. & 項目 & 達成状況 & 備考 \\
+\hline
+MOE1 & 輪唱の成立 & OK & 4 子機（メロディ 3＋ドラム 1）の輪唱を実機で確認．押下順カノンにより，最初に押した子機がリードとして pos0 から流れ出し，後続が 8／16／20 tick 遅れで参加 \\
+\hline
+MOE3 & 楽器音らしい音色 & OK & ピアノ＋ドラムの組合せで楽器音として聴感で認識可能 \\
+\hline
+MOP1 & 音色単体テスト & OK & 既存 \\
+\hline
+MOP2 & シリアル通信テスト & OK & 既存（115200bps，CSV 形式） \\
+\hline
+MOP3 & 赤外線通信テスト & 暫定OK（複数子機） & 4 子機同時受信は確認．\textbf{成功率の定量計測は未実施}（第10週で対応） \\
+\hline
+MOP5 & フェードアウト & 部分対応 & 休符 R の即時 noteOff() は導入したが，本来要求の 0.03 秒フェードアウトは未実装 \\
+\hline
+MOP6 & 倍速演奏 & 未対応 & 親機側 tempo ボタンの実装はあるが LED マトリクス連携が未統合 \\
+\hline
+\end{longtable}
+
+\subsection*{4.4 今後評価予定の項目（参考）}
+
+\begin{itemize}
+    \item MOP3：4 子機を一定時間動かして送受信ログから成功率を算出（第10週）
+    \item MOP4：音色認識テスト（聴衆過半数が各楽器と識別）
+    \item MOP5：Line による 0.03 秒フェードアウトを noteOff() に組み込み，切り替えノイズを除去
+    \item MOP6：tempo ボタンと LED マトリクス側の表示連動を確認
+\end{itemize}
+
+%=====================================================
+\section{5. 課題管理}
+
+\begin{longtable}{|p{2.8cm}|p{2.8cm}|p{1cm}|p{1cm}|p{3.0cm}|p{1.6cm}|p{1.6cm}|}
+\hline
+\rowcolor[gray]{0.9}
+課題 & 発生原因 & 影響度 & 優先度 & 対策 & 期限 & 状態 \\
+\hline
+双子音処理の \texttt{delay()} による IR 取りこぼし & \texttt{DOUBLE\_START=24} 以降の半 tick 遅延を \texttt{delay(lastIntervalMs/2)} で実装しており，その間 IR 受信ループが止まる & 高 & 高 & \texttt{millis()} ベースの遅延発火に置換し，loop() を止めない非ブロック化 & 6/30 & 未対応 \\
+\hline
+フェードアウト未実装（MOP5） & noteOff() が即時 unpatch のままで，切り替え時のクリックノイズが残る & 高 & 高 & Line で 0.03 秒フェードアウト後に unpatch するよう改修 & 6/30 & 部分対応 \\
+\hline
+赤外線通信成功率が未計測 & MOP3（95\％目標）の定量試験未実施 & 中 & 中 & 4 子機分の送受信ログを取得し成功率を算出 & 6/30 & 未対応 \\
+\hline
+倍速演奏スイッチと LED マトリクスの連携 & 親機側 tempo ボタンと LED 表示側で表示連動未統合 & 中 & 中 & tempo 値変更時に LED マトリクスへ通知する経路を設計 & 6/30 & 未対応 \\
+\hline
+\end{longtable}
+
+\vspace{0.5em}
+※影響度＝プロジェクトへのインパクト\\
+※優先度＝対応の緊急性
+
+%=====================================================
+\section{6. AI利用状況と検証}
+
+\subsection*{6.1 利用内容}
+
+\begin{itemize}
+    \item 利用目的：親機 UI 強化（LED 追加・start 空打ち抑止），ボタンの debounce 強化，親機⇔子機の TICK\_LENGTH 不整合の特定，押下順カノンへの設計変更，Processing 側での休符即時停止
+    \item 入力（プロンプト要旨）：
+    \begin{itemize}
+        \item 「D4〜D7 のボタンを押したら隣の LED がトグル点灯するようにしたい」「もう一度押したら消える」
+        \item 「長押しすると LED がまた点いてしまう（debounce が不十分）」
+        \item 「子機ボタンが押されてない時は start で演奏を開始しないようにしたい」
+        \item 「輪唱で pos16 / pos21 等が飛ぶ」→ 親機側 TICK\_LENGTH=32 と子機側 33 の食い違いを特定
+        \item 「ボタン 3 を最初に押すと pos16 から始まってしまう．最初に押した子機が pos0 から流れてほしい」
+        \item 「楽譜上の R が休符に聞こえない（前音の余韻が次拍まで残る）」
+    \end{itemize}
+    \item 出力概要：
+    \begin{itemize}
+        \item hack-oya.ino：A0--A3 への LED トグル出力，\texttt{millis()} ベース状態継続式 debounce，start 空打ち抑止，\texttt{CANON\_ENTRY\_BY\_ORDER} と \texttt{pressOrder[]} による押下順カノン
+        \item hack-ko.ino：\texttt{LOOP\_REST\_TICKS} を 1 に揃えて親機と TICK\_LENGTH=32 に統一
+        \item hackko.pde：\texttt{PianoInstrument currentInstrument} を保持し，R 受信時に \texttt{noteOff()} で即停止
+    \end{itemize}
+\end{itemize}
+
+\subsection*{6.2 検証方法}
+
+\begin{itemize}
+    \item 検証手法：
+    \begin{itemize}
+        \item 親機回路上で D4〜D7 を順にトグルし，対応する A0〜A3 LED が押下ごとに点灯／消灯することを目視確認
+        \item 長押し操作（数秒間ボタンを押し続ける）で LED 状態が再反転しないことを目視確認
+        \item 子機未選択での start 押下で \texttt{[!] no child selected -- press D4-D7 first} がシリアルに出力され \texttt{isPlaying} に遷移しないことを確認
+        \item 4 子機（メロディ 3＋ドラム 1）の輪唱を実演し，pos16／pos24 など特定 localPos の抜けが解消されていること，R の tick で前音が即停止することを聴感確認
+        \item 押下順カノン：ボタン 3（child2）を最初に押すと child2 が pos0 から流れ始め，後で押した子機が 8/16/20 tick 遅れて参加することを聴感確認
+    \end{itemize}
+    \item 参照資料：
+    \begin{itemize}
+        \item 計画書・設計書 v1.2（2026/5/29 版）「2.1 基本設計の修正」「2.2 詳細設計」
+        \item IRremote ライブラリ（v4.x，NEC プロトコル）
+        \item Minim ライブラリ公式ドキュメント（ddf.minim.ugens：Oscil／Line／Instrument）
+    \end{itemize}
+    \item 検証手順：
+    \begin{enumerate}
+        \item 親機（hack-oya.ino）と 4 台の子機（hack-ko.ino，CHILD\_ID=0,1,2,3）を電源投入し，Processing 側で hackko.pde／drum.pde を Run
+        \item 任意の順序でボタン D4〜D7 を押し，対応する LED 点灯と Serial Monitor の \texttt{[child N] RESERVED order=...} 出力を確認
+        \item start を押して輪唱を開始し，聴感で輪唱が成立すること（pos 抜け・休符の抜けがないこと）を確認
+        \item reset で全停止と全 LED 消灯を確認
+    \end{enumerate}
+\end{itemize}
+
+\subsection*{6.3 ファクトチェック結果}
+
+\begin{itemize}
+    \item 一致点：
+    \begin{itemize}
+        \item TICK\_LENGTH 不整合の症状（child2 で pos16，child1 で pos24 が抜ける）が手計算（\texttt{localPos = (cyclePos - myOffset + 33) \% 33} に対し親機 cyclePos は 0..31 周期）と一致．修正後は両者 32 に揃い対称に巡回することを確認
+        \item 押下順カノンの動作（最初に押した子機が pos0，N 番目が \texttt{CANON\_ENTRY\_BY\_ORDER[N-1]}）が設計書「2.1 基本設計」のカノン形（リード→追従）と整合
+        \item R 即時 noteOff() は本来の MOP5「フェードアウト 0.03 秒」の暫定対応であり，部分的な聴感改善にとどまる
+    \end{itemize}
+    \item 不一致・疑義：
+    \begin{itemize}
+        \item 双子音処理の \texttt{delay()} は IR 受信ループを止めるため非ブロック化が必要．第10週で着手
+        \item MOP5 の本来要求（0.03 秒フェード）は未達．R 即停止は応急処置である旨を計画書側に追記する必要
+    \end{itemize}
+    \item 最終判断：採用（複数子機輪唱の実機稼働という MOE1 の中核到達点として妥当）
+    \item 根拠：
+    \begin{itemize}
+        \item TICK\_LENGTH 不一致を直したことで，これまで「飛ぶ」「抜ける」と表現されていた症状が消え，輪唱が聴感で破綻なく成立した
+        \item 親機 UI（LED ＋ start ボタン）と押下順カノンにより，演奏者がカノンの順序を即興で組み立てられる構成になり，運用上の自由度が増した
+    \end{itemize}
+\end{itemize}
+
+%=====================================================
+\section{7. 次回計画}
+
+\begin{itemize}
+    \item 目標（第10週）：
+    \begin{itemize}
+        \item 双子音処理の \texttt{delay()} 撤去（\texttt{millis()} ベースの遅延発火に置換）
+        \item MOP5：noteOff() に Line フェードアウト（0.03 秒）を実装し，切り替えノイズを除去
+        \item MOP3：4 子機の送受信ログから赤外線通信成功率を定量算出（95\％目標との比較）
+        \item tempo ボタンと LED マトリクス側の表示連動を確認（MOP6）
+    \end{itemize}
+    \item 達成基準：
+    \begin{itemize}
+        \item 双子音区間でも IR 取りこぼしがなく，全 localPos が連続して送られていることをログで確認
+        \item 音切り替え時にクリックノイズが聞こえないこと
+        \item 通信成功率を数値で提示できること
+    \end{itemize}
+    \item 期限：
+    \begin{itemize}
+        \item 6/30（第10週末）
+    \end{itemize}
+\end{itemize}
+
+%=====================================================
+\section{8. その他}
+
+\begin{itemize}
+    \item 押下順カノン化に伴い，CHILD\_ENTRY を子機固有値として参照していた他メンバーのコード（家田・渡邊側の楽譜進行プログラム 250）と仕様すり合わせが必要
+    \item 親機回路の LED 追加に伴い，配線がブレッドボード中央溝をまたぐ箇所が増えた．配線取り回しを LED の位置を 1〜2 行ずらすことで解消した知見を回路担当（木下・手代木）と共有
+    \item 双子音区間の非ブロック化は，子機側の状態管理（pending note と発火時刻）を増やす変更になる．第10週着手前に設計図を更新する
+\end{itemize}
+
+%=====================================================
+\section{9. 付録}
+
+\subsection*{9.1 添付資料}
+
+\begin{itemize}
+    \item ソースコード：hack-oya/hack-oya.ino（親機），hack-ko/hack-ko.ino（子機，CHILD\_ID は機体ごとに 0/1/2/3 を設定），hackko/hackko.pde（メロディ用 Processing），drum/drum.pde（ドラム用 Processing）
+    \item リポジトリ：\url{https://github.com/k-kushihama/hackathon-code/}
+\end{itemize}
+
+\subsection*{9.2 添付範囲}
+
+\begin{itemize}
+    \item 第9週に変更した親機ファーム（LED トグル・start 空打ち抑止・debounce・押下順カノン）に該当する hack-oya.ino のスナップショット
+    \item 第9週に変更した子機ファーム（TICK\_LENGTH 整合）に該当する hack-ko.ino のスナップショット
+    \item 第9週に変更した Processing スケッチ（R 即時 noteOff）に該当する hackko.pde のスナップショット
+\end{itemize}
+
+\subsection*{9.3 システム図}
+
+\subsubsection*{9.3.1 輪唱システム全体構成}
+
+図~\ref{fig:system} に第9週末時点の輪唱システム全体を示す．親機 1 台（hack-oya.ino）が 4 子機（hack-ko.ino，CHILD\_ID=0〜3）へ NEC フレームを一斉送出し，各子機は自分宛 mask が立った tick で localPos を計算し，対応する楽譜要素を CSV で Processing へ送る．child0〜2 はメロディ機（hackko.pde で発音），child3 はドラム機（drum.pde で発音）．
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  node distance=0.5cm and 0.9cm,
+  block/.style={rectangle, draw, rounded corners=2pt, minimum width=2.6cm, minimum height=1.0cm, align=center, font=\small},
+  io/.style={rectangle, draw, fill=gray!10, minimum width=2.0cm, minimum height=0.9cm, align=center, font=\small},
+  arrow/.style={-Stealth, thick}
+]
+  \node[block] (oya) {親機 Arduino\\hack-oya.ino\\(NEC 送出)};
+  \node[block, right=2.0cm of oya] (k0) {子機 0 (Melody)\\hack-ko.ino\\CHILD\_ID=0};
+  \node[block, below=0.3cm of k0] (k1) {子機 1 (Melody)\\hack-ko.ino\\CHILD\_ID=1};
+  \node[block, below=0.3cm of k1] (k2) {子機 2 (Melody)\\hack-ko.ino\\CHILD\_ID=2};
+  \node[block, below=0.3cm of k2] (k3) {子機 3 (Drum)\\hack-ko.ino\\CHILD\_ID=3};
+
+  \node[io, right=of k0] (p0) {hackko.pde};
+  \node[io, right=of k1] (p1) {hackko.pde};
+  \node[io, right=of k2] (p2) {hackko.pde};
+  \node[io, right=of k3] (p3) {drum.pde};
+
+  \draw[arrow] (oya.east) -- node[above, font=\scriptsize]{IR / NEC} (k0.west);
+  \draw[arrow] (oya.east) -- (k1.west);
+  \draw[arrow] (oya.east) -- (k2.west);
+  \draw[arrow] (oya.east) -- (k3.west);
+
+  \draw[arrow] (k0) -- node[above, font=\scriptsize]{CSV} (p0);
+  \draw[arrow] (k1) -- (p1);
+  \draw[arrow] (k2) -- (p2);
+  \draw[arrow] (k3) -- node[above, font=\scriptsize]{"C2"} (p3);
+\end{tikzpicture}
+\caption{輪唱システム全体構成．親機 1 台が 4 子機へ NEC フレームを一斉送出し，各子機は自分宛 tick で楽譜要素を Processing へ送る．}
+\label{fig:system}
+\end{figure}
+
+\subsubsection*{9.3.2 親機 hack-oya の回路図（第9週末時点）}
+
+図~\ref{fig:oya} に親機の回路を示す．D4〜D7 が子機トグル用ボタン（INPUT\_PULLUP），各ボタンの隣に A0〜A3 を出力としたトグル状態表示 LED を配置した（330$\Omega$ 直列）．D8 が start ボタン，D9 が tempo ボタン，D10 が reset ボタン，D13 が tick 拍に合わせて点滅するインジケータ LED．D3 から赤外線 LED（IR\_SEND）を駆動する．
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  every node/.style={font=\small},
+  pin/.style={circle, draw, fill=black, inner sep=1.0pt},
+  led/.style={rectangle, draw, minimum width=1.4cm, minimum height=0.6cm, align=center, font=\scriptsize, fill=red!20},
+  btn/.style={rectangle, draw, minimum width=1.0cm, minimum height=0.6cm, align=center, font=\scriptsize, fill=blue!10},
+  arduino/.style={rectangle, draw, very thick, rounded corners=4pt, minimum width=4.4cm, minimum height=6.6cm, align=center},
+  wire/.style={thick}
+]
+  \node[arduino] (ard) at (0,0) {Arduino\\UNO R4 WiFi\\(親機 hack-oya)};
+
+  \node[pin, label=right:{\tiny D3 (IR)}] (d3) at (2.2,2.6) {};
+  \node[pin, label=right:{\tiny D4 (BTN0)}] (d4) at (2.2,2.0) {};
+  \node[pin, label=right:{\tiny D5 (BTN1)}] (d5) at (2.2,1.4) {};
+  \node[pin, label=right:{\tiny D6 (BTN2)}] (d6) at (2.2,0.8) {};
+  \node[pin, label=right:{\tiny D7 (BTN3)}] (d7) at (2.2,0.2) {};
+  \node[pin, label=right:{\tiny D8 (start)}] (d8) at (2.2,-0.4) {};
+  \node[pin, label=right:{\tiny D9 (tempo)}] (d9) at (2.2,-1.0) {};
+  \node[pin, label=right:{\tiny D10(reset)}] (d10) at (2.2,-1.6) {};
+  \node[pin, label=right:{\tiny D13(INDIC)}] (d13) at (2.2,-2.2) {};
+  \node[pin, label=left:{\tiny A0 (LED0)}] (a0) at (-2.2,2.0) {};
+  \node[pin, label=left:{\tiny A1 (LED1)}] (a1) at (-2.2,1.4) {};
+  \node[pin, label=left:{\tiny A2 (LED2)}] (a2) at (-2.2,0.8) {};
+  \node[pin, label=left:{\tiny A3 (LED3)}] (a3) at (-2.2,0.2) {};
+  \node[pin, label=left:{\tiny GND}] (gnd) at (-2.2,-2.2) {};
+
+  \node[btn, right=0.4cm of d4] (b0) {BTN0};
+  \node[btn, right=0.4cm of d5] (b1) {BTN1};
+  \node[btn, right=0.4cm of d6] (b2) {BTN2};
+  \node[btn, right=0.4cm of d7] (b3) {BTN3};
+  \node[btn, right=0.4cm of d8] (bs) {start};
+
+  \node[led, left=0.4cm of a0] (l0) {LED0};
+  \node[led, left=0.4cm of a1] (l1) {LED1};
+  \node[led, left=0.4cm of a2] (l2) {LED2};
+  \node[led, left=0.4cm of a3] (l3) {LED3};
+
+  \draw[wire] (d4) -- (b0);
+  \draw[wire] (d5) -- (b1);
+  \draw[wire] (d6) -- (b2);
+  \draw[wire] (d7) -- (b3);
+  \draw[wire] (d8) -- (bs);
+  \draw[wire] (a0) -- (l0);
+  \draw[wire] (a1) -- (l1);
+  \draw[wire] (a2) -- (l2);
+  \draw[wire] (a3) -- (l3);
+\end{tikzpicture}
+\caption{親機 hack-oya の回路図（第9週末時点）．D4--D7 の子機ボタンと A0--A3 の状態表示 LED を中央溝の両側に配置し，D8 の start ボタンを子機ボタン列の続きに置いて運用性を確保した．}
+\label{fig:oya}
+\end{figure}
+
+なお，第9週の改修により親機回路は「演奏中の状態」と「どの子機を予約／参加させたか」の双方が物理 UI 上で同時に視認できるようになり，リハーサル中に Serial Monitor を確認することなく運用できるようになった．
+
+\end{document}
