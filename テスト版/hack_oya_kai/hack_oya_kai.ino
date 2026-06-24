@@ -13,13 +13,17 @@ const int PIN_BTN_TEMPO = 9;
 const int PIN_BTN_RESET = 10;
 const int LED_INDICATOR = 13;
 
-const int QUANTIZE_TICKS = 4;     // 区切り幅（0,5,10,15,...）
-const uint16_t IR_ADDRESS = 0x00;
+const int QUANTIZE_TICKS = 8;     // 区切り幅（0,5,10,15,...）
+// IR address フィールドの bit0 をループON/OFFの通知に使う
+// (mask は command フィールドに引き続き載せる)。
+const uint16_t IR_ADDR_LOOP_ON  = 0x01;
+const uint16_t IR_ADDR_LOOP_OFF = 0x00;
 
 bool isActive[NUM_CHILDREN]   = {false, false, false, false}; // 参加済みフラグ
 long joinTick[NUM_CHILDREN]   = {-1, -1, -1, -1};              // 参加予定tick（未予約は-1）
 
 bool isPlaying  = false;
+bool loopMode   = true;      // デフォルトはループON ('l' でトグル)
 int  tempoBpm   = 120;
 long tickCount  = 0;
 unsigned long lastTickMs = 0;
@@ -135,6 +139,12 @@ void handleTempoButton() {
   prevBtnTempo = s;
 }
 
+void doLoopToggle() {
+  loopMode = !loopMode;
+  Serial.print("loop=");
+  Serial.println(loopMode ? "ON" : "OFF");
+}
+
 // 再生開始：誰も参加していない状態から開始する（参加はボタンで都度行う）
 void doStart() {
   if (isPlaying) {
@@ -174,6 +184,8 @@ void handleSerialCommand() {
       doReset();
     } else if (c == 't' || c == 'T') {
       doTempoChange();
+    } else if (c == 'l' || c == 'L') {
+      doLoopToggle();
     } else if (c == '?') {
       printHelp();
     }
@@ -186,9 +198,12 @@ void printHelp() {
   Serial.println("s    : start");
   Serial.println("r    : reset");
   Serial.println("t    : tempo cycle (60/90/120/150)");
+  Serial.println("l    : loop on/off toggle (default ON)");
   Serial.println("?    : help");
   Serial.print("Current BPM=");
   Serial.println(tempoBpm);
+  Serial.print("Loop=");
+  Serial.println(loopMode ? "ON" : "OFF");
 }
 
 void tick() {
@@ -209,6 +224,7 @@ void tick() {
   }
 
   if (mask != 0) {
-    IrSender.sendNEC(IR_ADDRESS, mask, 0);
+    // address に loopMode を載せて子機へ通知
+    IrSender.sendNEC(loopMode ? IR_ADDR_LOOP_ON : IR_ADDR_LOOP_OFF, mask, 0);
   }
 }
