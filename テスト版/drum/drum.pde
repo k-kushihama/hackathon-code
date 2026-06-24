@@ -31,7 +31,7 @@ void setup() {
   // 利用可能なシリアルポート一覧をコンソールに表示。実機では子機3に対応する
   // /dev/cu.wchusbserial-XXXX または /dev/cu.usbmodemXXXX を選んで下の行を差し替える。
   println(Serial.list());
-  port = new Serial(this, "/dev/cu.usbmodem4827E2E019382", 115200);
+  port = new Serial(this, "/dev/cu.usbserial-A5069RR4", 115200);
   port.bufferUntil('\n');
 
   minim = new Minim(this);

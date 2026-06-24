@@ -5,7 +5,8 @@ import ddf.minim.ugens.*;
 Waveform currentWaveform;
 Minim minim;
 AudioOutput out;
-int currentNote = 0;
+String currentNote = "";
+int currentPos = -1;  // 親機が割り当ててきた localPos (デバッグ表示用)
 
 void setup() {
   size(512, 200);
@@ -13,7 +14,8 @@ void setup() {
   out = minim.getLineOut();
   out.setTempo(120);
   currentWaveform = WavetableGenerator.gen10(4096, new float[] { 1.0f, 0.6f, 0.35f, 0.2f, 0.1f, 0.05f });
-  port = new Serial(this, "/dev/cu.usbmodem34B7DA64C6002", 115200);
+  // portは各自変えて．
+  port = new Serial(this, "/dev/cu.usbmodem64E83364FFA82", 115200);
   port.clear();
   port.bufferUntil('\n');
 }
@@ -25,25 +27,39 @@ void draw() {
     line(i, 50 + out.left.get(i)*50, i+1, 50 + out.left.get(i+1)*50);
   }
   fill(255);
-  text("note: " + currentNote, 10, 180);
+  text("note: " + currentNote, 10, 170);
+  text("pos : " + currentPos, 10, 190);
 }
 
 void serialEvent(Serial p) {
   String inString = p.readStringUntil('\n');
-  if (inString != null) {
-    inString = trim(inString);
-    if (inString.length() == 0) return;
-    int midi = int(inString);
-    currentNote = midi;
-    if (midi > 0) {
-      playNote(midi);
-    }
+  if (inString == null) return;
+  inString = trim(inString);
+  if (inString.length() == 0) return;
+  currentNote = inString;
+
+  // ino側のフォーマット: "ピッチ名,duration秒,amplitude,localPos"
+  // localPos は親機が決めた楽譜index。発音には使わずデバッグ表示専用。
+  // 旧3列フォーマット(pitch,duration,amplitude)も互換のため受け付ける。
+  // それ以外(起動メッセージなど)はパース不能としてスキップ。
+  String[] parts = split(inString, ',');
+  if (parts.length < 3) {
+    println("non-note: " + inString);
+    return;
   }
+  String pitch = parts[0];
+  float duration = float(parts[1]);
+  float amplitude = float(parts[2]);
+  if (parts.length >= 4) {
+    currentPos = int(parts[3]);
+  }
+  if (pitch.equals("R")) return;
+  playNote(pitch, duration, amplitude);
 }
 
-void playNote(int midi) {
-  float freq = (float)(440.0 * Math.pow(2.0, (midi - 69) / 12.0));
-  out.playNote(0, 0.4f, new PianoInstrument(freq, 0.6f, currentWaveform));
+void playNote(String pitch, float duration, float amplitude) {
+  float freq = Frequency.ofPitch(pitch).asHz();
+  out.playNote(0, duration, new PianoInstrument(freq, amplitude, currentWaveform));
 }
 
 class PianoInstrument implements Instrument {

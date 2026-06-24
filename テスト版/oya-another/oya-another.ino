@@ -9,7 +9,6 @@ const int PIN_BTN_START = 8;
 const int PIN_BTN_TEMPO = 9;
 const int PIN_BTN_RESET = 10;
 const int LED_INDICATOR = 13;
-
 const int OFFSET_TICKS  = 8;
 const uint16_t IR_ADDRESS = 0x00;
 

@@ -8,7 +8,7 @@
 // configIdx==childId のとき myOffset を更新する。
 
 // 書き込む機体ごとに値を変えて Upload する: 0,1,2 = メロディ機, 3 = ドラム機。
-int childId = 2;
+int childId = 0;
 
 const int DRUM_CHILD_ID = 3;
 const int PIN_IR_RECV = 2;

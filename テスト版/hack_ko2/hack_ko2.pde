@@ -5,7 +5,7 @@ import ddf.minim.ugens.*;
 Waveform currentWaveform;
 Minim minim;
 AudioOutput out;
-String currentNote = "";
+int currentNote = 0;
 
 void setup() {
   size(512, 200);
@@ -13,7 +13,7 @@ void setup() {
   out = minim.getLineOut();
   out.setTempo(120);
   currentWaveform = WavetableGenerator.gen10(4096, new float[] { 1.0f, 0.6f, 0.35f, 0.2f, 0.1f, 0.05f });
-  port = new Serial(this, "/dev/cu.usbmodem34B7DA64C6002", 115200);
+  port = new Serial(this, "/dev/cu.usbserial-A5069RR4", 115200);
   port.clear();
   port.bufferUntil('\n');
 }
@@ -30,28 +30,20 @@ void draw() {
 
 void serialEvent(Serial p) {
   String inString = p.readStringUntil('\n');
-  if (inString == null) return;
-  inString = trim(inString);
-  if (inString.length() == 0) return;
-  currentNote = inString;
-
-  // ino側のフォーマット: "ピッチ名,duration秒,amplitude"
-  // それ以外(起動メッセージや旧フォーマット)はパース不能としてスキップ。
-  String[] parts = split(inString, ',');
-  if (parts.length < 3) {
-    println("non-note: " + inString);
-    return;
+  if (inString != null) {
+    inString = trim(inString);
+    if (inString.length() == 0) return;
+    int midi = int(inString);
+    currentNote = midi;
+    if (midi > 0) {
+      playNote(midi);
+    }
   }
-  String pitch = parts[0];
-  if (pitch.equals("R")) return;
-  float duration = float(parts[1]);
-  float amplitude = float(parts[2]);
-  playNote(pitch, duration, amplitude);
 }
 
-void playNote(String pitch, float duration, float amplitude) {
-  float freq = Frequency.ofPitch(pitch).asHz();
-  out.playNote(0, duration, new PianoInstrument(freq, amplitude, currentWaveform));
+void playNote(int midi) {
+  float freq = (float)(440.0 * Math.pow(2.0, (midi - 69) / 12.0));
+  out.playNote(0, 0.4f, new PianoInstrument(freq, 0.6f, currentWaveform));
 }
 
 class PianoInstrument implements Instrument {
@@ -84,4 +76,3 @@ class PianoInstrument implements Instrument {
     wave.unpatch(out);
   }
 }
-

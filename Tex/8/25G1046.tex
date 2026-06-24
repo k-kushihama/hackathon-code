@@ -54,13 +54,17 @@
 \hline
 報告日 & 2026年6月16日\\
 \hline
+チーム & チーム9\\
+\hline
 プロジェクト名 & 赤外線通信で歌うカエル\\
 \hline
 担当パート & Processing（ピアノ演奏プログラム）／Arduino（ドラム子機 hack-ko.ino，音価・音量の集中管理）\\
 \hline
-本来の今週の位置づけ & 第8週末（6/16）．計画書 v1.2 のガント上，第8週（6/10〜6/16）は櫛濱の割当タスクが直接は載っていないが，輪唱実験（実機統合）と通信仕様の見直しを実施した期間\\
+本来の今週の位置づけ & 第8週末（6/16）．計画書 v1.2 のガント上，第8週（6/10〜6/16）は 510:輪唱機能作成（全員）の実施期間．櫛濱は通信仕様の見直しと輪唱実験を担当\\
 \hline
 報告対象 & 第7週末（6/10）以降に行った「音価・音量の Arduino 側への集中管理化」と，6/11（木）の輪唱実験，6/13（土）のドラム実機テスト\\
+\hline
+作業時間 & 計7時間\\
 \hline
 \end{tabular}
 
@@ -99,28 +103,28 @@
 \begingroup
 \setlength{\tabcolsep}{3pt}
 
-\subsection*{2.1 チーム全体ガントチャート（計画書 v1.2）}
+\subsection*{2.1 チーム全体ガントチャート}
 
 \begin{longtable}{|p{6.2cm}|p{2.3cm}|c|c|c|c|c|c|}
 \hline
 \rowcolor[gray]{0.9}
 第3層：活動タスク & 担当者 & 5週 & 6週 & 7週 & 8週 & 9週 & 10週 \\
 \hline
-110:ピアノ音の作成 & 櫛濱・久家 & \cellcolor{ganttCell} & \cellcolor{ganttCell} & & & & \\
+110:ピアノ音の作成 & 櫛濱・久家 & \cellcolor{ganttCell} & & \cellcolor{ganttCell} & & & \\
 \hline
-120:arduinoとの通信用関数（ピアノ） & 櫛濱・久家 & \cellcolor{ganttCell} & \cellcolor{ganttCell} & & & & \\
+120:arduinoとの通信用関数（ピアノ） & 櫛濱・久家 & \cellcolor{ganttCell} & & & & & \\
 \hline
-130:フルート音の作成 & 家田・渡邊 & \cellcolor{ganttCell} & \cellcolor{ganttCell} & & & & \\
+130:フルート音の作成 & 家田・渡邊 & \cellcolor{ganttCell} & & & & & \\
 \hline
-140:arduinoとの通信用関数（フルート） & 家田・渡邊 & \cellcolor{ganttCell} & \cellcolor{ganttCell} & & & & \\
+140:arduinoとの通信用関数（フルート） & 家田・渡邊 & \cellcolor{ganttCell} & & & & & \\
 \hline
-150:トランペット音の作成 & 木下・手代木 & \cellcolor{ganttCell} & \cellcolor{ganttCell} & & & & \\
+150:トランペット音の作成 & 木下・手代木 & \cellcolor{ganttCell} & & & & & \\
 \hline
-160:arduinoとの通信用関数（トランペット） & 木下・手代木 & \cellcolor{ganttCell} & \cellcolor{ganttCell} & & & & \\
+160:arduinoとの通信用関数（トランペット） & 木下・手代木 & \cellcolor{ganttCell} & & & & & \\
 \hline
 170:ドラム音の作成（キック） & 櫛濱・久家 & & \cellcolor{ganttCell} & & & & \\
 \hline
-171:ドラム音の作成（シンバル）\textsuperscript{新規} & 櫛濱・久家 & & \cellcolor{ganttCell} & & & & \\
+171:ドラム音の作成（シンバル） & 櫛濱・久家 & & \cellcolor{ganttCell} & & & & \\
 \hline
 180:arduinoとの通信用関数（ドラム） & 櫛濱・久家 & & \cellcolor{ganttCell} & & & & \\
 \hline
@@ -132,17 +136,19 @@
 \hline
 240:ドラムのプログラム & 櫛濱・久家 & & \cellcolor{ganttCell} & & & & \\
 \hline
-260:楽譜進行プログラム & 家田・渡邊 & & \cellcolor{ganttCell} & \cellcolor{ganttCell} & & & \\
+250:楽譜進行プログラム & 家田・渡邊 & & \cellcolor{ganttCell} & \cellcolor{ganttCell} & \cellcolor{ganttCell} & & \\
 \hline
-310:赤外線管理プログラム & 家田・渡邊 & & \cellcolor{ganttCell} & \cellcolor{ganttCell} & & & \\
+310:赤外線管理プログラム & 家田・渡邊 & & \cellcolor{ganttCell} & \cellcolor{ganttCell} & \cellcolor{ganttCell} & & \\
 \hline
-320:テンポ管理プログラム & 家田・渡邊 & & & \cellcolor{ganttCell} & \cellcolor{ganttCell} & & \\
+320:テンポ管理プログラム & 家田・渡邊 & & \cellcolor{ganttCell} & & & & \\
 \hline
 410:回路作成 & 木下・手代木 & & \cellcolor{ganttCell} & & & & \\
 \hline
 420:LEDマトリクス作成 & 木下・手代木 & & \cellcolor{ganttCell} & \cellcolor{ganttCell} & \cellcolor{ganttCell} & & \\
 \hline
-510:結合テスト & 全員 & & & & & \cellcolor{ganttCell} & \cellcolor{ganttCell} \\
+510:輪唱機能作成 & 全員 & & & \cellcolor{ganttCell} & \cellcolor{ganttCell} & & \\
+\hline
+520:結合テスト & 全員 & & & & & \cellcolor{ganttCell} & \cellcolor{ganttCell} \\
 \hline
 \end{longtable}
 
@@ -150,30 +156,38 @@
 
 \subsection*{2.2 個人ガントチャート（計画書 v1.2 から櫛濱担当分を抜粋）}
 
-計画書 v1.2 のチーム全体ガント（§2.1）から櫛濱担当分を抜き出した個人計画．音色作成（110）・通信用関数（120）を第5〜6週，ピアノのプログラム（210）を第5週，ドラムのプログラム（240）を第6週に置く．第8週は GC 上では櫛濱の割当タスクは載っていないが，実機統合（輪唱実験）と通信仕様見直しを行った期間．
+§2.1 のチーム全体ガントから櫛濱担当分（櫛濱・久家／全員）を抜き出した個人計画．第8週は GC 上では櫛濱単独の活動タスクは載っていないが，輪唱機能作成（510，全員）の実施期間にあたる．
 
 \begin{longtable}{|p{0.9cm}|p{2.0cm}|p{6.0cm}|c|c|c|c|c|c|}
 \hline
 \rowcolor[gray]{0.9}
 管理 & 第2層 & 第3層タスク & 5週 & 6週 & 7週 & 8週 & 9週 & 10週 \\
 \hline
-110 & 100 (Processing) & ピアノ音の作成 & \cellcolor{ganttCell} & \cellcolor{ganttCell} & & & & \\
+110 & 100 (Processing) & ピアノ音の作成 & \cellcolor{ganttCell} & & \cellcolor{ganttCell} & & & \\
 \hline
-120 & 100 (Processing) & arduinoとの通信用関数（ピアノ） & \cellcolor{ganttCell} & \cellcolor{ganttCell} & & & & \\
+120 & 100 (Processing) & arduinoとの通信用関数（ピアノ） & \cellcolor{ganttCell} & & & & & \\
+\hline
+170 & 100 (Processing) & ドラム音の作成（キック） & & \cellcolor{ganttCell} & & & & \\
+\hline
+171 & 100 (Processing) & ドラム音の作成（シンバル） & & \cellcolor{ganttCell} & & & & \\
+\hline
+180 & 100 (Processing) & arduinoとの通信用関数（ドラム） & & \cellcolor{ganttCell} & & & & \\
 \hline
 210 & 200 (子機) & ピアノのプログラム & \cellcolor{ganttCell} & & & & & \\
 \hline
-240 & 200 (子機) & ドラムのプログラム（hack-ko.ino／drum.pde） & & \cellcolor{ganttCell} & & & & \\
+240 & 200 (子機) & ドラムのプログラム & & \cellcolor{ganttCell} & & & & \\
 \hline
-510 & 500 (包括) & 結合テスト（全員） & & & & & \cellcolor{ganttCell} & \cellcolor{ganttCell} \\
+510 & 500 (包括) & 輪唱機能作成（全員） & & & \cellcolor{ganttCell} & \cellcolor{ganttCell} & & \\
+\hline
+520 & 500 (包括) & 結合テスト（全員） & & & & & \cellcolor{ganttCell} & \cellcolor{ganttCell} \\
 \hline
 \end{longtable}
 
 \subsection*{2.3 今週の作業位置づけ}
 
 \begin{itemize}
-    \item 現在地は第8週末（6/16）．GC 上，第8週（6/10〜6/16）に櫛濱の割当タスクは載っていないが，第7週末ログで残課題としていた「ドラムのプログラム（240）の実機テスト」と「通信仕様の整理」を実施した．
-    \item 通信仕様について，音価・音量の決定主体を Processing 側から Arduino 側へ移し，子機 .ino を「音楽情報の源泉」，Processing を「再生エンジン」と役割分担し直した（CSV 経由の片方向通知）．
+    \item 現在地は第8週末（6/16）．GC 上，第8週（6/10〜6/16）は 510:輪唱機能作成（全員）の実施期間にあたり，第7週末ログで残課題としていた「ドラムのプログラム（240）の実機テスト」と「通信仕様の整理」を併せて実施した．
+    \item 通信仕様について，音価・音量の決定主体を Processing 側から Arduino 側へ移し，子機 .ino を「音楽情報」，Processing を「再生エンジン」と役割分担し直した．
     \item 6/11 の輪唱実験は，借用受光モジュールの個体不良により複数子機での同時実験ができず，6/13 に追加機材（UNO R3）を購入して単独でドラム経路の実機テストを行った．
     \item 第9週は，正常な受光モジュールを確保した上で複数子機の輪唱実験を再試行し，MOP5（フェードアウト）・MOP3（成功率定量）に着手する．
 \end{itemize}
@@ -429,7 +443,7 @@ MOP6 & 倍速演奏 & 未対応 & 親機側スイッチとの連携が未実装 
 
 \subsubsection*{9.3.2 ドラム子機 Arduino の回路図}
 
-図~\ref{fig:circuit} にドラム子機 Arduino の接続を示す．赤外線受光モジュール CHQ1838D を 1 つ用い，親機からの NEC フレームを受信する．D2 に受光信号，D13 に動作確認用 LED を接続し，USB を Processing 実行用 PC へつなぐ．6/13 のドラム実機テストではこの構成を Arduino UNO R3（追加購入分）で組み，自 Mac の drum.pde と接続した．
+図~\ref{fig:circuit} にドラム子機 Arduino の接続を示す．赤外線受光モジュール CHQ1838D を1つ用い，親機からの NEC フレームを受信する．D2 に受光信号，D13 に動作確認用 LED を接続し，USB を Processing 実行用 PC へつなぐ．6/13 のドラム実機テストではこの構成を Arduino UNO R3（追加購入分）で組み，自 Mac の drum.pde と接続した．
 
 \begin{figure}[H]
 \centering

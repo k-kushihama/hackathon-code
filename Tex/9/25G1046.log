@@ -1,7 +1,7 @@
-This is LuaHBTeX, Version 1.22.0 (TeX Live 2025)  (format=lualatex 2025.4.23)  26 MAY 2026 23:47
+This is LuaHBTeX, Version 1.22.0 (TeX Live 2025)  (format=lualatex 2025.4.23)  23 JUN 2026 21:19
  restricted system commands enabled.
-**hackathon.tex
-(./hackathon.tex
+**25G1046.tex
+(./25G1046.tex
 LaTeX2e <2024-11-01> patch level 2
 L3 programming layer <2025-03-26>
 Lua module: luaotfload 2024-12-03 v3.29 Lua based OpenType font support
@@ -1029,33 +1029,33 @@ Package: float 2001/11/08 v1.3d Float enhancements (AL)
 )
 (/usr/local/texlive/2025/texmf-dist/tex/luatex/luatexja/patches/lltjp-array.sty
 Package: lltjp-array 2024-07-21 Patch to array for LuaTeX-ja
-) (./hackathon.aux)
-\openout1 = hackathon.aux
+) (./25G1046.aux)
+\openout1 = 25G1046.aux
 
-LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 44.
-LaTeX Font Info:    ... okay on input line 44.
-LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 44.
-LaTeX Font Info:    ... okay on input line 44.
-LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 44.
-LaTeX Font Info:    ... okay on input line 44.
-LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 44.
-LaTeX Font Info:    ... okay on input line 44.
-LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 44.
-LaTeX Font Info:    ... okay on input line 44.
-LaTeX Font Info:    Checking defaults for TU/lmr/m/n on input line 44.
-LaTeX Font Info:    ... okay on input line 44.
-LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 44.
-LaTeX Font Info:    ... okay on input line 44.
-LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 44.
-LaTeX Font Info:    ... okay on input line 44.
-LaTeX Font Info:    Checking defaults for JY3/mc/m/n on input line 44.
-LaTeX Font Info:    ... okay on input line 44.
-LaTeX Font Info:    Checking defaults for JT3/mc/m/n on input line 44.
-LaTeX Font Info:    ... okay on input line 44.
-LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 44.
-LaTeX Font Info:    ... okay on input line 44.
-LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 44.
-LaTeX Font Info:    ... okay on input line 44.
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 49.
+LaTeX Font Info:    ... okay on input line 49.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 49.
+LaTeX Font Info:    ... okay on input line 49.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 49.
+LaTeX Font Info:    ... okay on input line 49.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 49.
+LaTeX Font Info:    ... okay on input line 49.
+LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 49.
+LaTeX Font Info:    ... okay on input line 49.
+LaTeX Font Info:    Checking defaults for TU/lmr/m/n on input line 49.
+LaTeX Font Info:    ... okay on input line 49.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 49.
+LaTeX Font Info:    ... okay on input line 49.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 49.
+LaTeX Font Info:    ... okay on input line 49.
+LaTeX Font Info:    Checking defaults for JY3/mc/m/n on input line 49.
+LaTeX Font Info:    ... okay on input line 49.
+LaTeX Font Info:    Checking defaults for JT3/mc/m/n on input line 49.
+LaTeX Font Info:    ... okay on input line 49.
+LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 49.
+LaTeX Font Info:    ... okay on input line 49.
+LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 49.
+LaTeX Font Info:    ... okay on input line 49.
 
 *geometry* driver: auto-detecting
 *geometry* detected driver: luatex
@@ -1113,176 +1113,204 @@ Package epstopdf-base Info: Redefining graphics rule for `.eps' on input line 4
 File: epstopdf-sys.cfg 2010/07/13 v1.3 Configuration of (r)epstopdf for TeX Liv
 e
 ))
-Package hyperref Info: Link coloring OFF on input line 44.
+Package hyperref Info: Link coloring OFF on input line 49.
 
-(./hackathon.out) (./hackathon.out)
+(./25G1046.out) (./25G1046.out)
 \@outlinefile=\write5
 
-\openout5 = hackathon.out
+\openout5 = 25G1046.out
 \c@lstlisting=\count348
 (load cache: extra_lmroman17-regular.luc)
 LaTeX Font Info:    Font shape `JT3/mc/m/n' will be
-(Font)              scaled to size 15.97903pt on input line 47.
+(Font)              scaled to size 15.97903pt on input line 52.
 LaTeX Font Info:    Font shape `JY3/mc/m/n' will be
-(Font)              scaled to size 15.97903pt on input line 47.
+(Font)              scaled to size 15.97903pt on input line 52.
 (load cache: extra_lmroman12-bold.luc)
 LaTeX Font Info:    Font shape `JT3/mc/b/n' in size <17.28> not available
-(Font)              Font shape `JT3/gt/m/n' tried instead on input line 47.
+(Font)              Font shape `JT3/gt/m/n' tried instead on input line 52.
 LaTeX Font Info:    Font shape `JT3/gt/m/n' will be
-(Font)              scaled to size 14.59271pt on input line 47.
+(Font)              scaled to size 14.59271pt on input line 52.
 LaTeX Font Info:    Font shape `JY3/mc/b/n' in size <17.28> not available
-(Font)              Font shape `JY3/gt/m/n' tried instead on input line 47.
+(Font)              Font shape `JY3/gt/m/n' tried instead on input line 52.
 LaTeX Font Info:    Font shape `JY3/gt/m/n' will be
-(Font)              scaled to size 14.59271pt on input line 47.
-(load cache: extra_haranoajigothic-medium.luc)
-LaTeX Font Info:    Calculating math sizes for size <10.95001> on input line 50
+(Font)              scaled to size 14.59271pt on input line 52.
+(load cache: extra_haranoajigothic-medium.luc)(load cache: extra_lmroman12-regul
+ar.luc)
+LaTeX Font Info:    Font shape `JT3/mc/m/n' will be
+(Font)              scaled to size 11.09656pt on input line 53.
+LaTeX Font Info:    Font shape `JY3/mc/m/n' will be
+(Font)              scaled to size 11.09656pt on input line 53.
+LaTeX Font Info:    Calculating math sizes for size <10.95001> on input line 56
 .
 LaTeX Font Info:    External font `cmex10' loaded for size
-(Font)              <10> on input line 50.
+(Font)              <10> on input line 56.
 LaTeX Font Info:    External font `cmex10' loaded for size
-(Font)              <6.99995> on input line 50.
+(Font)              <6.99995> on input line 56.
 LaTeX Font Info:    External font `cmex10' loaded for size
-(Font)              <5> on input line 50.
+(Font)              <5> on input line 56.
 LaTeX Font Info:    Font shape `JY3/mc/m/n' will be
-(Font)              scaled to size 6.47295pt on input line 50.
+(Font)              scaled to size 6.47295pt on input line 56.
 LaTeX Font Info:    Font shape `JY3/mc/m/n' will be
-(Font)              scaled to size 4.62357pt on input line 50.
-(load cache: extra_lmroman12-regular.luc)
-LaTeX Font Info:    Font shape `JT3/mc/m/n' will be
-(Font)              scaled to size 11.09656pt on input line 67.
-LaTeX Font Info:    Font shape `JY3/mc/m/n' will be
-(Font)              scaled to size 11.09656pt on input line 67.
-LaTeX Font Info:    Font shape `JT3/mc/b/n' in size <12> not available
-(Font)              Font shape `JT3/gt/m/n' tried instead on input line 67.
-LaTeX Font Info:    Font shape `JT3/gt/m/n' will be
-(Font)              scaled to size 10.13382pt on input line 67.
-LaTeX Font Info:    Font shape `JY3/mc/b/n' in size <12> not available
-(Font)              Font shape `JY3/gt/m/n' tried instead on input line 67.
-LaTeX Font Info:    Font shape `JY3/gt/m/n' will be
-(Font)              scaled to size 10.13382pt on input line 67.
+(Font)              scaled to size 4.62357pt on input line 56.
 (load cache: extra_lmroman10-bold.luc)
 LaTeX Font Info:    Font shape `JT3/mc/b/n' in size <10> not available
-(Font)              Font shape `JT3/gt/m/n' tried instead on input line 74.
+(Font)              Font shape `JT3/gt/m/n' tried instead on input line 70.
 LaTeX Font Info:    Font shape `JT3/gt/m/n' will be
-(Font)              scaled to size 8.44485pt on input line 74.
+(Font)              scaled to size 8.44485pt on input line 70.
 LaTeX Font Info:    Font shape `JY3/mc/b/n' in size <10> not available
-(Font)              Font shape `JY3/gt/m/n' tried instead on input line 74.
+(Font)              Font shape `JY3/gt/m/n' tried instead on input line 70.
 LaTeX Font Info:    Font shape `JY3/gt/m/n' will be
-(Font)              scaled to size 8.44485pt on input line 74.
+(Font)              scaled to size 8.44485pt on input line 70.
+LaTeX Font Info:    Font shape `JT3/mc/b/n' in size <12> not available
+(Font)              Font shape `JT3/gt/m/n' tried instead on input line 79.
 LaTeX Font Info:    Font shape `JT3/gt/m/n' will be
-(Font)              scaled to size 11.09656pt on input line 87.
+(Font)              scaled to size 10.13382pt on input line 79.
+LaTeX Font Info:    Font shape `JY3/mc/b/n' in size <12> not available
+(Font)              Font shape `JY3/gt/m/n' tried instead on input line 79.
 LaTeX Font Info:    Font shape `JY3/gt/m/n' will be
-(Font)              scaled to size 11.09656pt on input line 87.
-(load cache: extra_lmsans12-regular.luc)
-Overfull \hbox (14.94545pt too wide) in alignment at lines 91--132
- [][][][][][][][][] 
- []
+(Font)              scaled to size 10.13382pt on input line 79.
+
 
 [1
 
-{/usr/local/texlive/2025/texmf-var/fonts/map/pdftex/updmap/pdftex.map}]
-Overfull \hbox (21.28474pt too wide) in alignment at lines 136--149
- [][][][][][][][] 
- []
-
-
-Overfull \hbox (32.88797pt too wide) in alignment at lines 163--172
- [][][][][][][] 
- []
-
+{/usr/local/texlive/2025/texmf-var/fonts/map/pdftex/updmap/pdftex.map}](load cac
+he: extra_lmmono10-regular.luc)
+LaTeX Font Info:    Font shape `JT3/gt/m/n' will be
+(Font)              scaled to size 9.24713pt on input line 88.
+LaTeX Font Info:    Font shape `JY3/gt/m/n' will be
+(Font)              scaled to size 9.24713pt on input line 88.
 
 
 [2]
-Overfull \hbox (20.60674pt too wide) in alignment at lines 192--199
- [][][][] 
- []
-
-
-Overfull \hbox (17.76129pt too wide) in alignment at lines 203--212
- [][][][] 
- []
-
-[3]
-Overfull \hbox (38.57843pt too wide) in alignment at lines 226--237
- [][][][][][][] 
- []
-
-(load cache: extra_lmmono10-regular.luc)
 LaTeX Font Info:    Font shape `JT3/gt/m/n' will be
-(Font)              scaled to size 9.24713pt on input line 253.
+(Font)              scaled to size 11.09656pt on input line 118.
 LaTeX Font Info:    Font shape `JY3/gt/m/n' will be
-(Font)              scaled to size 9.24713pt on input line 253.
+(Font)              scaled to size 11.09656pt on input line 118.
+(load cache: extra_lmsans12-regular.luc)
+
+[3](load cache: extra_lmroman8-bold.luc)
+LaTeX Font Info:    Font shape `JT3/mc/b/n' in size <8> not available
+(Font)              Font shape `JT3/gt/m/n' tried instead on input line 214.
+LaTeX Font Info:    Font shape `JT3/gt/m/n' will be
+(Font)              scaled to size 6.75587pt on input line 214.
+LaTeX Font Info:    Font shape `JY3/mc/b/n' in size <8> not available
+(Font)              Font shape `JY3/gt/m/n' tried instead on input line 214.
+LaTeX Font Info:    Font shape `JY3/gt/m/n' will be
+(Font)              scaled to size 6.75587pt on input line 214.
+(load cache: extra_lmmono8-regular.luc)
+LaTeX Font Info:    Font shape `JT3/gt/m/n' will be
+(Font)              scaled to size 7.3977pt on input line 216.
+LaTeX Font Info:    Font shape `JY3/gt/m/n' will be
+(Font)              scaled to size 7.3977pt on input line 216.
+ [4] [5]
+Overfull \hbox (3.03949pt too wide) in paragraph at lines 277--277
+[]|\TU/lmr/m/n/10.95001 MOE1| 
+ []
 
 
-[4]
+Overfull \hbox (3.03949pt too wide) in paragraph at lines 279--279
+[]|\TU/lmr/m/n/10.95001 MOE3| 
+ []
 
-[5](load cache: extra_lmsans10-regular.luc)
+
+Overfull \hbox (3.03949pt too wide) in paragraph at lines 281--281
+[]|\TU/lmr/m/n/10.95001 MOP1| 
+ []
+
+
+Overfull \hbox (3.03949pt too wide) in paragraph at lines 283--283
+[]|\TU/lmr/m/n/10.95001 MOP2| 
+ []
+
+
+Overfull \hbox (3.03949pt too wide) in paragraph at lines 285--285
+[]|\TU/lmr/m/n/10.95001 MOP3| 
+ []
+
+
+
+[6]
+
+[7]
+
+[8]
+
+[9](load cache: extra_lmsans10-regular.luc)
 LaTeX Font Info:    Font shape `JT3/mc/m/n' will be
-(Font)              scaled to size 8.32242pt on input line 366.
+(Font)              scaled to size 8.32242pt on input line 465.
 LaTeX Font Info:    Font shape `JY3/mc/m/n' will be
-(Font)              scaled to size 8.32242pt on input line 366.
-LaTeX Font Info:    Font shape `JT3/gt/m/n' will be
-(Font)              scaled to size 8.32242pt on input line 367.
-LaTeX Font Info:    Font shape `JY3/gt/m/n' will be
-(Font)              scaled to size 8.32242pt on input line 367.
+(Font)              scaled to size 8.32242pt on input line 465.
 (load cache: extra_lmroman7-regular.luc)
 LaTeX Font Info:    Font shape `JT3/mc/m/n' will be
-(Font)              scaled to size 6.47299pt on input line 377.
+(Font)              scaled to size 6.47299pt on input line 476.
 LaTeX Font Info:    Font shape `JY3/mc/m/n' will be
-(Font)              scaled to size 6.47299pt on input line 377.
-
-Overfull \hbox (39.33667pt too wide) in paragraph at lines 380--381
- [][] 
- []
-
-(load cache: extra_lmroman5-regular.luc)
-LaTeX Font Info:    Font shape `JT3/mc/m/n' will be
-(Font)              scaled to size 4.62357pt on input line 402.
+(Font)              scaled to size 6.47299pt on input line 476.
 
 
-[6
+[10]
+<circuit-diagram.pdf, id=168, 794.97pt x 614.295pt>
+File: circuit-diagram.pdf Graphic file (type pdf)
+<use circuit-diagram.pdf>
+Package luatex.def Info: circuit-diagram.pdf  used on input line 496.
+(luatex.def)             Requested size: 432.48051pt x 334.1983pt.
+
+
+[11
 warning  (pdf backend): ignoring duplicate destination with the name 'figure.1'
 ]
+<image.png, id=181, 702.625pt x 485.815pt>
+File: image.png Graphic file (type png)
+<use image.png>
+Package luatex.def Info: image.png  used on input line 507.
+(luatex.def)             Requested size: 432.48051pt x 299.03761pt.
 
-[7
+
+[12
 warning  (pdf backend): ignoring duplicate destination with the name 'figure.2'
-] (./hackathon.aux)
+<./circuit-diagram.pdf>]
+
+[13
+warning  (pdf backend): ignoring duplicate destination with the name 'figure.3'
+<./image.png>] (./25G1046.aux)
  ***********
 LaTeX2e <2024-11-01> patch level 2
 L3 programming layer <2025-03-26>
  ***********
-Package rerunfilecheck Info: File `hackathon.out' has not changed.
-(rerunfilecheck)             Checksum: 5F1B2032F4636ECDC071BCA6324D23E0;887.
+Package rerunfilecheck Info: File `25G1046.out' has not changed.
+(rerunfilecheck)             Checksum: 66D6A26A7ACA5E7F94B5D342CBA04365;2525.
 )
 
 Here is how much of LuaTeX's memory you used:
- 25527 strings out of 471941
- 244637,953878 words of node,token memory allocated
+ 25484 strings out of 471941
+ 244638,953878 words of node,token memory allocated
  874 words of node memory still in use:
    7 hlist, 1 vlist, 4 rule, 2 glue, 3 kern, 1 glyph, 140 attribute, 60 glue_spe
 c, 21 attribute_list, 2 write, 9 user_defined nodes
-   avail lists: 1:47,2:59449,3:1216,4:1162,5:387,6:201,7:7084,8:46,9:4342,10:21,
-11:64
- 51385 multiletter control sequences out of 65536+600000
- 55 fonts using 56404367 bytes
- 119i,9n,112p,1853b,873s stack positions out of 10000i,1000n,20000p,200000b,200000s
-</usr/local/texlive/2025/texmf-dist/fonts/opentype/public/lm/lmroman5-regular.ot
-f></usr/local/texlive/2025/texmf-dist/fonts/opentype/public/lm/lmroman7-regular.
-otf></usr/local/texlive/2025/texmf-dist/fonts/opentype/public/lm/lmmono9-regular
-.otf></usr/local/texlive/2025/texmf-dist/fonts/opentype/public/lm/lmroman9-regul
-ar.otf></usr/local/texlive/2025/texmf-dist/fonts/opentype/public/lm/lmsans10-reg
-ular.otf></usr/local/texlive/2025/texmf-dist/fonts/opentype/public/lm/lmmono10-r
-egular.otf></usr/local/texlive/2025/texmf-dist/fonts/opentype/public/lm/lmsans12
--regular.otf></usr/local/texlive/2025/texmf-dist/fonts/opentype/public/lm/lmroma
-n10-bold.otf></usr/local/texlive/2025/texmf-dist/fonts/opentype/public/lm/lmroma
-n10-regular.otf></usr/local/texlive/texmf-local/fonts/opentype/cjk-gs-integrate/
-HaranoAjiMincho-Regular.otf></usr/local/texlive/2025/texmf-dist/fonts/opentype/p
-ublic/lm/lmroman12-bold.otf></usr/local/texlive/texmf-local/fonts/opentype/cjk-g
-s-integrate/HaranoAjiGothic-Medium.otf>
-Output written on hackathon.pdf (7 pages, 176977 bytes).
+   avail lists: 1:26,2:71162,3:771,4:802,5:444,6:136,7:6974,8:46,9:3465,10:24,11
+:70
+ 51314 multiletter control sequences out of 65536+600000
+ 56 fonts using 60188279 bytes
+ 119i,9n,112p,1851b,858s stack positions out of 10000i,1000n,20000p,200000b,200000s
+</usr/local/texlive/2025/texmf-dist/fonts/opentype/public/lm/lmroman7-regular.ot
+f></usr/local/texlive/2025/texmf-dist/fonts/opentype/public/lm/lmroman9-regular.
+otf></usr/local/texlive/2025/texmf-dist/fonts/opentype/public/lm/lmsans10-regula
+r.otf></usr/local/texlive/2025/texmf-dist/fonts/opentype/public/lm/lmmono8-regul
+ar.otf></usr/local/texlive/2025/texmf-dist/fonts/opentype/public/lm/lmroman8-bol
+d.otf></usr/local/texlive/2025/texmf-dist/fonts/opentype/public/lm/lmroman8-regu
+lar.otf></usr/local/texlive/2025/texmf-dist/fonts/opentype/public/lm/lmsans12-re
+gular.otf></usr/local/texlive/2025/texmf-dist/fonts/opentype/public/lm/lmmono10-
+regular.otf></usr/local/texlive/2025/texmf-dist/fonts/opentype/public/lm/lmroman
+10-bold.otf></usr/local/texlive/2025/texmf-dist/fonts/opentype/public/lm/lmroman
+10-regular.otf></usr/local/texlive/2025/texmf-dist/fonts/opentype/public/lm/lmro
+man12-regular.otf></usr/local/texlive/texmf-local/fonts/opentype/cjk-gs-integrat
+e/HaranoAjiMincho-Regular.otf></usr/local/texlive/2025/texmf-dist/fonts/opentype
+/public/lm/lmroman12-bold.otf></usr/local/texlive/texmf-local/fonts/opentype/cjk
+-gs-integrate/HaranoAjiGothic-Medium.otf></usr/local/texlive/2025/texmf-dist/fon
+ts/type1/public/amsfonts/cm/cmr10.pfb>
+Output written on 25G1046.pdf (13 pages, 416537 bytes).
 
-PDF statistics: 183 PDF objects out of 1000 (max. 8388607)
- 136 compressed objects within 2 object streams
- 29 named destinations out of 1000 (max. 131072)
- 88 words of extra memory for PDF output out of 10000 (max. 100000000)
+PDF statistics: 298 PDF objects out of 1000 (max. 8388607)
+ 234 compressed objects within 3 object streams
+ 53 named destinations out of 1000 (max. 131072)
+ 192 words of extra memory for PDF output out of 10000 (max. 100000000)
 
