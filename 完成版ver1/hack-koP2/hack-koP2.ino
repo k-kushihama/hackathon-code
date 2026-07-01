@@ -81,13 +81,14 @@ void setup() {
 void loop() {
   if (!IrReceiver.decode()) return;
 
-  if (IrReceiver.decodedIRData.protocol == NEC) {
-    // hack_oya_kai.ino は command に mask をそのまま乗せて送る
-    // (address は IR_ADDRESS=0x00 固定で意味を持たない)。
-    uint8_t mask = IrReceiver.decodedIRData.command;
+  // decode直後にデータを退避し、即座にresumeする。
+  // delay()中もIR受信を継続させ、tick取りこぼしを防ぐ。
+  uint8_t protocol = IrReceiver.decodedIRData.protocol;
+  uint8_t mask = (protocol == NEC) ? IrReceiver.decodedIRData.command : 0;
+  IrReceiver.resume();
 
+  if (protocol == NEC) {
     if (mask & (1 << childId)) {
-      // 自分の出番が来た: localPosを1つ進める
       localPos++;
 
       if (childId == DRUM_CHILD_ID) {
@@ -96,7 +97,6 @@ void loop() {
         delay(15);
         digitalWrite(LED_INDICATOR, LOW);
       } else {
-        // 楽譜を1周し終えたら最初(localPos=0)に戻ってループする
         if (localPos >= TOTAL_TICKS) {
           localPos = 0;
         }
@@ -104,7 +104,10 @@ void loop() {
         unsigned long now = millis();
         if (lastReceiveMs != 0) {
           unsigned long interval = now - lastReceiveMs;
-          if (interval >= 50 && interval <= 2000) lastIntervalMs = interval;
+          // 演奏停止→再開時の大きなギャップでdelayが膨張するのを防ぐ
+          if (interval >= 50 && interval <= 2000 && interval <= lastIntervalMs * 3) {
+            lastIntervalMs = interval;
+          }
         }
         lastReceiveMs = now;
 
@@ -118,13 +121,12 @@ void loop() {
             digitalWrite(LED_INDICATOR, (localPos % 2) ? HIGH : LOW);
           }
           if (scoreIdx + 1 < SCORE_LENGTH) {
-            delay(lastIntervalMs / 2);
+            unsigned long halfDelay = min(lastIntervalMs / 2, 200UL);
+            delay(halfDelay);
             sendNoteToHost(myScore[scoreIdx + 1], NOTE_DURATION_HALF, NOTE_AMPLITUDE, localPos);
           }
         }
       }
     }
-    // 自分のビットが立っていないtickは無視 (待機)
   }
-  IrReceiver.resume();
 }
