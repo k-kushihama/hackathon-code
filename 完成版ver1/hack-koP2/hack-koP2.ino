@@ -13,6 +13,7 @@
 int childId = 0;
 const int DRUM_CHILD_ID = 3;
 const int PIN_IR_RECV = 2;
+const int PIN_SYNC_IN = 3;            // 親機D9からの同期パルス入力（遅延計測用）
 const int LED_INDICATOR = 13;
 
 const int SCORE_LENGTH = 40;
@@ -47,6 +48,13 @@ long localPos = -1;  // -1 = まだ一度も自分の出番が来ていない
 unsigned long lastReceiveMs = 0;
 unsigned long lastIntervalMs = 250;  // 双子音化区間の半tick遅延に使う
 
+// 遅延計測: 親機の同期パルス立ち上がり時刻をISRで記録
+volatile unsigned long syncRiseUs = 0;
+
+void onSyncRise() {
+  syncRiseUs = micros();
+}
+
 void sendNoteToHost(const String& pitch, float duration, float amplitude, long pos) {
   Serial.print(pitch);
   Serial.print(',');
@@ -72,6 +80,8 @@ void setup() {
   while (!Serial && (millis() - boot_t) < 3000) { ; }
 
   IrReceiver.begin(PIN_IR_RECV);
+  pinMode(PIN_SYNC_IN, INPUT);
+  attachInterrupt(digitalPinToInterrupt(PIN_SYNC_IN), onSyncRise, RISING);
   pinMode(LED_INDICATOR, OUTPUT);
 
   delay(100);
@@ -89,12 +99,20 @@ void loop() {
 
   if (protocol == NEC) {
     if (mask & (1 << childId)) {
+      unsigned long recvUs = micros();
+      unsigned long riseUs = syncRiseUs;  // ISRで記録された値をコピー
       Serial.print("[RECV] millis=");
       Serial.print(millis());
       Serial.print(" child=");
       Serial.print(childId);
       Serial.print(" localPos=");
-      Serial.println(localPos + 1);
+      Serial.print(localPos + 1);
+      if (riseUs != 0) {
+        Serial.print(" latency=");
+        Serial.print(recvUs - riseUs);
+        Serial.print("us");
+      }
+      Serial.println();
       localPos++;
 
       if (childId == DRUM_CHILD_ID) {

@@ -12,6 +12,7 @@ const int PIN_BTN_START = 8;
 const int PIN_POT_TEMPO = A5;     // BPM可変抵抗器 (uxcell 10kΩ シングルターン)。回転で 60〜150 BPM
 const int PIN_BTN_RESET = 10;
 const int LED_INDICATOR = 13;
+const int PIN_SYNC_OUT = 9;          // 遅延計測用同期パルス出力（子機のD3に直結）
 
 const int QUANTIZE_TICKS = 8;     // 参加予約のアライメント(0,8,16,...)
 // 子機の TOTAL_TICKS (=楽譜1周分のIR tick数) と一致させる必要がある。
@@ -54,6 +55,8 @@ void setup() {
   pinMode(PIN_BTN_RESET, INPUT_PULLUP);
   // PIN_POT_TEMPO はアナログ入力なので pinMode 不要（pull-up は付けない）
   pinMode(LED_INDICATOR, OUTPUT);
+  pinMode(PIN_SYNC_OUT, OUTPUT);
+  digitalWrite(PIN_SYNC_OUT, LOW);
 
   printHelp();
 }
@@ -285,6 +288,8 @@ void tick() {
     Serial.print(tickCount);
     Serial.print(" mask=0b");
     Serial.println(mask, BIN);
+    digitalWrite(PIN_SYNC_OUT, HIGH);
     IrSender.sendNEC(IR_ADDRESS, mask, 0);
+    digitalWrite(PIN_SYNC_OUT, LOW);
   }
 }
