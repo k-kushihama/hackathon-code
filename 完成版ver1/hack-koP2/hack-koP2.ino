@@ -89,6 +89,12 @@ void loop() {
 
   if (protocol == NEC) {
     if (mask & (1 << childId)) {
+      Serial.print("[RECV] millis=");
+      Serial.print(millis());
+      Serial.print(" child=");
+      Serial.print(childId);
+      Serial.print(" localPos=");
+      Serial.println(localPos + 1);
       localPos++;
 
       if (childId == DRUM_CHILD_ID) {

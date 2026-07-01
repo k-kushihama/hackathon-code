@@ -279,6 +279,12 @@ void tick() {
   }
 
   if (mask != 0) {
+    Serial.print("[SEND] millis=");
+    Serial.print(millis());
+    Serial.print(" tick=");
+    Serial.print(tickCount);
+    Serial.print(" mask=0b");
+    Serial.println(mask, BIN);
     IrSender.sendNEC(IR_ADDRESS, mask, 0);
   }
 }
