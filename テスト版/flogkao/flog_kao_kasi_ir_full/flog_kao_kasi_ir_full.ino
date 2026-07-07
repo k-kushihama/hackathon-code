@@ -1,13 +1,20 @@
 // flog_kao_kasi_ir_full
 //   カエルの顔(LCD1) + 歌詞(LCD2) + IR同期(NEC) を1台に統合した表示子機スケッチ。
-//   親機 hack_oya_kai2 が sendNEC(0x00, mask, 0) で流すtickを受信し、
-//   自分のビット(childId)が立ったtickだけ 歌詞送り・口パク・移動 を1段ずつ進める。
-//   音楽子機 hack-koP2 と同じ単純インクリメント方式で挙動を揃えている。
+//   親機 hack_oya_kai2_2 が sendNEC(tickLow, mask, 0) で流すtickを受信し、
+//   自分のビット(childId)が立ったtickで 歌詞送り・口パク・移動 を進める。
+//   歌詞位置(localPos)は address に乗った tickLow(tickCount下位8bit)から絶対復元するため、
+//   IRを取りこぼしても次の受信で正しい位置へ自己修復する（USE_TICKLOW_SYNC=1）。
+//   USE_TICKLOW_SYNC=0 で旧親機 hack_oya_kai2(address=0x00固定) 用の単純インクリメントに戻せる。
 
 // 【jukou由来】NEC受信のためのIRremote定義とLCDライブラリ
 #define DECODE_NEC
 #include <IRremote.hpp>
 #include <LiquidCrystal.h>
+
+// 【kai2_2のtickLow同期】歌詞位置(localPos)の復元方式を切り替えるコンパイルスイッチ
+//   1 = 親機 hack_oya_kai2_2 用（address=tickLow を使って位置を自己修復）
+//   0 = 親機 hack_oya_kai2 無印用（address=0x00 固定のため単純インクリメント）
+#define USE_TICKLOW_SYNC 1
 
 int childId = 0;                 // 【jukou由来】表示子機の声部。親機ボタンD4/シリアル'0'で参加
 const int PIN_IR_RECV = 6;       // 【jukou由来】IR受信モジュールのOUTピン
@@ -127,7 +134,8 @@ void showLyric(int pos) {
 
 
 // ---- 状態変数 ----
-long localPos = -1;   // 【jukou由来】自分の出番が来た回数（tick位置）
+long localPos = -1;   // 【jukou由来】自分の出番が来た回数（tick位置＝歌詞index）
+long joinBase = -1;   // 【kai2_2のtickLow同期】自分が初めて出番を得たtickLow。譜面頭(localPos=0)の基準
 int frogX = 0;        // 【idou由来】顔の横位置
 bool frogOpen = false;// 【idou由来】口の開閉状態
 int stepCount = 0;    // 【idou由来】口パク2回ごとに1マス進むためのカウンタ
@@ -205,39 +213,53 @@ void setup() {
 // 【jukou由来】ループ構造を踏襲し、顔の更新（口パク/移動）を追加
 void loop() {
   if (!IrReceiver.decode()) return;
-  IrReceiver.printIRResultShort(&Serial);
 
-  // 【新規】NECリピートフレームは無視（押しっぱなしの誤カウント防止）
-  if (IrReceiver.decodedIRData.flags & IRDATA_FLAGS_IS_REPEAT) {
-    IrReceiver.resume();
-    return;
-  }
+  // 【kai2_2のtickLow同期】decode直後に必要値を退避して即resumeする。
+  // drawFrogFull等の描画に時間がかかっても、その間のIR受信を取りこぼさない
+  // （音楽子機 hack-koP2 と同じ「退避してから処理」方式）。
+  bool isRepeat = (IrReceiver.decodedIRData.flags & IRDATA_FLAGS_IS_REPEAT);
+  uint8_t protocol = IrReceiver.decodedIRData.protocol;
+  uint8_t mask = (protocol == NEC) ? IrReceiver.decodedIRData.command : 0;
+  uint8_t tickLow = (uint8_t)(IrReceiver.decodedIRData.address & 0xFF);  // 親機kai2_2が乗せたtickCount下位8bit
+  IrReceiver.resume();
 
-  if (IrReceiver.decodedIRData.protocol == NEC) {
-    // 【jukou由来】親機はcommandにmaskをそのまま乗せて送る（address=0x00固定）
-    uint8_t mask = IrReceiver.decodedIRData.command;
+  // 【新規】NECリピート/非NECは退避後に破棄（押しっぱなしの誤カウント防止）
+  if (isRepeat || protocol != NEC) return;
 
-    if (mask & (1 << childId)) {
-      // 【jukou由来】自分の出番: tick位置を1つ進める（末尾でループ）
+  // 【新規】printIRResultShortはresume前だと遅延源になるので簡潔な自前出力に置換
+  Serial.print("[IR] tickLow=");
+  Serial.print(tickLow);
+  Serial.print(" mask=0x");
+  Serial.println(mask, HEX);
+
+  if (mask & (1 << childId)) {
+    // 【kai2_2のtickLow同期】歌詞位置(localPos)を決定する
+    #if USE_TICKLOW_SYNC
+      // 親機kai2_2が address に乗せた tickLow から絶対位置を復元。
+      // IR取りこぼしで欠けたtickも、次の受信で正しい位置へ自己修復できる。
+      if (joinBase < 0) joinBase = tickLow;  // 最初の自分の出番tickを譜面の頭(0)とする
+      // uint8_t 減算はラップアラウンドで正しく差が出る。TOTAL_TICKS=32 は 256 の約数なので
+      // tickLow が 255→0 に折り返しても (tickLow - joinBase) % 32 は連続する
+      localPos = (uint8_t)(tickLow - (uint8_t)joinBase) % TOTAL_TICKS;
+    #else
+      // 旧親機kai2無印は address=0x00固定なので単純インクリメント（従来方式）
       localPos++;
       if (localPos >= TOTAL_TICKS) localPos = 0;
+    #endif
 
-      showLyric((int)localPos);   // 【jukou由来】LCD2に歌詞
-      frogOpen = !frogOpen;       // 【idou由来】LCD1の口を反転
-      stepCount++;
+    showLyric((int)localPos);   // 【jukou由来】LCD2に歌詞
+    frogOpen = !frogOpen;       // 【idou由来】LCD1の口を反転（受信tickごと・位置補正しない）
+    stepCount++;
 
-      // 【idou由来】口パク2回（開→閉）で1マス移動
-      if (stepCount >= 2) {
-        stepCount = 0;
-        frogX++;
-        if (frogX > 13) frogX = 0;
-        drawFrogFull(frogX, frogOpen);  // 【idou由来】移動時は全再描画
-      } else {
-        setMouth(frogOpen);             // 【新規】口パクのみ（軽量）
-      }
+    // 【idou由来】口パク2回（開→閉）で1マス移動（受信tickごと・位置補正しない）
+    if (stepCount >= 2) {
+      stepCount = 0;
+      frogX++;
+      if (frogX > 13) frogX = 0;
+      drawFrogFull(frogX, frogOpen);  // 【idou由来】移動時は全再描画
+    } else {
+      setMouth(frogOpen);             // 【新規】口パクのみ（軽量）
     }
-    // 自分のビットが立っていないtickは無視（待機）
   }
-
-  IrReceiver.resume();
+  // 自分のビットが立っていないtickは無視（待機）
 }
