@@ -102,8 +102,14 @@ void draw() {
 // 親機ロジック: hack_oya_kai.ino と hack-koP2.ino の localPos 管理を統合
 // ------------------------------------------------------------------------
 long tickIntervalMs() {
-  // hack_oya_kai.ino: interval = 60000 / BPM / 2 (1tick = 8分音符相当)
-  return 60000L / bpm / 2L;
+  // 楽譜 myScore の前半区間 (index 0..DOUBLE_START-1) は 1 要素 = 4分音符相当。
+  // よって 1 tick = 4分音符 = 60000/BPM ms とする (BPM=100 で 600ms/tick、
+  // 4分音符4つ「ドレミファ」で 2.4 秒)。
+  // 元 hack_oya_kai.ino は interval = 60000/BPM/2 (8分音符間隔) で IR 送信
+  // していたが、そのまま移植すると BPM 値の実測が倍速になるため /2 を除去。
+  // 倍速区間 (DOUBLE_START 以降) は pendingHalfMs で半 tick (=8分音符相当)
+  // 遅延させて 1 tick 内に 2 音鳴らす仕組みを維持する。
+  return 60000L / bpm;
 }
 
 void masterTick() {
