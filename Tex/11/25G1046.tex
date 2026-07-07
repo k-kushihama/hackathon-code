@@ -1,0 +1,497 @@
+\documentclass[a4paper,11pt]{ltjsarticle}
+
+\usepackage{luatexja}
+\usepackage{geometry}
+\geometry{margin=25mm}
+
+\usepackage{array}
+\usepackage{longtable}
+\usepackage[table]{xcolor}
+\usepackage{booktabs}
+
+\usepackage{enumitem}
+
+\usepackage{hyperref}
+
+\usepackage{titlesec}
+\titleformat{\section}{\large\bfseries}{\thesection.}{0.5em}{}
+
+\usepackage{listings}
+\lstset{
+  basicstyle=\ttfamily\small,
+  frame=single,
+  breaklines=true,
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  keepspaces=true,
+  showstringspaces=false,
+  columns=fullflexible,
+  tabsize=2,
+}
+
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning, calc, fit}
+
+\usepackage{graphicx}
+
+\usepackage{float}
+
+\definecolor{ganttCell}{HTML}{4FC3D0}
+\definecolor{ganttEarly}{HTML}{FFB74D}
+
+\providecommand{\％}{\%}
+
+\setlength{\parindent}{0pt}
+\setlist[itemize]{leftmargin=2em}
+
+\setlength{\emergencystretch}{6em}
+
+\begin{document}
+
+\begin{center}
+    {\LARGE \textbf{第11回事前課題}}\\[0.4em]
+    {\large 作業ログ（第10週末）}\\[1em]
+\end{center}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+報告者 & 櫛濱 和輝 (25G1046)\\
+\hline
+報告日 & 2026年7月7日\\
+\hline
+チーム & チーム9\\
+\hline
+プロジェクト名 & 赤外線通信で歌うカエル\\
+\hline
+担当パート & 今週は本来の親機/ピアノ担当から少し外れた作業が中心．手代木が諦めた LCD（顔＋歌詞の2枚表示）の引き取り検討と実装，アンケート用のピアノ音の収録，IR 通信の伝搬遅延を測るための計測プログラム（\texttt{hack-koP2.ino} の kokitest 版）の整備\\
+\hline
+本来の今週の位置づけ & 第10週末（7/7）＝最終週．計画書 v1.1（2026/6/19版）のガント上，第10週は 510:結合テストの最終期間．前回個人作業ログ（7/1）で次回計画に挙げた MOP1 演奏タイミング誤差と MOP2 赤外線通信成功率の定量計測に向けて計測プログラムを準備しつつ，MOP5 に関わる歌詞/顔の LCD 表示を手代木から引き取った\\
+\hline
+報告対象 & 前回個人作業ログ（7/1）以降に手を付けた3件．手代木担当だった LCD 表示子機（SUNLIKE SC1602B を2枚使って顔と歌詞を出す）の実装，アンケート用のピアノ音の収録，IR 伝搬遅延の計測プログラム（親機 GPIO パルスを基準に \texttt{micros()} を2点で取って差分を測る仕組み）の整備．LCD は実装まで持っていったが実機で安定して動かず，原因の切り分けが済んでいない\\
+\hline
+作業時間 & 計8時間\\
+\hline
+\end{tabular}
+
+\vspace{1em}
+
+%=====================================================
+\section{進捗サマリー}\label{sec:summary}
+
+現在地は第10週末（7/7）で，ガント上は 510:結合テストの最終期間．前回（7/1）までに親機の BPM ポテンショメータ化と4子機の輪唱までは動いていて，今週は残っていた歌詞/顔の表示（LCD）と，MOP1/MOP2 を数字で示すための計測の準備に回った．正直に書くと，今週の3件のうち LCD はまだ動いていない．
+
+\begin{itemize}
+    \item LCD（顔＋歌詞）の引き取りと実装：もともと LCD は手代木の担当だったが，本人が「うまく映らないので諦める」と言って手を離したので，俺が引き取って検討した．顔を出す LCD1 と歌詞を出す LCD2 の2枚を1台の Arduino にぶら下げて，RS とデータ線（DB4--7）は2枚で共有し，E 線だけ個別（LCD1$\to$D11，LCD2$\to$D10）にして書き分ける構成にした．スケッチ（\texttt{flog\_kao\_kasi\_ir\_full}）は一通り書き上げて，IR で受けた tick に合わせて歌詞を1文字ずつ進めつつ顔を口パクさせる，というところまで実装した．\textbf{ただ実機ではまだ安定して映らない}．表示が出ない/薄い/片方だけ映る，といった症状が出ていて，配線なのかコントラスト（V0）なのか，あるいは書き込みタイミングの問題なのか，原因をまだ切り分けられていない．今週いちばん手こずっているのがここ
+    \item ピアノ音の収録：MOP4（音色の再現性）のアンケートに使うため，Processing（hackko.pde）で鳴らしている改善後のピアノ音を収録した．聴衆に聞かせて「ピアノだと分かるか」を問う設問で使う想定．収録自体は問題なく済んだ
+    \item IR 伝搬遅延の計測プログラム：MOP1（演奏タイミング誤差）と MOP2（通信成功率）を数字で出すために，IR の伝搬遅延を測る仕組みを子機側（\texttt{hack-koP2.ino} の kokitest 版）に組んだ．親機の GPIO をワイヤーで子機の割り込みピンに直結し，その立ち上がりを計測開始トリガにする．親機はトリガを出した直後に \texttt{sendNEC()} で IR を送り，子機が IR をデコードし終えた時刻との差分を取ることで「NEC を受けてデコードして loop で処理するまで」に何 $\mu$s かかっているかが分かる．この差分が通信誤差の主成分になる，という筋書き
+    \item 残課題：LCD が動かない件の原因切り分けが最優先．計測プログラムは組めたので，あとは実際に流してデータを取れば MOP1/MOP2 の数字が出せる．前回から持ち越している双子音処理の \texttt{delay()} 非ブロック化には今週は手が回らなかった
+\end{itemize}
+
+%=====================================================
+\section{ガントチャート}\label{sec:gantt}
+
+第10週末時点でも計画書 v1.1（2026/6/19版）から計画自体の変更はないので，チーム全体/個人とも v1.1 のガントチャートを掲載する．着色セル（\colorbox{ganttCell}{\phantom{xx}}）は当該タスクの実施週を表す．今週は第10週（最終週）にあたり，510:結合テストの締めの期間になる．
+
+\renewcommand{\arraystretch}{1.3}
+
+\begingroup
+\setlength{\tabcolsep}{3pt}
+
+\subsection{チーム全体ガントチャート}\label{sec:gantt-team}
+
+\begin{longtable}{|p{6.2cm}|p{2.3cm}|c|c|c|c|c|c|}
+\hline
+\rowcolor[gray]{0.9}
+第3層：活動タスク & 担当者 & 5週 & 6週 & 7週 & 8週 & 9週 & 10週 \\
+\hline
+110:ピアノ音の作成 & 櫛濱・久家 & \cellcolor{ganttCell} & & \cellcolor{ganttCell} & & & \\
+\hline
+120:arduinoとの通信用関数（ピアノ） & 櫛濱・久家 & \cellcolor{ganttCell} & & & & & \\
+\hline
+130:フルート音の作成 & 家田 & \cellcolor{ganttCell} & & & & & \\
+\hline
+140:arduinoとの通信用関数（フルート） & 家田 & \cellcolor{ganttCell} & & & & & \\
+\hline
+150:トランペット音の作成 & 木下 & \cellcolor{ganttCell} & & & & & \\
+\hline
+160:arduinoとの通信用関数（トランペット） & 木下 & \cellcolor{ganttCell} & & & & & \\
+\hline
+170:ドラム音の作成（キック） & 久家 & & \cellcolor{ganttCell} & & & & \\
+\hline
+171:ドラム音の作成（シンバル） & 久家 & & \cellcolor{ganttCell} & & & & \\
+\hline
+180:arduinoとの通信用関数（ドラム） & 久家 & & \cellcolor{ganttCell} & & & & \\
+\hline
+210:ピアノのプログラム & 櫛濱 & \cellcolor{ganttCell} & & & & & \\
+\hline
+220:フルートのプログラム & 家田 & \cellcolor{ganttCell} & & & & & \\
+\hline
+230:トランペットのプログラム & 木下 & \cellcolor{ganttCell} & & & & & \\
+\hline
+240:ドラムのプログラム & 久家 & & \cellcolor{ganttCell} & & & & \\
+\hline
+250:楽譜進行プログラム & 渡邊 & & \cellcolor{ganttCell} & \cellcolor{ganttCell} & \cellcolor{ganttCell} & & \\
+\hline
+310:赤外線管理プログラム & 家田・渡邊 & & \cellcolor{ganttCell} & \cellcolor{ganttCell} & \cellcolor{ganttCell} & & \\
+\hline
+320:テンポ管理プログラム & 渡邊 & & \cellcolor{ganttCell} & & & & \\
+\hline
+410:回路作成 & 手代木 & & \cellcolor{ganttCell} & & & & \\
+\hline
+420:LEDマトリクス作成 & 手代木 & & \cellcolor{ganttCell} & \cellcolor{ganttCell} & \cellcolor{ganttCell} & & \\
+\hline
+510:結合テスト & 全員 & & & & \cellcolor{ganttCell} & \cellcolor{ganttCell} & \cellcolor{ganttCell} \\
+\hline
+\end{longtable}
+
+\endgroup
+
+\subsection{個人ガントチャート（計画書 v1.1 から櫛濱担当分を抜粋）}\label{sec:gantt-personal}
+
+\ref{sec:gantt-team} 節のチーム全体ガントから櫛濱担当分を抜き出した個人計画．第10週は 510:結合テストの最終期間にあたる．計画上，歌詞/顔の LCD 表示（420 系）は本来手代木の担当だが，今週は手が止まっていたぶんを引き取って動かそうとした．結果としてはまだ表示が安定せず，最終週に持ち込んでしまっている．
+
+\begingroup
+\setlength{\tabcolsep}{3pt}
+\begin{longtable}{|p{0.9cm}|p{2.0cm}|p{5.2cm}|c|c|c|c|c|c|}
+\hline
+\rowcolor[gray]{0.9}
+管理 & 第2層 & 第3層タスク & 5週 & 6週 & 7週 & 8週 & 9週 & 10週 \\
+\hline
+110 & 100 (Processing) & ピアノ音の作成 & \cellcolor{ganttCell} & & \cellcolor{ganttCell} & & & \\
+\hline
+120 & 100 (Processing) & arduinoとの通信用関数（ピアノ） & \cellcolor{ganttCell} & & & & & \\
+\hline
+170 & 100 (Processing) & ドラム音の作成（キック） & & \cellcolor{ganttCell} & & & & \\
+\hline
+210 & 200 (子機) & ピアノのプログラム & \cellcolor{ganttCell} & & & & & \\
+\hline
+510 & 500 (包括) & 結合テスト（全員） & & & & \cellcolor{ganttCell} & \cellcolor{ganttCell} & \cellcolor{ganttCell} \\
+\hline
+\end{longtable}
+\endgroup
+
+\subsection{今週の作業位置づけ}\label{sec:gantt-position}
+
+\begin{itemize}
+    \item 現在地は第10週末（7/7）で，最終週．GC 上は 510:結合テストの締めの期間にあたる．前回（7/1）までに親機のテンポ連続可変化と4子機の輪唱までは動いているので，今週は残りの表示系（LCD）と，これまで聴感頼みだった MOP1/MOP2 を数字にするための計測に注力した
+    \item 手代木の担当だった LCD 表示（420 系，MOP5 の歌詞/アニメ同期に対応）を引き取り，顔＋歌詞の2枚表示子機として実装した．ただし実機で安定表示できておらず，最終週に持ち込んでいる
+    \item MOP1/MOP2 の定量評価に向けて，IR 伝搬遅延の計測プログラムを子機側に組んだ．親機 GPIO パルスを計測開始トリガに使い，IR デコード完了までの時間を \texttt{micros()} 差分で取る
+    \item 最終週の残り時間は，LCD が映らない原因の切り分け，計測プログラムでの実測（MOP1/MOP2），アンケート（MOP4）の実施，そして最終発表のデモ準備に充てる
+\end{itemize}
+
+%=====================================================
+\section{作業ログ}\label{sec:worklog}
+
+\renewcommand{\arraystretch}{1.4}
+
+\begingroup
+\setlength{\tabcolsep}{3pt}
+\sloppy
+{\footnotesize
+\begin{longtable}{|p{2.6cm}|p{1.1cm}|p{1.3cm}|p{1.0cm}|p{0.9cm}|p{2.2cm}|p{4.5cm}|}
+\hline
+\rowcolor[gray]{0.9}
+作業項目 & 開始日 & 予定完了日 & 状態 & 進捗率 & 依存関係・ブロッカー & コメント \\
+\hline
+LCD 表示子機の配線設計（顔＋歌詞2枚） & 7/1 & 7/2 & 完了 & 100\％ & SC1602B$\times$2 / CHQ1838D & 手代木から引き取り．RS(D12)とデータ線(D5,D4,D3,D2)を2枚で共有し，E 線だけ LCD1$\to$D11・LCD2$\to$D10 に分けて書き分ける配線に決めた．SC1602B はピン1=VDD/ピン2=VSS で市販の1602Aと電源が逆なので，そこだけ注意して配線表（HAISEN.md）にまとめた \\
+\hline
+LCD 表示子機スケッチの実装（flog\_kao\_kasi\_ir\_full） & 7/2 & 7/4 & 進行中 & 70\％ & LiquidCrystal / IRremote 4.x & 顔(LCD1)と歌詞(LCD2)を \texttt{LiquidCrystal lcd1(12,11,5,4,3,2)} / \texttt{lcd2(12,10,5,4,3,2)} で分けて，IR で受けた tick に合わせて歌詞を1文字ずつ進め，顔を口パクさせる実装まで書いた．コードは通るが実機で安定して映らず，原因切り分けが未了．最終週に持ち越し \\
+\hline
+ピアノ音の収録（アンケート用） & 7/3 & 7/3 & 完了 & 100\％ & hackko.pde（改善後音色） & MOP4 の音色認識アンケートに使うため，Processing で鳴らしている改善後のピアノ音を収録した．「これはピアノか」を聴衆に問う設問の音源として使う \\
+\hline
+IR 伝搬遅延の計測プログラム整備（hack-koP2 kokitest 版） & 7/4 & 7/6 & 完了 & 100\％ & \texttt{attachInterrupt} / 親機 GPIO 直結線 & 親機 GPIO を子機の \texttt{PIN\_SYNC\_IN} に直結し，立ち上がり割り込み \texttt{onSyncRise()} で \texttt{syncRiseUs=micros()} を記録（計測開始）．IR デコード後に \texttt{recvUs=micros()} を取り，差分で「NEC 受信＋デコード＋loop 処理」の所要時間を測る \\
+\hline
+tickLow 絶対同期の受信確認 & 7/6 & 7/6 & 完了 & 100\％ & hack\_oya\_kai2\_2 & 親機 \texttt{hack\_oya\_kai2\_2} が IR の address に tickCount 下位8bit を乗せて送る方式に合わせ，計測版子機でも取りこぼし後に位置が自己修復することを確認した \\
+\hline
+\end{longtable}
+}
+\endgroup
+
+%=====================================================
+\section{評価事項}\label{sec:evaluation}
+
+計画書 v1.1（2026/6/19版）の V\&V 計画のうち，今週の作業（LCD 表示の引き取り/ピアノ音収録/IR 伝搬遅延の計測プログラム）に対応する項目を整理する．今週は数字を取る手前の「計測の準備」と，表示系の「実装したが動かない」状態が中心なので，達成というより地ならしの週になった．
+
+\subsection{対応する有効指標 MOE}\label{sec:moe}
+
+\begin{longtable}{|p{1.2cm}|p{4cm}|p{8cm}|}
+\hline
+\rowcolor[gray]{0.9}
+No. & MOE & 評価基準 \\
+\hline
+MOE1 & 違和感なく聞くことができる & 輪唱が聴衆にズレを感じさせることなく演奏できている \\
+\hline
+MOE3 & 楽器音らしい音色である & Processing で合成した音が楽器音として聴衆に認識される（アンケートで確認） \\
+\hline
+MOE4 & 歌詞/顔の表示で演出が伝わる & LCD の歌詞と顔の表示が演奏に同期し，カエルが歌っている演出として伝わる \\
+\hline
+\end{longtable}
+
+\subsection{対応する性能指標 MOP（計画書 v1.1）}\label{sec:mop}
+
+\begin{longtable}{|p{1.2cm}|p{3.8cm}|p{8.8cm}|}
+\hline
+\rowcolor[gray]{0.9}
+No. & 性能指標 & 目標値・評価基準 \\
+\hline
+MOP1 & 演奏タイミング誤差 & 各演奏側 Arduino 間の音符開始タイミングのズレが 30 ms 以内であること \\
+\hline
+MOP2 & 同期信号の受信成功率 & 指揮側から送信した赤外線信号を演奏側が正しく受信できる割合が 95\% 以上であること \\
+\hline
+MOP4 & 音色の再現性 & 倍音構造/ADSR の設定により，対応する楽器の音色として聴衆の過半数に評価されること \\
+\hline
+MOP5 & 歌詞/アニメーション同期遅延 & 歌詞と顔の表示が演奏の tick に対して遅れなく追従すること \\
+\hline
+\end{longtable}
+
+\subsection{今週の自己評価}\label{sec:selfeval}
+
+\begingroup
+\setlength{\tabcolsep}{3pt}
+\sloppy
+\begin{longtable}{|p{1.0cm}|p{2.8cm}|p{1.8cm}|p{8.7cm}|}
+\hline
+\rowcolor[gray]{0.9}
+No. & 項目 & 達成状況 & 備考 \\
+\hline
+MOP1 & 演奏タイミング誤差 & 計測準備OK & 伝搬遅延の計測プログラムを整備し，\texttt{micros()} 差分で遅延を取れる状態にした．実測データの取得はこれから \\
+\hline
+MOP2 & 同期信号受信成功率 & 計測準備OK & 同じ計測版子機で受信/デコードのログが取れるので，一定時間流せば成功率を算出できる．実測はこれから \\
+\hline
+MOP4 & 音色の再現性 & 準備中 & アンケート用にピアノ音を収録済み．聴衆過半数の評価はアンケート実施待ち \\
+\hline
+MOP5 & 歌詞/アニメ同期 & 未達（難航） & 顔＋歌詞の2枚 LCD を実装したが実機で安定表示できず．原因切り分けが済んでおらず，最終週に持ち越し \\
+\hline
+\end{longtable}
+\endgroup
+
+\subsection{今後評価予定の項目（参考）}\label{sec:futureplan}
+
+\begin{itemize}
+    \item MOP1：計測版子機を使って親機 GPIO パルスから IR デコード完了までの遅延を \texttt{micros()} で収集し，各子機間の音符開始タイミングのズレが 30ms 以内かを数字で確認する（実測これから）
+    \item MOP2：計測版子機を一定時間動かし，受信/デコードの成功・失敗ログから成功率を算出して 95\% 目標と比較する（実測これから）
+    \item MOP4：収録したピアノ音を含む各楽器の音色認識アンケートを実施し，聴衆過半数が識別できるかを確認する
+    \item MOP5：LCD が安定して映るようになったら，歌詞/顔の表示が演奏 tick に遅れなく追従するかを聴感と目視で確認する（まず表示が出ることが前提）
+\end{itemize}
+
+%=====================================================
+\section{課題管理}\label{sec:issues}
+
+\begingroup
+\setlength{\tabcolsep}{3pt}
+\sloppy
+{\footnotesize
+\begin{longtable}{|p{2.6cm}|p{3.2cm}|p{0.9cm}|p{0.9cm}|p{3.4cm}|p{1.3cm}|p{1.3cm}|}
+\hline
+\rowcolor[gray]{0.9}
+課題 & 発生原因 & 影響度 & 優先度 & 対策 & 期限 & 状態 \\
+\hline
+LCD が実機で安定して映らない & 表示が出ない/薄い/片方だけ映る等．配線・コントラスト(V0)・書き込みタイミングのどれが主因か切り分けできていない & 高 & 高 & V0(コントラスト)$\to$RS(D12)$\to$共有データ線(D5,D4,D3,D2)$\to$E 線(D11/D10) の順で1つずつ潰す．V0 を GND 直結にして最濃で切り分ける手も試す & 7/8 & 未対応 \\
+\hline
+演奏タイミング誤差が未計測（MOP1） & 計測プログラムは整備したが実データをまだ取っていない & 高 & 高 & 計測版子機を4台で動かし \texttt{micros()} 差分を収集して 30ms 以内かを確認 & 7/8 & 未対応 \\
+\hline
+赤外線通信成功率が未計測（MOP2） & 95\% 目標との定量比較が未実施 & 高 & 高 & 計測版子機の受信/デコードログから成功率を算出 & 7/8 & 未対応 \\
+\hline
+音色認識アンケート未実施（MOP4） & 聴衆過半数の評価がまだ得られていない & 中 & 中 & 収録したピアノ音を含め各楽器の音色認識テストを実施 & 7/8 & 未対応 \\
+\hline
+双子音処理の \texttt{delay()} による IR 取りこぼし & \texttt{DOUBLE\_\-START} 以降の半 tick 遅延を \texttt{delay()} で実装しており，その間 IR 受信が止まる & 中 & 中 & \texttt{millis()} ベースの非ブロック化（前回から継続，今週は未着手） & 7/8 & 未対応 \\
+\hline
+\end{longtable}
+}
+\endgroup
+
+\vspace{0.5em}
+※影響度＝プロジェクトへのインパクト\\
+※優先度＝対応の緊急性
+
+%=====================================================
+\section{AI利用状況と検証}\label{sec:ai}
+
+\subsection{利用内容}\label{sec:ai-use}
+
+\begin{itemize}
+    \item 利用目的：LCD（顔＋歌詞の2枚表示）子機スケッチの実装，IR 伝搬遅延の計測プログラムの整備
+    \item 入力（プロンプト要旨）：
+    \begin{itemize}
+        \item SC1602B を2枚使って，1枚に顔・もう1枚に歌詞を出したい．RS とデータ線は共有して E 線だけ分ける配線でいけるか
+        \item IR で受けた tick に合わせて歌詞を1文字ずつ進め，顔を口パクさせたい
+        \item IR 通信の伝搬遅延を測りたい．親機の GPIO を子機に直結して立ち上がりを割り込みで拾い，そこから IR をデコードし終えるまでの時間を \texttt{micros()} で測る形にしたい
+    \end{itemize}
+    \item 出力概要：
+    \begin{itemize}
+        \item flog\_kao\_kasi\_ir\_full.ino：\texttt{LiquidCrystal lcd1(12,11,5,4,3,2)} / \texttt{lcd2(12,10,5,4,3,2)} で2枚を E 線切替で書き分け，IR 受信 tick に合わせて歌詞送り・口パク・顔の移動を行う実装
+        \item hack-koP2.ino（kokitest 版）：\texttt{PIN\_SYNC\_IN} の立ち上がり割り込み \texttt{onSyncRise()} で \texttt{syncRiseUs=micros()} を記録し，IR デコード後の \texttt{recvUs=micros()} との差分を出力する計測ロジック
+    \end{itemize}
+\end{itemize}
+
+\subsection{検証方法}\label{sec:ai-verify}
+
+\begin{itemize}
+    \item 検証手法：
+    \begin{itemize}
+        \item LCD：書き込み直後に LCD1 の待機顔と LCD2 の待機メッセージ（\texttt{MATTETA KAERU} / \texttt{OSHITE START!}）が出るかを目視で確認．出ない/薄いときは V0 を回してコントラストを振る．\textbf{現状ここが安定せず，表示が出たり出なかったりで再現性が取れていない}
+        \item LCD：片方だけ映る症状のときは，映らない側の E 線（LCD1=D11 / LCD2=D10）の接触を最優先で疑う（配線表の切り分け手順に沿って確認中）
+        \item 計測プログラム：親機 GPIO を子機の \texttt{PIN\_SYNC\_IN} に直結し，親機がトリガを出した直後に \texttt{sendNEC()} を呼ぶ．Serial Monitor（115200 baud）で \texttt{syncRiseUs} と \texttt{recvUs} の差分が $\mu$s 単位で出力されることを確認
+        \item 計測プログラム：GPIO は電気信号なので子機の割り込みはほぼ遅延0で入る．したがって差分は IR 経路（NEC フレーム送出＋受信＋デコード＋loop 検出）の実効遅延を表す，という前提が成り立つことを確認
+    \end{itemize}
+    \item 参照資料：
+    \begin{itemize}
+        \item チーム計画書/設計書 v1.1（2026/6/19版）
+        \item 前回個人作業ログ（第10回事前課題，2026/7/1）
+        \item flog\_kao\_kasi\_ir\_full の配線・動作確認ガイド（HAISEN.md）
+        \item Arduino 公式ドキュメント（\texttt{attachInterrupt()} / \texttt{micros()} / \texttt{LiquidCrystal} ライブラリ）
+        \item IRremote 4.x ライブラリ（\texttt{IRremote.hpp}）のドキュメント
+    \end{itemize}
+    \item 検証手順：
+    \begin{enumerate}
+        \item 表示子機（\texttt{flog\_kao\_kasi\_ir\_full}）を音楽子機とは別の Arduino に書き込み，LCD1/LCD2 に待機表示が出るかを見る
+        \item 表示が出ないときは V0 を GND 直結にして最濃で映るか，配線が原因かコントラストが原因かを切り分ける（この切り分けが今週まだ終わっていない）
+        \item 計測版子機（\texttt{hack-koP2.ino} kokitest 版）を書き込み，親機 GPIO を \texttt{PIN\_SYNC\_IN} に直結する
+        \item 親機からトリガ＋\texttt{sendNEC()} を出し，Serial Monitor で \texttt{recvUs-syncRiseUs} が妥当な $\mu$s 値で出るかを確認する
+        \item 4子機ぶんの遅延を並べて，子機間のばらつき（MOP1）と受信成功率（MOP2）を集計する（本実測は最終週に実施）
+    \end{enumerate}
+\end{itemize}
+
+\subsection{ファクトチェック結果}\label{sec:ai-fact}
+
+\begin{itemize}
+    \item 一致点：
+    \begin{itemize}
+        \item 計測の起点に GPIO 直結の立ち上がり割り込みを使う設計は妥当で，電気信号の伝搬は $\mu$s オーダーで無視できるため，差分を IR 経路の遅延とみなせることを確認した
+        \item \texttt{LiquidCrystal} で RS とデータ線を共有し E 線だけ分ける2枚構成は，HD44780 互換 LCD の一般的な使い方として成立することを確認した（E をトグルするタイミングで書き込み先が決まる）
+    \end{itemize}
+    \item 不一致/疑義：
+    \begin{itemize}
+        \item LCD が安定して映らない原因が特定できていない．コード上のロジックは通っているので，主因はソフトよりハード側（コントラスト，E 線や共有データ線の接触，SC1602B の電源ピンの向き）の可能性が高いと見ているが，まだ確証がない
+        \item 計測差分には NEC フレーム自体の送出時間（プロトコル上の固定時間）も含まれる．純粋な「受信＋デコード＋loop」だけを切り出すには，フレーム送出時間を別途差し引く補正が要るかもしれない（最終週に実データを見て判断）
+    \end{itemize}
+    \item 最終判断：計測プログラムは採用（MOP1/MOP2 の定量化の土台として妥当）．LCD は保留（実機で映る状態にしてから再評価）
+    \item 根拠：
+    \begin{itemize}
+        \item GPIO トリガ基準の \texttt{micros()} 差分計測は，これまで聴感頼みだった演奏タイミング誤差と通信成功率を，初めて数字で扱える形にできる
+        \item LCD はコードとしては書けているが，実機で表示が安定しない以上「動く」とは言えないため，原因切り分けが済むまで達成扱いにはしない
+    \end{itemize}
+\end{itemize}
+
+%=====================================================
+\section{次回計画}\label{sec:next}
+
+\begin{itemize}
+    \item 目標（最終週の残り／最終発表まで）：
+    \begin{itemize}
+        \item LCD が実機で安定して映らない原因を切り分ける．V0(コントラスト)$\to$RS$\to$共有データ線$\to$E 線 の順に1つずつ潰し，まずは待機表示が確実に出る状態にする
+        \item 計測版子機を4台で動かし，親機 GPIO トリガから IR デコード完了までの遅延を \texttt{micros()} で収集して MOP1（30ms 以内）と MOP2（95\% 以上）を数字で出す
+        \item 収録したピアノ音を使って MOP4 の音色認識アンケートを実施する
+        \item LCD が映るようになれば，歌詞/顔が演奏 tick に追従するか（MOP5）を確認する
+        \item 最終発表のデモ演奏の準備
+    \end{itemize}
+    \item 達成基準：
+    \begin{itemize}
+        \item LCD1 に顔，LCD2 に歌詞が安定して映り，再現性を持って表示できること
+        \item 計測データで子機間のズレが 30ms 以内，IR 受信成功率が 95\% 以上であることを数値で提示できること
+        \item アンケートで各楽器の音色が過半数に識別されること
+    \end{itemize}
+    \item 期限：
+    \begin{itemize}
+        \item 7/8（最終週の締め／最終発表準備）
+    \end{itemize}
+\end{itemize}
+
+%=====================================================
+\section{その他}\label{sec:other}
+
+\begin{itemize}
+    \item LCD は手代木が手を離した状態から引き取ったので，配線の意図（どのピンを何に使っているか）を HAISEN.md にまとめ直すところから始めた．次に触る人が迷わないよう，SC1602B の電源ピンが市販1602Aと逆である点は特に強調して書いた
+    \item 表示子機は音楽子機（hack-koP2）とは別の Arduino に焼く前提．同じ基板に両方は載らないので，最終発表では表示用と演奏用で基板を分ける
+    \item 計測プログラムは親機 GPIO を子機に直結する配線が前提なので，計測時だけワイヤーを1本足す運用にする．本番の演奏構成では外す
+    \item LCD の実機写真は，安定して映るようになってから最終版のログに載せる（今は映ったり映らなかったりで、載せられる状態の写真が撮れていない）
+\end{itemize}
+
+%=====================================================
+\section{付録}\label{sec:appendix}
+
+\subsection{添付資料}\label{sec:attach}
+
+\begin{itemize}
+    \item ソースコード：テスト版/flogkao/flog\_kao\_kasi\_ir\_full/flog\_kao\_kasi\_ir\_full.ino（顔＋歌詞の2枚 LCD 表示子機），テスト版/hack\_koP2saisei\_kokitest/hack-koP2.ino（IR 伝搬遅延の計測版子機），配線ガイド HAISEN.md
+    \item リポジトリ：\url{https://github.com/k-kushihama/hackathon-code/}
+\end{itemize}
+
+\subsection{添付範囲}\label{sec:attach-scope}
+
+\begin{itemize}
+    \item 第10週に引き取った LCD 表示子機（SC1602B$\times$2，顔＋歌詞）の実装スケッチと配線ガイド
+    \item 第10週に整備した IR 伝搬遅延の計測版子機スケッチ（GPIO トリガ基準の \texttt{micros()} 差分計測）
+\end{itemize}
+
+\subsection{システム図}\label{sec:diagrams}
+
+\subsubsection{IR 伝搬遅延の計測方法}\label{sec:measure-diag}
+
+図~\ref{fig:measure} に今週組んだ計測の流れを示す．親機の GPIO をワイヤーで子機の \texttt{PIN\_SYNC\_IN} に直結しておき，親機はまず GPIO を HIGH にする．この立ち上がりを子機の割り込み \texttt{onSyncRise()} が拾って \texttt{syncRiseUs=micros()} を記録する（計測開始）．GPIO は電気信号なので，このトリガはほぼ遅延0で子機に届く．親機はトリガを出した直後に \texttt{sendNEC()} で IR（NEC プロトコル）を送出し，子機の IR レシーバ（CHQ1838D）がそれをデコードする．子機は \texttt{loop()} でデコード結果を処理した時点で \texttt{recvUs=micros()} を取る（計測終了）．差分 \texttt{recvUs-syncRiseUs} が「NEC を受信してデコードし loop で処理し終えるまで」に要した時間で，これが通信誤差の主成分になる．
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  font=\small,
+  lane/.style={thick},
+  ev/.style={circle, fill=black, inner sep=1.6pt},
+  box/.style={rectangle, draw, rounded corners=2pt, align=center, font=\scriptsize, minimum height=0.7cm},
+  lbl/.style={font=\scriptsize, align=center}
+]
+  % レーン
+  \draw[lane, -Stealth] (0,2.2) -- (12,2.2) node[right]{親機};
+  \draw[lane, -Stealth] (0,0) -- (12,0) node[right]{子機};
+
+  % 親機イベント
+  \node[ev] (g) at (2.2,2.2) {};
+  \node[box, above=0.25cm of g] {GPIO を HIGH\\(トリガ)};
+  \node[ev] (nec) at (4.4,2.2) {};
+  \node[box, above=0.25cm of nec] {\texttt{sendNEC()}\\IR 送出};
+
+  % 子機イベント
+  \node[ev] (sr) at (2.2,0) {};
+  \node[box, below=0.25cm of sr] {\texttt{onSyncRise()}\\\texttt{syncRiseUs}\\=計測開始};
+  \node[ev] (dec) at (9.6,0) {};
+  \node[box, below=0.25cm of dec] {IR デコード\\$\to$\texttt{recvUs}\\=計測終了};
+
+  % GPIO 直結（ほぼ遅延0）
+  \draw[-Stealth, thick] (g) -- node[lbl, left, xshift=-1pt]{GPIO 直結\\($\approx$0$\mu$s)} (sr);
+  % IR 経路（遅延あり）
+  \draw[-Stealth, thick, dashed] (nec) .. controls (6.5,1.2) and (7.5,0.9) .. node[lbl, above, pos=0.6]{IR / NEC（遅延あり）} (dec);
+
+  % 差分区間
+  \draw[|-|, thick, ganttCell!80!black] (2.2,-2.05) -- node[below, font=\scriptsize, yshift=-1pt]{$\Delta t=$\texttt{recvUs}$-$\texttt{syncRiseUs}（＝受信＋デコード＋loop 処理）}(9.6,-2.05);
+\end{tikzpicture}
+\caption{IR 伝搬遅延の計測方法．GPIO 直結のトリガで計測開始，IR デコード完了で計測終了とし，その差分を通信誤差の主成分として測る．}
+\label{fig:measure}
+\end{figure}
+
+\subsubsection{顔＋歌詞 LCD 表示子機の構成}\label{sec:lcd-diag}
+
+図~\ref{fig:lcd} に，今週引き取った LCD 表示子機の構成を示す．1台の表示子機 Arduino に SC1602B を2枚ぶら下げ，LCD1 に顔，LCD2 に歌詞を出す．RS（D12）とデータ線 DB4--7（D5,D4,D3,D2）は2枚で共有し，E 線だけ LCD1$\to$D11・LCD2$\to$D10 に分けることで，どちらの LCD に書くかを切り替える．IR レシーバ（CHQ1838D）は D6 で受け，親機からの tick に合わせて歌詞送りと口パクを進める．この構成自体は配線図としては成立しているが，実機ではまだ安定して表示できていない．
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  node distance=0.7cm and 2.8cm,
+  mcu/.style={rectangle, draw, rounded corners=2pt, minimum width=3.0cm, minimum height=1.6cm, align=center, font=\small},
+  lcd/.style={rectangle, draw, fill=ganttCell!20, minimum width=2.6cm, minimum height=1.0cm, align=center, font=\small},
+  ir/.style={rectangle, draw, dashed, fill=yellow!15, minimum width=2.2cm, minimum height=0.8cm, align=center, font=\scriptsize},
+  arrow/.style={-Stealth, thick}
+]
+  \node[mcu] (mcu) {表示子機 Arduino\\flog\_kao\_kasi\_ir\_full};
+  \node[lcd, right=of mcu, yshift=1.0cm] (l1) {LCD1（顔）\\SC1602B};
+  \node[lcd, right=of mcu, yshift=-1.0cm] (l2) {LCD2（歌詞）\\SC1602B};
+  \node[ir, left=of mcu] (ir) {CHQ1838D\\IR 受信};
+
+  \draw[arrow] (ir) -- node[above, font=\scriptsize]{OUT$\to$D6} (mcu);
+  \draw[arrow] (mcu.east|-l1) -- node[above, font=\scriptsize, midway]{E:D11} (l1.west);
+  \draw[arrow] (mcu.east|-l2) -- node[below, font=\scriptsize, midway]{E:D10} (l2.west);
+  \node[font=\scriptsize, align=center] at ($(mcu.east)!0.5!(l1.west)+(0,-1.0)$) {RS(D12)/DB4--7\\を2枚で共有};
+\end{tikzpicture}
+\caption{顔＋歌詞 LCD 表示子機の構成．RS とデータ線を2枚で共有し，E 線（D11/D10）で書き込み先を切り替える．IR は CHQ1838D で D6 受け．配線としては成立しているが実機表示が未安定．}
+\label{fig:lcd}
+\end{figure}
+
+\end{document}
