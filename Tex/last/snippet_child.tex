@@ -1,0 +1,77 @@
+% 子機Arduino（hack-koP2.ino）の処理説明スニペット
+\usetikzlibrary{shapes.geometric} % ひし形ノード用（プリアンブルへ移してもよい）
+
+\subsection{子機Arduinoの処理}
+
+子機Arduinoは，親機からの赤外線フレームを受けて自分のパートを演奏する側の装置である．楽譜のデータは通信では受け取らず，各子機が自分のパートの譜面配列をプログラム内に保持している．受信したマスクのうち自分の担当ビットが立っているtickだけを自分の出番と解釈し，出番の回数を数えるカウンタ\texttt{localPos}を1つ進めたうえで，譜面配列のその位置の音符情報をシリアル通信でProcessingへ送信する．親機の進行にはループの概念がないため，メロディ機は譜面の末尾に達したら\texttt{localPos}を0へ戻し，子機の側で先頭からの繰り返しを作る．ドラム機は譜面を持たず，出番のたびにキックの合図を送るだけである．子機のプログラムは4台で共通であり，冒頭の機体番号\texttt{childId}を書き換えて各機体へ書き込むことで，メロディ機3台とドラム機1台を作り分けている．
+
+譜面位置24以降は，1tickにつき2音を発音する倍速区間である．旋律の終盤にあたるこの区間では，1音あたりの音長を通常の0.40\,sから0.20\,sへ半分にし，2音目を直近の受信間隔の半分だけ遅らせて送信することで，16分音符相当の刻みを作る．待ち時間の基準となる受信間隔は受信のたびに計測するが，演奏の停止と再開のあいだに生じる大きな間隔をそのまま使うと待ち時間が膨らむため，極端な値は捨てて更新する．また，この待ち時間の間にも次のフレームは届きうるので，受信データは復号した直後に退避して受信器をすぐに再開し，待機中も受信を続けてtickの取りこぼしを防いでいる．このほか，親機の同期パルスの立ち上がり時刻を割り込みで記録し，赤外線の受信までの遅延をログへ出力する計測の仕組みも子機側に持たせている．子機の主要な関数を表\ref{tab:func_child}に，\texttt{loop}の処理の流れを図\ref{fig:flow_child}に示す．
+
+\begin{table}[H]
+\caption{子機Arduinoの主要関数}
+\label{tab:func_child}
+\begin{center}
+\small
+\begin{tabular}{llp{15em}}
+\hline
+関数名 & 役割 & 概要 \\
+\hline
+\texttt{setup} & 初期化 & シリアル通信と赤外線受信を開始し，同期パルス入力の割り込みを登録する \\
+\texttt{loop} & 受信監視と発音 & 赤外線フレームを常時監視し，自分の出番のtickで譜面位置を進めて音符情報を送信する \\
+\texttt{sendNoteToHost} & 音符情報の送信 & 音高，音長，音量，譜面位置をカンマ区切りの1行にまとめてProcessingへ送る \\
+\texttt{onSyncRise} & 同期パルスの記録 & 親機の同期パルスの立ち上がり時刻を記録する割り込み処理で，遅延計測の基準になる \\
+\texttt{printReady} & 起動通知 & 起動時に自分の機体番号とメロディ機かドラム機かの種別をシリアルへ出力する \\
+\hline
+\end{tabular}
+\end{center}
+\end{table}
+
+\begin{figure}[H]
+\begin{center}
+\begin{tikzpicture}[
+  term/.style={draw, rounded corners=7pt, minimum width=6em, minimum height=1.9em, align=center, font=\footnotesize},
+  proc/.style={draw, minimum height=1.9em, align=center, font=\footnotesize},
+  dec/.style={draw, diamond, aspect=2.3, align=center, font=\footnotesize, inner sep=1pt},
+  lbl/.style={font=\footnotesize, inner sep=2pt},
+  >=Stealth, node distance=0.5cm]
+  \node[term] (start) {起動};
+  \node[proc, below=of start] (init) {シリアル通信と赤外線受信を初期化し\\同期パルス割り込みを登録（\texttt{setup}）};
+  \node[proc, below=of init] (wait) {赤外線フレームの受信を待ち\\マスクを退避して受信を再開};
+  \node[dec, below=of wait] (nec) {NECフォーマットか};
+  \node[dec, below=of nec] (mine) {自分の担当ビットが\\立っているか};
+  \node[proc, below=of mine] (adv) {出番の回数\texttt{localPos}を1進める};
+  \node[dec, below=of adv] (drum) {ドラム機か};
+  \node[dec, below=of drum] (loopchk) {\texttt{localPos}が楽譜1周分の\\32tickに達したか};
+  \node[proc, below=of loopchk] (intv) {受信間隔を計測し\\半tick分の遅延時間を更新};
+  \node[dec, below=of intv] (dbl) {譜面位置が24以降の\\倍速区間か};
+  \node[proc, below=of dbl] (single) {譜面の音符を音長0.40\,sで\\Processingへ送信};
+  \node[proc, right=0.9cm of loopchk] (reset) {\texttt{localPos}を0に戻し\\先頭からループ};
+  \node[proc] (kick) at (reset.center |- drum.center) {キック合図C2を送信し\\LEDを点滅};
+  \node[proc] (two) at (reset.center |- dbl.center) {1音目を音長0.20\,sで送信し\\半tick後に2音目を送信};
+  \coordinate (lx) at (-3.6,0);
+  \coordinate (rx) at (7.6,0);
+  \draw[->] (start) -- (init);
+  \draw[->] (init) -- (wait);
+  \draw[->] (wait) -- (nec);
+  \draw[->] (nec) -- node[lbl, right] {Yes} (mine);
+  \draw[->] (mine) -- node[lbl, right] {Yes} (adv);
+  \draw[->] (adv) -- (drum);
+  \draw[->] (drum) -- node[lbl, right] {No} (loopchk);
+  \draw[->] (loopchk) -- node[lbl, right] {No} (intv);
+  \draw[->] (intv) -- (dbl);
+  \draw[->] (dbl) -- node[lbl, right] {No} (single);
+  \draw[->] (nec.west) -- node[lbl, above] {No} (nec.west -| lx) |- (wait.west);
+  \draw[->] (mine.west) -- node[lbl, above] {No} (mine.west -| lx) |- (wait.west);
+  \draw[->] (drum.east) -- node[lbl, above] {Yes} (kick.west);
+  \draw[->] (loopchk.east) -- node[lbl, above] {Yes} (reset.west);
+  \draw[->] (dbl.east) -- node[lbl, above] {Yes} (two.west);
+  \draw[->] (reset.south) |- (intv.east);
+  \draw (single.south) -- ++(0,-0.45) coordinate (m1);
+  \draw (two.south) |- (m1);
+  \draw[->] (m1) -- (m1 -| lx) |- (wait.west);
+  \draw[->] (kick.east) -- (kick.east -| rx) |- (wait.east);
+\end{tikzpicture}
+\end{center}
+\caption{子機Arduinoの処理フロー}
+\label{fig:flow_child}
+\end{figure}
