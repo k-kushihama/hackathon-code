@@ -1,0 +1,75 @@
+% 親機Arduinoの処理（フローチャートと主要関数表）
+% ひし形ノードと座標計算に shapes.geometric と calc が必要
+% （positioning と arrows.meta は本文プリアンブルで読込済み）
+\usetikzlibrary{shapes.geometric, calc}
+
+\subsection{親機Arduinoの処理}
+
+親機は，演奏の開始とリセット，子機の参加と退場の予約，およびテンポの変更を受け付けながら，全子機に共通の時間基準となるtickを刻み，赤外線フレームを送信する指揮装置である．主要な関数を表\ref{tab:func_parent}に，loop()を1周する処理の流れを図\ref{fig:flow_parent}に示す．loop()では，シリアルコマンドと各ボタンの入力，および可変抵抗によるテンポ変更を毎周監視したうえで，再生中であれば前回のtickからの経過時間を調べ，式(\ref{eq:tick})のtick間隔$T_\mathrm{tick}$に達したときだけtick()を実行する．参加ボタンとそれに対応するシリアルコマンドはtoggleChildに集約されており，図\ref{fig:state}の状態遷移に従って予約とその取消が切り替わる．
+
+tick()では，まず参加予約と退場予約が発火するtickに到達したかを子機ごとに判定して参加状態を更新し，参加中の子機集合を表すマスクを組み立てる．参加中の子機が1台でもあるときは，遅延計測用の同期パルスを出力したのち，tickカウンタの下位8ビットとマスクを赤外線の1フレームとして送信する．loop()の末尾では子機ボタン横のLEDを参加状態と予約の有無に同期させ，予約の取消を含むどの操作でも表示が確実に切り替わるようにしている．
+
+\begin{table}[H]
+\caption{親機Arduinoの主要関数}
+\label{tab:func_parent}
+\begin{center}
+\small
+\begin{tabular}{llp{15em}}
+\hline
+関数名 & 役割 & 概要 \\
+\hline
+\texttt{loop} & メインループ & 入力の監視とtick周期の管理を行い，子機LEDの表示を内部状態に同期させる \\
+\texttt{handleSerialCommand} & シリアル入力の処理 & 1文字コマンドを解釈し，参加トグルや再生開始，リセットの各関数に振り分ける \\
+\texttt{handleOrderButtons} & 参加ボタンの処理 & 子機ごとのボタンの立ち下がりを検出して\texttt{toggleChild}を呼び出す \\
+\texttt{toggleChild} & 参加と退場の予約 & 子機の状態に応じて参加予約，退場予約，およびそれらの取消を切り替える \\
+\texttt{handleTempoPot} & テンポの調整 & 可変抵抗の値を平滑化して読み取り，60〜150\,BPMの範囲でテンポを更新する \\
+\texttt{doStart} & 再生の開始 & 全子機を未参加に初期化し，tickカウンタを0に戻して計時を開始する \\
+\texttt{doReset} & リセット & 再生を停止し，全子機の参加状態とすべての予約を初期化する \\
+\texttt{tick} & 同期信号の送信 & 予約の発火判定と参加マスクの生成を行い，赤外線フレームを送信する \\
+\hline
+\end{tabular}
+\end{center}
+\end{table}
+
+\begin{figure}[H]
+\begin{center}
+\begin{tikzpicture}[
+  term/.style={draw, rounded corners=8pt, minimum width=8em, minimum height=1.9em, align=center, font=\footnotesize},
+  proc/.style={draw, minimum width=13em, minimum height=2.1em, align=center, font=\footnotesize},
+  dec/.style={draw, diamond, aspect=2.6, align=center, font=\footnotesize, inner sep=1pt},
+  lbl/.style={font=\footnotesize, inner sep=2pt},
+  >=Stealth, node distance=0.5cm]
+  \node[term] (start) {loop() の先頭};
+  \node[proc, below=of start] (input) {シリアルコマンドと各ボタンの入力を監視し\\toggleChild / doStart / doReset を実行};
+  \node[proc, below=of input] (pot) {可変抵抗の値を平滑化して読み取り\\tempoBpm を 60〜150\,BPM に更新};
+  \node[dec, below=of pot] (playing) {isPlaying が真か};
+  \node[dec, below=of playing] (interval) {$T_\mathrm{tick}$ が経過したか};
+  \node[proc, below=of interval] (fire) {tick() を実行し，joinTick / leaveTick に到達した\\子機の参加状態を切り替えて参加マスク mask を生成};
+  \node[dec, below=of fire] (mask) {mask が 0 以外か};
+  \node[proc, below=of mask] (send) {同期パルスを出力し，sendNEC で\\tickCount の下位8ビットと mask を送信};
+  \node[proc, below=of send] (inc) {tickCount をインクリメント};
+  \node[proc, below=of inc] (led) {子機LEDを参加状態と予約の有無に応じて点灯};
+  \node[term, below=of led] (loopend) {loop() の先頭へ戻る};
+
+  \draw[->] (start) -- (input);
+  \draw[->] (input) -- (pot);
+  \draw[->] (pot) -- (playing);
+  \draw[->] (playing) -- node[lbl, right] {Yes} (interval);
+  \draw[->] (interval) -- node[lbl, right] {Yes} (fire);
+  \draw[->] (fire) -- (mask);
+  \draw[->] (mask) -- node[lbl, right] {Yes} (send);
+  \draw[->] (send) -- (inc);
+  \draw[->] (inc) -- (led);
+  \draw[->] (led) -- (loopend);
+
+  % tick を打たない経路（再生中でない，または tick 間隔が未経過）
+  \coordinate (byp) at ($(interval.east)+(1.8,0)$);
+  \draw[->] (playing.east) -- node[lbl, above] {No} (playing.east -| byp) |- (led.east);
+  \draw (interval.east) -- node[lbl, above] {No} (byp);
+  % 参加中の子機がいなければ送信を飛ばす経路
+  \draw[->] (mask.east) -- node[lbl, above] {No} ++(1.2,0) |- (inc.east);
+\end{tikzpicture}
+\end{center}
+\caption{親機Arduinoの処理フロー}
+\label{fig:flow_parent}
+\end{figure}
