@@ -1,0 +1,67 @@
+% LCD表示処理のスニペット（テスト版/flogkao/flog_kao_kasi_ir_full.ino に基づく）
+% diamondノードに shapes.geometric が必要（本文プリアンブルの \usetikzlibrary に足してもよい）
+\usetikzlibrary{shapes.geometric}
+
+\subsection{LCD表示の処理}
+
+表示用の子機は，16文字2行のLCDキャラクタディスプレイ2枚を1台のArduinoで駆動し，1枚目にかえるの顔を，2枚目に歌詞を表示する．顔はHD44780のカスタム文字機能で作成した5$\times$8ドットのパターンを3列2行に並べて構成し，口の開閉は下段3文字を開いた絵柄と閉じた絵柄とで差し替えて表現する．歌詞は楽譜の32tickと1対1に対応する文字列テーブルとして保持し，上段に現在の歌詞を，下段に次の歌詞を表示して先読みできるようにした．
+
+表示の進行は親機の赤外線tickに同期させる．受信したマスクの担当ビットが立ったtickでのみ歌詞を1つ進めて口パクを行う．歌詞位置localPosは受信フレームに載ったtick番号の下位8ビットtickLowから復元するため，受信を取りこぼしても次の受信で正しい位置へ自己修復する．描画では，HD44780のCGRAMを書き換えると表示中の文字の形も即座に変わる性質を利用し，顔の位置が変わらないtickでは画面を消去せずに口のパターン3文字だけを書き換えることで，全再描画によるチラつきを避けている．口パク2回ごとに顔を1マス右へ移動させ，このときだけ全体を描き直す．顔が右端に達したら左端へ戻して繰り返す．主要な関数を表\ref{tab:lcd_func}に，処理の流れを図\ref{fig:flow_lcd}に示す．
+
+\begin{table}[H]
+\caption{LCD表示の主要関数}
+\label{tab:lcd_func}
+\begin{center}
+\small
+\begin{tabular}{llp{18zw}}
+\hline
+関数名 & 役割 & 概要 \\
+\hline
+setup & 初期化 & LCD2枚を初期化してかえるのカスタム文字を登録し，待機画面を表示する \\
+loop & 受信と振り分け & 赤外線フレームを受信し，担当tickの判定と各表示処理の呼び出しを行う \\
+showLyric & 歌詞表示 & LCD2の上段に現在の歌詞を，下段に次の歌詞を書き込む \\
+drawFrogFull & 顔の全再描画 & 口の開閉に応じたカスタム文字を登録し直し，画面を消去して指定位置に顔を描き直す \\
+setMouth & 口パクの更新 & CGRAMの口パターン3文字だけを書き換え，再描画なしで口を開閉する \\
+\hline
+\end{tabular}
+\end{center}
+\end{table}
+
+\begin{figure}[H]
+\begin{center}
+\begin{tikzpicture}[
+  term/.style={draw, rounded corners=8pt, minimum width=9em, minimum height=2.2em, align=center, font=\footnotesize},
+  proc/.style={draw, minimum width=12em, minimum height=2.2em, align=center, font=\footnotesize},
+  dec/.style={draw, diamond, aspect=2.2, align=center, font=\footnotesize, inner sep=1.5pt},
+  lbl/.style={font=\footnotesize},
+  >=Stealth, node distance=0.55cm]
+  \node[term] (start) {親機からの赤外線フレームを受信};
+  \node[proc, below=of start] (save) {受信フレームからmaskとtickLowを退避し\\受信を再開する};
+  \node[dec, below=of save] (dec1) {新規のNEC\\フレームか};
+  \node[dec, below=of dec1] (dec2) {maskの担当\\ビットが1か};
+  \node[proc, below=of dec2] (pos) {tickLowとjoinBaseの差から\\歌詞位置localPosを復元する};
+  \node[proc, below=of pos] (lyric) {showLyricでLCD2の上段に現在の歌詞を，\\下段に次の歌詞を表示する};
+  \node[proc, below=of lyric] (flip) {口の開閉フラグfrogOpenを反転し，\\stepCountを加算する};
+  \node[dec, below=of flip] (dec3) {stepCountが\\2に達したか};
+  \node[proc, below=of dec3] (move) {stepCountを0に戻してfrogXを1マス進め，\\drawFrogFullでかえるの顔を全再描画する};
+  \node[proc, right=0.8cm of dec3] (monly) {setMouthでCGRAMの\\口パターンのみ書き換える};
+  \node[term, below=of move] (fin) {次のフレームを待つ};
+  \coordinate (lane) at (6.6, 0);
+  \draw[->] (start) -- (save);
+  \draw[->] (save) -- (dec1);
+  \draw[->] (dec1) -- node[lbl, right] {Yes} (dec2);
+  \draw[->] (dec2) -- node[lbl, right] {Yes} (pos);
+  \draw[->] (pos) -- (lyric);
+  \draw[->] (lyric) -- (flip);
+  \draw[->] (flip) -- (dec3);
+  \draw[->] (dec3) -- node[lbl, right] {Yes} (move);
+  \draw[->] (dec3) -- node[lbl, above] {No} (monly);
+  \draw[->] (move) -- (fin);
+  \draw[->] (dec1.east) -- node[lbl, above] {No（破棄）} (lane |- dec1.east) -- (lane |- fin.east) -- (fin.east);
+  \draw (dec2.east) -- node[lbl, above] {No（待機）} (lane |- dec2.east);
+  \draw (monly.south) |- (fin.east);
+\end{tikzpicture}
+\end{center}
+\caption{LCD表示の処理フロー}
+\label{fig:flow_lcd}
+\end{figure}
