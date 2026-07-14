@@ -1,8 +1,3 @@
-% 親機Arduinoの処理（フローチャートと主要関数表）
-% ひし形ノードと座標計算に shapes.geometric と calc が必要
-% （positioning と arrows.meta は本文プリアンブルで読込済み）
-\usetikzlibrary{shapes.geometric, calc}
-
 \subsection{親機Arduinoの処理}
 
 親機は，演奏の開始とリセット，子機の参加と退場の予約，およびテンポの変更を受け付けながら，全子機に共通の時間基準となるtickを刻み，赤外線フレームを送信する指揮装置である．主要な関数を表\ref{tab:func_parent}に，loop()を1周する処理の流れを図\ref{fig:flow_parent}に示す．loop()では，シリアルコマンドと各ボタンの入力，および可変抵抗によるテンポ変更を毎周監視したうえで，再生中であれば前回のtickからの経過時間を調べ，式(\ref{eq:tick})のtick間隔$T_\mathrm{tick}$に達したときだけtick()を実行する．参加ボタンとそれに対応するシリアルコマンドはtoggleChildに集約されており，図\ref{fig:state}の状態遷移に従って予約とその取消が切り替わる．

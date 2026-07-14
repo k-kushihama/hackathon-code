@@ -1,8 +1,8 @@
-#define DECODE_SONY
+#define DECODE_NEC
 #include <IRremote.hpp>
 
 // hack_oya_kai.ino 用プロトコル対応版:
-//   IrSender.sendSony(0, mask, 0) を受信（Sony SIRC 12bit, ~17ms）。
+//   IrSender.sendNEC(IR_ADDRESS=0x00, mask, 0) を受信。
 //   mask の bit(childId) が立っているtickだけ「自分の出番」として
 //   localPos をカウントアップし、その位置の音をホストへ送信する。
 //   親機側にループの概念がないが、メロディ機 (childId != DRUM_CHILD_ID)
@@ -13,7 +13,6 @@
 int childId = 0;
 const int DRUM_CHILD_ID = 3;
 const int PIN_IR_RECV = 2;
-const int PIN_SYNC_IN = 3;            // 親機D9からの同期パルス入力（遅延計測用）
 const int LED_INDICATOR = 13;
 
 const int SCORE_LENGTH = 40;
@@ -45,23 +44,8 @@ const String DRUM_NOTE = "C2";
 // 自分の出番が来た回数 (= 親機のtickCountに相当)。受信したtickごとに進む。
 long localPos = -1;  // -1 = まだ一度も自分の出番が来ていない
 
-// テストモード: 't' で ON。受信カウント＋レイテンシCSV出力のみ行う
-bool testMode = false;
-long testRecvCount = 0;
-unsigned long testLatencyMin = 0xFFFFFFFF;
-unsigned long testLatencyMax = 0;
-unsigned long testLatencySum = 0;
-unsigned long lastTestRecvMs = 0;
-
 unsigned long lastReceiveMs = 0;
 unsigned long lastIntervalMs = 250;  // 双子音化区間の半tick遅延に使う
-
-// 遅延計測: 親機の同期パルス立ち上がり時刻をISRで記録
-volatile unsigned long syncRiseUs = 0;
-
-void onSyncRise() {
-  syncRiseUs = micros();
-}
 
 void sendNoteToHost(const String& pitch, float duration, float amplitude, long pos) {
   Serial.print(pitch);
@@ -88,98 +72,23 @@ void setup() {
   while (!Serial && (millis() - boot_t) < 3000) { ; }
 
   IrReceiver.begin(PIN_IR_RECV);
-  pinMode(PIN_SYNC_IN, INPUT);
-  attachInterrupt(digitalPinToInterrupt(PIN_SYNC_IN), onSyncRise, RISING);
   pinMode(LED_INDICATOR, OUTPUT);
 
   delay(100);
   printReady();
 }
 
-void handleChildSerial() {
-  while (Serial.available()) {
-    char c = (char)Serial.read();
-    if (c == '\r' || c == '\n' || c == ' ') continue;
-    if (c == 't' || c == 'T') {
-      testMode = !testMode;
-      testRecvCount = 0;
-      testLatencyMin = 0xFFFFFFFF;
-      testLatencyMax = 0;
-      testLatencySum = 0;
-      lastTestRecvMs = 0;
-      if (testMode) {
-        Serial.println("[TEST] receive mode ON — waiting for IR...");
-        Serial.println("seq,latency_us");
-      } else {
-        Serial.println("[TEST] receive mode OFF");
-      }
-    }
-  }
-}
-
 void loop() {
-  handleChildSerial();
-
-  // テスト完了検知: 最後の受信から3秒経ったらサマリーを出力して終了
-  if (testMode && testRecvCount > 0 && (millis() - lastTestRecvMs > 3000)) {
-    Serial.println("---");
-    Serial.print("[TEST] received: ");
-    Serial.print(testRecvCount);
-    Serial.println("/10000");
-    Serial.print("[TEST] min=");
-    Serial.print(testLatencyMin);
-    Serial.print("us max=");
-    Serial.print(testLatencyMax);
-    Serial.print("us avg=");
-    Serial.print(testLatencySum / testRecvCount);
-    Serial.println("us");
-    long lost = 10000 - testRecvCount;
-    Serial.print("[TEST] lost: ");
-    Serial.println(lost);
-    testMode = false;
-  }
-
   if (!IrReceiver.decode()) return;
+  IrReceiver.printIRResultShort(&Serial);
 
-  // decode直後にデータを退避し、即座にresumeする。
-  // delay()中もIR受信を継続させ、tick取りこぼしを防ぐ。
-  uint8_t protocol = IrReceiver.decodedIRData.protocol;
-  uint8_t mask = (protocol == SONY) ? IrReceiver.decodedIRData.command : 0;
-  IrReceiver.resume();
-
-  if (protocol == SONY) {
-    if (testMode) {
-      testRecvCount++;
-      lastTestRecvMs = millis();
-      unsigned long recvUs = micros();
-      unsigned long riseUs = syncRiseUs;
-      unsigned long lat = (riseUs != 0) ? (recvUs - riseUs) : 0;
-      if (lat > 0) {
-        if (lat < testLatencyMin) testLatencyMin = lat;
-        if (lat > testLatencyMax) testLatencyMax = lat;
-        testLatencySum += lat;
-      }
-      Serial.print(testRecvCount);
-      Serial.print(',');
-      Serial.println(lat);
-      return;
-    }
+  if (IrReceiver.decodedIRData.protocol == NEC) {
+    // hack_oya_kai.ino は command に mask をそのまま乗せて送る
+    // (address は IR_ADDRESS=0x00 固定で意味を持たない)。
+    uint8_t mask = IrReceiver.decodedIRData.command;
 
     if (mask & (1 << childId)) {
-      unsigned long recvUs = micros();
-      unsigned long riseUs = syncRiseUs;  // ISRで記録された値をコピー
-      Serial.print("[RECV] millis=");
-      Serial.print(millis());
-      Serial.print(" child=");
-      Serial.print(childId);
-      Serial.print(" localPos=");
-      Serial.print(localPos + 1);
-      if (riseUs != 0) {
-        Serial.print(" latency=");
-        Serial.print(recvUs - riseUs);
-        Serial.print("us");
-      }
-      Serial.println();
+      // 自分の出番が来た: localPosを1つ進める
       localPos++;
 
       if (childId == DRUM_CHILD_ID) {
@@ -188,6 +97,7 @@ void loop() {
         delay(15);
         digitalWrite(LED_INDICATOR, LOW);
       } else {
+        // 楽譜を1周し終えたら最初(localPos=0)に戻ってループする
         if (localPos >= TOTAL_TICKS) {
           localPos = 0;
         }
@@ -195,10 +105,7 @@ void loop() {
         unsigned long now = millis();
         if (lastReceiveMs != 0) {
           unsigned long interval = now - lastReceiveMs;
-          // 演奏停止→再開時の大きなギャップでdelayが膨張するのを防ぐ
-          if (interval >= 50 && interval <= 2000 && interval <= lastIntervalMs * 3) {
-            lastIntervalMs = interval;
-          }
+          if (interval >= 50 && interval <= 2000) lastIntervalMs = interval;
         }
         lastReceiveMs = now;
 
@@ -212,12 +119,13 @@ void loop() {
             digitalWrite(LED_INDICATOR, (localPos % 2) ? HIGH : LOW);
           }
           if (scoreIdx + 1 < SCORE_LENGTH) {
-            unsigned long halfDelay = min(lastIntervalMs / 2, 200UL);
-            delay(halfDelay);
+            delay(lastIntervalMs / 2);
             sendNoteToHost(myScore[scoreIdx + 1], NOTE_DURATION_HALF, NOTE_AMPLITUDE, localPos);
           }
         }
       }
     }
+    // 自分のビットが立っていないtickは無視 (待機)
   }
+  IrReceiver.resume();
 }

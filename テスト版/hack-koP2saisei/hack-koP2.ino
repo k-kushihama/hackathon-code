@@ -1,8 +1,8 @@
-#define DECODE_SONY
+#define DECODE_NEC
 #include <IRremote.hpp>
 
 // hack_oya_kai.ino 用プロトコル対応版:
-//   IrSender.sendSony(0, mask, 0) を受信（Sony SIRC 12bit, ~17ms）。
+//   IrSender.sendNEC(IR_ADDRESS=0x00, mask, 0) を受信。
 //   mask の bit(childId) が立っているtickだけ「自分の出番」として
 //   localPos をカウントアップし、その位置の音をホストへ送信する。
 //   親機側にループの概念がないが、メロディ機 (childId != DRUM_CHILD_ID)
@@ -44,14 +44,6 @@ const String DRUM_NOTE = "C2";
 
 // 自分の出番が来た回数 (= 親機のtickCountに相当)。受信したtickごとに進む。
 long localPos = -1;  // -1 = まだ一度も自分の出番が来ていない
-
-// テストモード: 't' で ON。受信カウント＋レイテンシCSV出力のみ行う
-bool testMode = false;
-long testRecvCount = 0;
-unsigned long testLatencyMin = 0xFFFFFFFF;
-unsigned long testLatencyMax = 0;
-unsigned long testLatencySum = 0;
-unsigned long lastTestRecvMs = 0;
 
 unsigned long lastReceiveMs = 0;
 unsigned long lastIntervalMs = 250;  // 双子音化区間の半tick遅延に使う
@@ -96,75 +88,16 @@ void setup() {
   printReady();
 }
 
-void handleChildSerial() {
-  while (Serial.available()) {
-    char c = (char)Serial.read();
-    if (c == '\r' || c == '\n' || c == ' ') continue;
-    if (c == 't' || c == 'T') {
-      testMode = !testMode;
-      testRecvCount = 0;
-      testLatencyMin = 0xFFFFFFFF;
-      testLatencyMax = 0;
-      testLatencySum = 0;
-      lastTestRecvMs = 0;
-      if (testMode) {
-        Serial.println("[TEST] receive mode ON — waiting for IR...");
-        Serial.println("seq,latency_us");
-      } else {
-        Serial.println("[TEST] receive mode OFF");
-      }
-    }
-  }
-}
-
 void loop() {
-  handleChildSerial();
-
-  // テスト完了検知: 最後の受信から3秒経ったらサマリーを出力して終了
-  if (testMode && testRecvCount > 0 && (millis() - lastTestRecvMs > 3000)) {
-    Serial.println("---");
-    Serial.print("[TEST] received: ");
-    Serial.print(testRecvCount);
-    Serial.println("/10000");
-    Serial.print("[TEST] min=");
-    Serial.print(testLatencyMin);
-    Serial.print("us max=");
-    Serial.print(testLatencyMax);
-    Serial.print("us avg=");
-    Serial.print(testLatencySum / testRecvCount);
-    Serial.println("us");
-    long lost = 10000 - testRecvCount;
-    Serial.print("[TEST] lost: ");
-    Serial.println(lost);
-    testMode = false;
-  }
-
   if (!IrReceiver.decode()) return;
 
   // decode直後にデータを退避し、即座にresumeする。
   // delay()中もIR受信を継続させ、tick取りこぼしを防ぐ。
   uint8_t protocol = IrReceiver.decodedIRData.protocol;
-  uint8_t mask = (protocol == SONY) ? IrReceiver.decodedIRData.command : 0;
+  uint8_t mask = (protocol == NEC) ? IrReceiver.decodedIRData.command : 0;
   IrReceiver.resume();
 
-  if (protocol == SONY) {
-    if (testMode) {
-      testRecvCount++;
-      lastTestRecvMs = millis();
-      unsigned long recvUs = micros();
-      unsigned long riseUs = syncRiseUs;
-      unsigned long lat = (riseUs != 0) ? (recvUs - riseUs) : 0;
-      if (lat > 0) {
-        if (lat < testLatencyMin) testLatencyMin = lat;
-        if (lat > testLatencyMax) testLatencyMax = lat;
-        testLatencySum += lat;
-      }
-      Serial.print(testRecvCount);
-      Serial.print(',');
-      Serial.println(lat);
-      return;
-    }
-
+  if (protocol == NEC) {
     if (mask & (1 << childId)) {
       unsigned long recvUs = micros();
       unsigned long riseUs = syncRiseUs;  // ISRで記録された値をコピー

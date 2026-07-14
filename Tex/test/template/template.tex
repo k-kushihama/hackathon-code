@@ -1,0 +1,130 @@
+\documentclass[uplatex,dvipdfmx]{jlreq}
+
+\input{pckgs.sty}
+\usepackage{hira-stix} % ヒラギノフォント＆STIX2 代替フォント定義（Warning回避）
+
+\begin{document}
+
+\begin{titlepage}
+\vspace*{1cm}
+\centering
+\Huge\textsf{\TeX でのガントチャートの例}\\[2cm]
+\Large\textsf{情報工学科 2年}\\
+\Large\textsf{24G1000}\\[5pt]
+\huge\textsf{工大 太郎}
+
+\vspace*{1cm}
+\Large\sffamily
+\begin{itembox}[c]{チーム90}
+\centering
+\begin{tabular}{ll}
+工大 二郎（24G1001）&
+工大 三郎（24G1002）\\
+工大 四郎（24G1003）&
+工大 五郎（24G1004）\\
+工大 六郎（24G1005）&\\
+\end{tabular}
+\end{itembox}
+
+\vspace*{1cm}
+\Large\textsf{\today}
+\end{titlepage}
+\clearpage
+
+%% 以降本文
+%\input{sect1}
+\section{はじめに}
+報告書のテンプレートです．
+1つのファイルに全部書いてもいいですが，input関数でファイルを読み込む形式が
+整理しやすいと思います．
+
+%\input{sect2}
+%\input{sect3}
+%\input{sect4}
+%\input{sect5}
+%\input{sect6}
+
+\section{おわりに}
+これは{\TeX}による報告書作成のテンプレートでした．
+
+%\input{biblio}
+
+
+\appendix
+\renewcommand{\thefigure}{A.\arabic{figure}} % 図番号を A.1, A.2 に
+\renewcommand{\thetable}{A.\arabic{table}}   % 表番号も変える場合
+\renewcommand{\theequation}{\Alph{section}.\arabic{equation}} %式番号をA.1, A.2に
+
+%\input{apndx}
+\section{役割分担とスケジュール}
+このテンプレートでは，{\TeX}でガントチャートを描いてみました．
+\begin{figure}[tb]
+    \begin{center}
+    \begin{ganttchart}[y unit title=0.4cm,
+    y unit chart=0.5cm,
+    vgrid,hgrid, 
+    title label anchor/.style={below=-1.6ex},
+    title left shift=.05,
+    title right shift=-.05,
+    title height=1,
+	title/.append style={fill=yellow!10},
+    progress label text={},
+	bar height=0.7,
+    group right shift=0,
+    group top shift=.6,
+    group height=.3]{1}{24}
+    %labels
+    \gantttitle{8 Weeks}{24} \\
+    \gantttitle{W1}{3} 
+    \gantttitle{W2}{3} 
+    \gantttitle{W3}{3} 
+    \gantttitle{W4}{3} 
+    \gantttitle{W5}{3} 
+    \gantttitle{W6}{3} 
+	\gantttitle{W7}{3} 
+	\gantttitle{W8}{3}\\
+    %tasks
+    \ganttbar[bar/.append style={fill=orange!40}]{Task A-1/佐波}{1}{6} \\%elem0
+    \ganttbar[bar/.append style={fill=orange!40}]{Task A-2/佐波}{7}{9} \\%elem1
+    \ganttbar[bar/.append style={fill=orange!40}]{Task A-3/佐波}{10}{12} \\%elem2
+    \ganttbar[bar/.append style={fill=orange!40}]{Task A-4/佐波}{13}{19} \\%elem3
+    \ganttbar[bar/.append style={fill=green!40}]{Task B/有本}{13}{19} \\%elem4
+	\ganttbar[bar/.append style={fill=green!40}]{Task C/有本}{6}{19} \\%elem5
+    \ganttbar[bar/.append style={fill=green!40}]{Task D/有本}{1}{3} \\%elem6
+	\ganttbar[bar/.append style={fill=green!40}]{Task E/有本}{4}{10} \\%elem7
+    \ganttbar[bar/.append style={fill=blue!40}]{Task F/全員}{21}{24}%elem8
+    
+    %relations 
+    \ganttlink{elem0}{elem1} 
+    \ganttlink{elem1}{elem2} 
+    \ganttlink{elem2}{elem3} 
+    \ganttlink{elem3}{elem8} 
+    \ganttlink{elem4}{elem8}
+	\ganttlink{elem5}{elem8} 
+	\ganttlink{elem6}{elem7} 
+	\ganttlink{elem7}{elem8}
+    \end{ganttchart}
+    \end{center}
+    \caption{計画時のスケジュール}
+	\label{gantt1}
+\end{figure}
+\section{プログラムソース}
+
+ソースの書き方のサンプルです．
+
+\begin{lstlisting}
+// 光センサによる居眠り検知システム（Doze-detection system using optical sensors）
+#define USE_ARDUINO_INTERRUPTS true  
+#include <PulseSensorPlayground.h>  
+const int SENSOR_A = 0;//環境光(部屋の明るさ)
+const int SENSOR_B = 1;//頭の動きを検知
+const int SENSOR_Pulse = 2;//心拍を検知
+const int IN1 = 10;//モータ
+const int IN2 = 9;//モータ
+const int check_range = 50;//センサーの値をチェックする範囲，つまり配列の大きさ 5秒間
+const int A_dif = 2;//光センサAの値が一定になったと判別する際に用いる変数
+const int Night_Mode_Value = 15;//夜モードになるための閾値
+const float Judgment_Value = 4;//居眠りと判定するための変数　通常は環境光/3が頭の影（自宅環境）
+\end{lstlisting}
+
+\end{document} 

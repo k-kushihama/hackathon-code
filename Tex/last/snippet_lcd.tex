@@ -1,7 +1,3 @@
-% LCD表示処理のスニペット（テスト版/flogkao/flog_kao_kasi_ir_full.ino に基づく）
-% diamondノードに shapes.geometric が必要（本文プリアンブルの \usetikzlibrary に足してもよい）
-\usetikzlibrary{shapes.geometric}
-
 \subsection{LCD表示の処理}
 
 表示用の子機は，16文字2行のLCDキャラクタディスプレイ2枚を1台のArduinoで駆動し，1枚目にかえるの顔を，2枚目に歌詞を表示する．顔はHD44780のカスタム文字機能で作成した5$\times$8ドットのパターンを3列2行に並べて構成し，口の開閉は下段3文字を開いた絵柄と閉じた絵柄とで差し替えて表現する．歌詞は楽譜の32tickと1対1に対応する文字列テーブルとして保持し，上段に現在の歌詞を，下段に次の歌詞を表示して先読みできるようにした．

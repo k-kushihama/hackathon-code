@@ -1,4 +1,4 @@
-This is LuaHBTeX, Version 1.22.0 (TeX Live 2025)  (format=lualatex 2025.4.23)  7 JUL 2026 21:22
+This is LuaHBTeX, Version 1.22.0 (TeX Live 2025)  (format=lualatex 2025.4.23)  7 JUL 2026 22:47
  restricted system commands enabled.
 **25G1046.tex
 (./25G1046.tex
@@ -1272,54 +1272,52 @@ Overfull \hbox (3.03949pt too wide) in paragraph at lines 263--263
 
 [7]
 
-[8]
+[8](load cache: extra_lmsans10-regular.luc)
 
-[9](load cache: extra_lmsans10-regular.luc)
+[9]
 LaTeX Font Info:    Font shape `JT3/mc/m/n' will be
-(Font)              scaled to size 8.32242pt on input line 443.
+(Font)              scaled to size 8.32242pt on input line 442.
 LaTeX Font Info:    Font shape `JY3/mc/m/n' will be
-(Font)              scaled to size 8.32242pt on input line 443.
+(Font)              scaled to size 8.32242pt on input line 442.
 (load cache: extra_lmroman7-regular.luc)
 LaTeX Font Info:    Font shape `JT3/mc/m/n' will be
-(Font)              scaled to size 6.47299pt on input line 448.
+(Font)              scaled to size 6.47299pt on input line 447.
 LaTeX Font Info:    Font shape `JY3/mc/m/n' will be
-(Font)              scaled to size 6.47299pt on input line 448.
+(Font)              scaled to size 6.47299pt on input line 447.
 LaTeX Font Info:    Font shape `JT3/gt/m/n' will be
-(Font)              scaled to size 6.47299pt on input line 450.
+(Font)              scaled to size 6.47299pt on input line 449.
 LaTeX Font Info:    Font shape `JY3/gt/m/n' will be
-(Font)              scaled to size 6.47299pt on input line 450.
-LaTeX Font Info:    Calculating math sizes for size <7.66501> on input line 456
+(Font)              scaled to size 6.47299pt on input line 449.
+LaTeX Font Info:    Calculating math sizes for size <7.66501> on input line 455
 .
 
 
 LaTeX Font Warning: Font shape `OT1/cmr/m/n' in size <3.5> not available
-(Font)              size <5> substituted on input line 456.
+(Font)              size <5> substituted on input line 455.
 
 
 LaTeX Font Warning: Font shape `OML/cmm/m/it' in size <3.5> not available
-(Font)              size <5> substituted on input line 456.
+(Font)              size <5> substituted on input line 455.
 
 
 LaTeX Font Warning: Font shape `OMS/cmsy/m/n' in size <3.5> not available
-(Font)              size <5> substituted on input line 456.
+(Font)              size <5> substituted on input line 455.
 
 LaTeX Font Info:    External font `cmex10' loaded for size
-(Font)              <7> on input line 456.
+(Font)              <7> on input line 455.
 LaTeX Font Info:    External font `cmex10' loaded for size
-(Font)              <4.89998> on input line 456.
+(Font)              <4.89998> on input line 455.
 LaTeX Font Info:    External font `cmex10' loaded for size
-(Font)              <3.5> on input line 456.
+(Font)              <3.5> on input line 455.
 LaTeX Font Info:    Font shape `JY3/mc/m/n' will be
-(Font)              scaled to size 4.53107pt on input line 456.
+(Font)              scaled to size 4.53107pt on input line 455.
 LaTeX Font Info:    Font shape `JY3/mc/m/n' will be
-(Font)              scaled to size 3.2365pt on input line 456.
+(Font)              scaled to size 3.2365pt on input line 455.
 
 
 [10
 warning  (pdf backend): ignoring duplicate destination with the name 'figure.1'
-]
 
-[11
 warning  (pdf backend): ignoring duplicate destination with the name 'figure.2'
 ] (./25G1046.aux)
  ***********
@@ -1336,13 +1334,13 @@ Package rerunfilecheck Info: File `25G1046.out' has not changed.
 )
 
 Here is how much of LuaTeX's memory you used:
- 25528 strings out of 471941
- 244638,953878 words of node,token memory allocated
+ 25527 strings out of 471941
+ 244644,953878 words of node,token memory allocated
  874 words of node memory still in use:
    7 hlist, 1 vlist, 4 rule, 2 glue, 3 kern, 1 glyph, 140 attribute, 60 glue_spe
 c, 21 attribute_list, 2 write, 9 user_defined nodes
-   avail lists: 1:24,2:63794,3:990,4:774,5:424,6:121,7:6593,8:46,9:3572,10:23,11
-:22
+   avail lists: 1:20,2:61065,3:1079,4:772,5:423,6:109,7:6608,8:46,9:3546,10:22,1
+1:24
  51365 multiletter control sequences out of 65536+600000
  66 fonts using 75697271 bytes
  119i,9n,112p,1851b,867s stack positions out of 10000i,1000n,20000p,200000b,200000s
@@ -1366,10 +1364,10 @@ ype1/public/amsfonts/cm/cmr7.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1
 /public/amsfonts/cm/cmsy10.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/p
 ublic/amsfonts/cm/cmsy7.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/publ
 ic/amsfonts/cm/cmsy8.pfb>
-Output written on 25G1046.pdf (11 pages, 283193 bytes).
+Output written on 25G1046.pdf (10 pages, 280170 bytes).
 
-PDF statistics: 289 PDF objects out of 1000 (max. 8388607)
- 228 compressed objects within 3 object streams
- 50 named destinations out of 1000 (max. 131072)
+PDF statistics: 283 PDF objects out of 1000 (max. 8388607)
+ 223 compressed objects within 3 object streams
+ 49 named destinations out of 1000 (max. 131072)
  192 words of extra memory for PDF output out of 10000 (max. 100000000)
 

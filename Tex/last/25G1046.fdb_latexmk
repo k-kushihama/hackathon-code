@@ -1,0 +1,22 @@
+# Fdb version 4
+["dvipdf"] 0 "25G1046.dvi" "25G1046.pdf" "25G1046" 0 -1
+  "25G1046.dvi" 0 -1 0 "latex"
+  (generated)
+  "25G1046.pdf"
+  (rewritten before read)
+["latex"] 1783583504.83319 "25G1046.tex" "25G1046.dvi" "25G1046" 1783583505.09738 2
+  "/usr/local/texlive/2025/texmf-dist/tex/latex/etoolbox/etoolbox.sty" 1739306980 46850 d87daedc2abdc653769a6f1067849fe0 ""
+  "/usr/local/texlive/2025/texmf-dist/tex/latex/everyhook/everyhook.sty" 1417130005 5531 6783cc7ca14ebcec881a109a07e02d11 ""
+  "/usr/local/texlive/2025/texmf-dist/tex/latex/jlreq/jlreq-helpers.sty" 1707868109 21198 4561cb0e83239e0adc8e4f204ae00bdf ""
+  "/usr/local/texlive/2025/texmf-dist/tex/latex/jlreq/jlreq.cls" 1742155061 299244 b6ba9ada3c45791ccb98df8a2e331dbe ""
+  "/usr/local/texlive/2025/texmf-dist/tex/latex/svn-prov/svn-prov.sty" 1272330018 6852 44ea8d7e58290cde708a34ebf3953571 ""
+  "/usr/local/texlive/2025/texmf-dist/web2c/texmf.cnf" 1739380943 42148 61becc7c670cd061bb319c643c27fdd4 ""
+  "/usr/local/texlive/2025/texmf-var/web2c/pdftex/latex.fmt" 1745398977 3561264 172b6ed49d3c0601cbdd9bda8642705f ""
+  "/usr/local/texlive/2025/texmf.cnf" 1741450484 577 418a7058ec8e006d8704f60ecd22c938 ""
+  "25G1046.aux" 1783583504.83264 32 3985256e7290058c681f74d7a3565a19 "latex"
+  "25G1046.tex" 1783583454.39216 67937 300a9f47668d0958a206080bc493dd1d ""
+  (generated)
+  "25G1046.aux"
+  "25G1046.dvi"
+  "25G1046.log"
+  (rewritten before read)

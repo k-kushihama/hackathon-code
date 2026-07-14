@@ -1,4 +1,4 @@
-#define DECODE_NEC
+#define DECODE_SONY
 #define IR_SEND_PIN 3
 #include <IRremote.hpp>
 
@@ -12,6 +12,7 @@ const int PIN_BTN_START = 8;
 const int PIN_POT_TEMPO = A5;     // BPM可変抵抗器 (uxcell 10kΩ シングルターン)。回転で 60〜150 BPM
 const int PIN_BTN_RESET = 10;
 const int LED_INDICATOR = 13;
+const int PIN_SYNC_OUT = 9;       // 子機D3への同期パルス出力（遅延計測用）
 
 const int QUANTIZE_TICKS = 8;     // 参加予約のアライメント(0,8,16,...)
 // 子機の TOTAL_TICKS (=楽譜1周分のIR tick数) と一致させる必要がある。
@@ -20,7 +21,7 @@ const int SCORE_TICKS = 32;
 const int TEMPO_MIN_BPM = 60;
 const int TEMPO_MAX_BPM = 150;
 const unsigned long POT_READ_INTERVAL_MS = 50;
-// NOTE: address フィールドは tickCount下位8bit用に転用するため、固定アドレスとしては未使用
+// Sony SIRC 12bit: address(5bit) + command(7bit)。mask は command に載せる
 
 bool isActive[NUM_CHILDREN]    = {false, false, false, false}; // 参加済みフラグ
 long joinTick[NUM_CHILDREN]    = {-1, -1, -1, -1};              // 参加予定tick（未予約は-1）
@@ -54,6 +55,8 @@ void setup() {
   pinMode(PIN_BTN_RESET, INPUT_PULLUP);
   // PIN_POT_TEMPO はアナログ入力なので pinMode 不要（pull-up は付けない）
   pinMode(LED_INDICATOR, OUTPUT);
+  pinMode(PIN_SYNC_OUT, OUTPUT);
+  digitalWrite(PIN_SYNC_OUT, LOW);
 
   printHelp();
 }
@@ -221,6 +224,25 @@ void handleStartButton() {
   prevBtnStart = s;
 }
 
+void doTest() {
+  const long TEST_COUNT = 10000;
+  const int SEND_INTERVAL_MS = 30;
+  Serial.println("[TEST] start 10000 sends (mask=0x0F, interval=30ms)");
+  for (long i = 0; i < TEST_COUNT; i++) {
+    digitalWrite(PIN_SYNC_OUT, HIGH);
+    delayMicroseconds(50);
+    digitalWrite(PIN_SYNC_OUT, LOW);
+    IrSender.sendSony(0, 0x0F, 0);
+    if (i % 1000 == 0) {
+      Serial.print("[TEST] ");
+      Serial.print(i);
+      Serial.println("/10000");
+    }
+    delay(SEND_INTERVAL_MS);
+  }
+  Serial.println("[TEST] done 10000/10000");
+}
+
 void handleSerialCommand() {
   while (Serial.available()) {
     char c = (char)Serial.read();
@@ -232,6 +254,8 @@ void handleSerialCommand() {
       doStart();
     } else if (c == 'r' || c == 'R') {
       doReset();
+    } else if (c == 't' || c == 'T') {
+      doTest();
     } else if (c == '?') {
       printHelp();
     }
@@ -279,10 +303,12 @@ void tick() {
   }
 
   if (mask != 0) {
-    // address に tickCount の下位8bit を乗せて送る。
-    // 子機側はこれを「正解の位置」として受け取り、localPos を補正する
-    // (IR受信失敗による同期ずれを毎tick自己修復できる)。
-    uint8_t tickLow = (uint8_t)(tickCount & 0xFF);
-    IrSender.sendNEC(tickLow, mask, 0);
+    // 子機D3への同期パルス。IR送信直前に立てて、子機ISRのmicros()と
+    // 本ループのsendNEC完了までの遅延を子機側で計測できるようにする。
+    digitalWrite(PIN_SYNC_OUT, HIGH);
+    delayMicroseconds(50);
+    digitalWrite(PIN_SYNC_OUT, LOW);
+
+    IrSender.sendSony(0, mask, 0);
   }
 }

@@ -1,5 +1,5 @@
 # Fdb version 4
-["lualatex"] 1783426974.54353 "25G1046.tex" "25G1046.pdf" "25G1046" 1783426976.98619 0
+["lualatex"] 1783432032.94999 "25G1046.tex" "25G1046.pdf" "25G1046" 1783432035.45245 0
   "/Users/kushi/Library/texlive/2025/texmf-var/luatex-cache/generic/fonts/otl/haranoajigothic-medium.luc" 1747906659.28699 1924611 064ae20f11f9d15b48dac1789f0cba63 ""
   "/Users/kushi/Library/texlive/2025/texmf-var/luatex-cache/generic/fonts/otl/haranoajimincho-regular.luc" 1747906505.27548 2011209 997af0bab672dbc1165839804b1c6a81 ""
   "/Users/kushi/Library/texlive/2025/texmf-var/luatex-cache/generic/fonts/otl/lmmono10-regular.luc" 1779794299.6307 81837 7091cab214959897276971ec5ae174a1 ""
@@ -291,9 +291,9 @@
   "/usr/local/texlive/2025/texmf-var/web2c/luahbtex/lualatex.fmt" 1745398932 6369968 4aff17f9481ba7fc672fe9400c46a704 ""
   "/usr/local/texlive/texmf-local/fonts/opentype/cjk-gs-integrate/HaranoAjiGothic-Medium.otf" 1696969431 4741344 4e2d7e002125f563344f42c58a36357b ""
   "/usr/local/texlive/texmf-local/fonts/opentype/cjk-gs-integrate/HaranoAjiMincho-Regular.otf" 1696969431 6420628 688119813d53b7282d5209dbc0147746 ""
-  "25G1046.aux" 1783426976.63701 7517 57d88edfdac240cb53e49ef5af2a4375 "lualatex"
-  "25G1046.out" 1783426976.63811 2525 66d6a26a7aca5e7f94b5d342cba04365 "lualatex"
-  "25G1046.tex" 1783426931.38544 33809 4bf114ba6aa2f40db1b6ce19fad3d6f8 ""
+  "25G1046.aux" 1783432035.09479 7513 ad8d6dfb9b612ab6b3fea5681dff83da "lualatex"
+  "25G1046.out" 1783432035.09584 2525 66d6a26a7aca5e7f94b5d342cba04365 "lualatex"
+  "25G1046.tex" 1783432011.35863 33356 e3e8e3958c858bb794b7c851c9c2edd9 ""
   (generated)
   "25G1046.aux"
   "25G1046.log"
