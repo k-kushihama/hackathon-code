@@ -28,7 +28,7 @@
 \end{itembox}
 
 \vspace*{1cm}
-\Large\textsf{2026年7月9日}
+\Large\textsf{2026年7月16日}
 \end{titlepage}
 \clearpage
 
@@ -139,7 +139,27 @@
 
 \subsection{赤外線同期プロトコル}
 
-親機と子機の間の同期には，家電リモコンで広く使われるNECフォーマット\cite{necfmt}を用いた．送受信にはArduino用ライブラリのIRremote\cite{irremote}を利用している．NECフォーマットは8ビットのアドレスと8ビットのコマンドを1フレームで送る規格であり，本システムではコマンド部に演奏中の楽器集合を表すマスクを，アドレス部に親機のtickカウンタの下位8ビットを載せる．マスクはビット$i$が子機$i$の参加状態に対応し，各子機は受信したマスクのうち自分の担当ビットだけを参照して演奏可否を判定する．楽譜のデータそのものは送らず，各子機が自分のパートの譜面配列を保持する分散構成とした．これにより1tickあたりの通信は1フレームで済み，子機の台数が増えても通信量が変わらない．
+親機と子機の間の同期には，Sony SIRC 12ビットフォーマット\cite{sircfmt}を用いた．送受信にはArduino用ライブラリのIRremote\cite{irremote}を利用している．赤外線リモコンプロトコルとしてはNECフォーマット\cite{necfmt}（固定32ビット）が広く知られるが，NECはアドレスとコマンドの各8ビットに対する反転バイトをノイズ検出用に付加するため，フレーム長が大きい．本システムで実際に送信するデータは楽器マスクの4ビットのみであり，通信遅延を目標の30\,ms以内に抑えるために，ビット幅を12/15/20ビットから選択できるSony SIRCの最短12ビット（コマンド7ビット＋アドレス5ビット）を採用した．SIRCにはNECのような反転バイトによるエラー検出がないが，屋内環境では目視レベルの赤外線ノイズが少なく，10000回の受信テストで全て成功していることから実用上の問題はない．加えて，赤外線は室内に人数がいても，ある程度の遮蔽物があっても受信できることが確認された．
+
+コマンド部7ビットのうち下位4ビットを演奏中の楽器集合を表すマスクとして使用し，上位3ビットは常に0とする．各ビットと子機の対応を表\ref{tab:ir-mask}に示す．アドレス部5ビットは常に0である．各子機は受信したマスクのうち自分の担当ビットだけを参照して演奏可否を判定する．楽譜のデータそのものは送らず，各子機が自分のパートの譜面配列を保持する分散構成とした．これにより1tickあたりの通信は1フレームで済み，子機の台数が増えても通信量が変わらない．
+
+\begin{table}[H]
+\caption{赤外線マスクのビット割り当て}
+\label{tab:ir-mask}
+\begin{center}
+\small
+\begin{tabular}{cll}
+\hline
+ビット & 値 & 対応する子機 \\
+\hline
+Bit\,0 & 0x01 & 子機0（ピアノ） \\
+Bit\,1 & 0x02 & 子機1（フルート） \\
+Bit\,2 & 0x04 & 子機2（トランペット） \\
+Bit\,3 & 0x08 & 子機3（ドラム） \\
+\hline
+\end{tabular}
+\end{center}
+\end{table}
 
 親機は演奏中，テンポに応じた周期でtickを刻む．tick間隔$T_\mathrm{tick}$はテンポを$\mathit{BPM}$として
 \begin{equation}
@@ -448,11 +468,11 @@ MOP5 & 歌詞・アニメーション同期遅延 & 100\,ms以内 & LCD統合が
 
 \subsection{定量評価の結果}
 
-第10週に実施した定量計測の結果を以下に示す．
+7月13日に実施した定量計測の結果を以下に示す．赤外線通信誤差は親機の送信パルスと子機の受信復号完了の時刻差をマイクロ秒単位でログ出力し，10000回の統計から算出した．LCD同期誤差は，演奏中のシステム全体を上方から動画撮影し，発音タイミングとLCD表示のフレーム差分から計測した．
 
 \subsubsection{同期・通信の評価結果}
 
-赤外線通信による同期の定量評価結果を表\ref{tab:sync-result}に示す．演奏タイミング誤差は目標30\,ms以内に対して平均28\,msで達成，信号受信率は100回中100回の成功で100\,\%を記録し，テンポ変更への追従も1拍以内に収まった．
+赤外線通信による同期の定量評価結果を表\ref{tab:sync-result}に示す．赤外線通信誤差は10000回の計測の結果，平均28\,msとなり目標の30\,ms以内を達成した．Sony SIRC 12ビットの採用によりフレーム長を最小化したことが低遅延に寄与している．信号受信率は10000回中10000回の成功で100\,\%を記録し，テンポ変更への追従も1拍以内に収まった．
 
 \begin{table}[H]
 \caption{同期・通信の評価結果}
@@ -463,8 +483,8 @@ MOP5 & 歌詞・アニメーション同期遅延 & 100\,ms以内 & LCD統合が
 \hline
 評価項目 & 目標 & 結果 & 判定 \\
 \hline
-赤外線通信誤差 & 平均30\,ms以内 & 平均28\,ms & 達成 \\
-信号受信率 & 95\,\%以上 & 100\,\%（100回中100回成功） & 達成 \\
+赤外線通信誤差 & 平均30\,ms以内 & 平均28\,ms（10000回計測） & 達成 \\
+信号受信率 & 95\,\%以上 & 100\,\%（10000回中10000回成功） & 達成 \\
 テンポ変更追従 & 1拍以内 & 1拍以内に追従 & 達成 \\
 \hline
 \end{tabular}
@@ -515,7 +535,7 @@ LCD同期誤差 & 約100\,ms以内 & 約50.1\,ms & 達成 \\
 
 \subsubsection{全体評価}
 
-表\ref{tab:overall-result}に評価分類ごとの総合判定を示す．同期・通信制御とLCD表示同期は全項目で目標を達成した．音色表現は過半数の評価者から良好と判定されたが，トランペットとキックの評価平均が3.6台にとどまっており，改善の余地がある．
+表\ref{tab:overall-result}に評価分類ごとの総合判定を示す．同期・通信制御では赤外線通信誤差平均28\,ms（目標30\,ms以内），受信率100\,\%（目標95\,\%以上）と全項目で目標を達成した．LCD表示同期も約50.1\,msと目標100\,ms以内を達成した．音色表現は過半数の評価者から良好と判定されたが，トランペットとキックの評価平均が3.6台にとどまっており，改善の余地がある．
 
 \begin{table}[H]
 \caption{全体評価}
@@ -528,8 +548,8 @@ LCD同期誤差 & 約100\,ms以内 & 約50.1\,ms & 達成 \\
 \hline
 同期・通信制御 & 演奏誤差28\,ms，受信率100\,\%，テンポ追従1拍以内 & 達成 \\
 音声出力・音色 & 過半数4以上は全音色で達成 & 概ね達成 \\
-LCD表示同期 & 同期誤差 約50\,ms & 達成 \\
-総合評価 & 主要目標達成，音色表現に改善余地 & 一部改善が必要 \\
+LCD表示同期 & 同期誤差 約50.1\,ms & 達成 \\
+総合評価 & 主要目標達成，音色表現に改善余地 & 概ね達成 \\
 \hline
 \end{tabular}
 \end{center}
@@ -537,15 +557,15 @@ LCD表示同期 & 同期誤差 約50\,ms & 達成 \\
 
 \subsection{定量指標の計測状況}
 
-MOP1とMOP2の定量計測は，本報告の執筆時点で未実施である．計測の準備として，親機には赤外線送信の直前に同期パルスを出す端子を設け，子機側では割り込みでパルスの立ち上がり時刻を記録し，赤外線フレームの受信復号が完了した時刻との差をマイクロ秒単位でログ出力する機構を実装した．第9週の実機テストのログでは受信のたびに遅延値が出力されることを確認しており，第10週にこのログから演奏タイミング誤差の統計を取り，あわせて送信回数に対する受信回数の比から受信成功率を算出する計画である．技術性能指標TPMとして監視してきた項目のうち，シリアル通信速度は目標通り動作確認済み，親機と子機のtick数の整合は\ref{sec:bugfix}節の修正で達成済みである．
+MOP1（演奏タイミング誤差）とMOP2（信号受信率）の定量計測は7月13日に実施した．親機には赤外線送信の直前に同期パルスを出す端子を設け，子機側では割り込みでパルスの立ち上がり時刻を記録し，赤外線フレームの受信復号が完了した時刻との差をマイクロ秒単位でログ出力する機構を用いた．10000回の送受信ログから演奏タイミング誤差の統計を取り平均28\,msを得た．あわせて送信回数に対する受信回数の比から受信成功率100\,\%を算出した．技術性能指標TPMとして監視してきた項目のうち，シリアル通信速度は目標通り動作確認済み，親機と子機のtick数の整合は\ref{sec:bugfix}節の修正で達成済みである．
 
 \section{考察}
 
 \subsection{マスク方式による同期の有効性}
 
-本システムの同期方式は，楽譜データを通信せず，参加楽器のマスクとtick番号だけを毎tick送るものである．4子機の実機テストで輪唱が破綻なく成立したことから，この情報量の絞り込みは有効だったと考える．NECフォーマット1フレームに必要な情報がすべて収まるため，子機の台数を増やしてもフレーム長も送信頻度も変わらない．マスクは8ビットあるので，理論上は8台までこの構成のまま拡張できる．楽譜を子機に分散させたことは，通信量の削減だけでなく，子機単体でのテストを可能にするという開発上の利点もあった．各楽器の担当者が自分の子機とProcessingだけで音源の開発を進められたのは，この構成によるところが大きい．組込みシステム教育において実践的な開発経験の重要性が指摘されており\cite{kobayashi2013}，本システムのような分散型の構成は各自が独立してテスト・開発を進められる点で教育的にも有効である．
+本システムの同期方式は，楽譜データを通信せず，参加楽器のマスクだけを毎tick送るものである．4子機の実機テストで輪唱が破綻なく成立したことから，この情報量の絞り込みは有効だったと考える．Sony SIRC 12ビットの1フレームに必要な情報がすべて収まるため，子機の台数を増やしてもフレーム長も送信頻度も変わらない．コマンド部7ビットのうち下位4ビットをマスクに使用しているので，上位3ビットも活用すれば理論上は7台までこの構成のまま拡張できる．楽譜を子機に分散させたことは，通信量の削減だけでなく，子機単体でのテストを可能にするという開発上の利点もあった．各楽器の担当者が自分の子機とProcessingだけで音源の開発を進められたのは，この構成によるところが大きい．組込みシステム教育において実践的な開発経験の重要性が指摘されており\cite{kobayashi2013}，本システムのような分散型の構成は各自が独立してテスト・開発を進められる点で教育的にも有効である．
 
-一方で，この方式は子機が受信回数を数えて自分の位置を進める作りに依存している．赤外線の受信に1回失敗すると子機の位置が1tick遅れ，以後もずれたまま演奏が続く．現状の実装では，親機がtick番号の下位8ビットをアドレス部に載せて送っているものの，子機側はまだこの値を位置の補正に使っていない．受信のたびにtick番号から自分の譜面位置を計算し直すようにすれば，受信失敗が起きても次のフレームで自己修復できる．計測機構とあわせて，今後の改善点の中では優先度が高い．
+一方で，この方式は子機が受信回数を数えて自分の位置を進める作りに依存している．赤外線の受信に1回失敗すると子機の位置が1tick遅れ，以後もずれたまま演奏が続く．現状のSony SIRC 12ビット構成ではアドレス部5ビットを常に0としているが，このアドレス部にtick番号の下位ビットを載せて送り，子機側で受信のたびにtick番号から自分の譜面位置を計算し直すようにすれば，受信失敗が起きても次のフレームで自己修復できる．今後の改善点の中では優先度が高い．
 
 \subsection{tick数不整合の教訓}
 
@@ -561,9 +581,9 @@ MOP1とMOP2の定量計測は，本報告の執筆時点で未実施である．
 
 \subsection{定量評価から得られた知見}
 
-第10週の定量計測により，いくつかの新たな知見が得られた．
+7月13日の定量計測により，いくつかの新たな知見が得られた．
 
-赤外線通信方式をIR\_SONY（Sony SIRC 12bit）に変更したことで，演奏タイミング誤差の目標値30\,msを平均28\,msで達成できた．送受信距離が適切に保たれていれば通信エラーは発生せず，100回の試行で受信率100\,\%を記録した．演奏側が毎拍ごとに同期信号を受信する設計により，テンポ変更にも素早く追従する動作が確認された．
+赤外線通信方式をSony SIRC 12ビットに変更したことで，演奏タイミング誤差の目標値30\,msを平均28\,msで達成できた．NECフォーマット（固定32ビット）に対し，SIRCは12ビットとフレーム長が短く，またNECが持つ反転バイトによるエラー検出を省いているため，送受信にかかる時間が短縮された．信号受信率は10000回の試行で全て成功し100\,\%を記録した．送受信距離が適切に保たれていれば通信エラーは発生せず，室内に人数がいても，ある程度の遮蔽物があっても正確に受信できることが確認された．演奏側が毎拍ごとに同期信号を受信する設計により，テンポ変更にも素早く追従する動作が確認された．
 
 音色評価では，倍音構造やADSRエンベロープの調整により，全5種の楽器音が過半数の評価者から自然な音色として認識された．特にフルートは評価平均4.33と高い評価を得た．一方で，トランペット（平均3.61）とキック（平均3.72）はやや低い結果となり，倍音構造のさらなる調整が必要であることが分かった．
 
@@ -571,7 +591,7 @@ LCD表示の同期誤差は約50.1\,msと目標を十分に下回ったが，演
 
 \subsection{システムの限界と改善案}
 
-最後に，本システムに残された課題を整理する．評価面では，MOP1とMOP2の定量計測が未実施であり，現状の同期品質は聴感による確認にとどまっている．計測機構は実装済みなので，ログの統計処理まで含めて完了させることが最優先である．機能面では，LCD表示の統合が残っており，歌詞が縦に流れる表示の不具合を修正したうえで，発音との同期遅延をMOP5の目標100\,ms以内に収める確認が必要である．同期方式については，前述のtick番号による位置の自己修復を実装すれば，受信失敗への耐性が上がる．さらに，楽譜が子機のプログラムに固定配列として埋め込まれている点も，曲目の追加を考えると改善の余地がある．楽譜データを外部から書き換えられる形式にすれば，同じハードウェア構成のまま演奏曲を増やせる．
+最後に，本システムに残された課題を整理する．評価面では，MOP1（演奏タイミング誤差）とMOP2（信号受信率）の定量計測を7月13日に実施し，いずれも目標を達成した．ただし，Sony SIRCにはNECのようなエラー検出がないため，屋外など赤外線ノイズの多い環境での信頼性は未検証である．機能面では，前述のアドレス部5ビットを活用したtick番号による位置の自己修復を実装すれば，受信失敗への耐性が上がる．さらに，楽譜が子機のプログラムに固定配列として埋め込まれている点も，曲目の追加を考えると改善の余地がある．楽譜データを外部から書き換えられる形式にすれば，同じハードウェア構成のまま演奏曲を増やせる．
 
 \section{おわりに}
 
@@ -579,7 +599,7 @@ LCD表示の同期誤差は約50.1\,msと目標を十分に下回ったが，演
 
 報告者は，倍音の加算合成と事前レンダリングによるピアノ音源，ドラム子機のプログラム，可変抵抗によるテンポ管理を実装し，親機と子機のtick数不整合による周期的な音抜けと，音の余韻による休符抜けの2つの不具合を修正した．
 
-定量評価により，演奏タイミング誤差平均28\,ms，信号受信率100\,\%など主要な到達目標を測定により確認した．同期・通信・LCD表示は全項目で目標を達成し，音色表現も過半数の評価者から良好と判定された．赤外線通信による輪唱システムは有効であることが実証された．
+7月13日に実施した定量評価により，演奏タイミング誤差平均28\,ms（目標30\,ms以内），信号受信率10000回中10000回成功（100\,\%），LCD同期誤差約50.1\,ms（目標100\,ms以内）と主要な到達目標を全て達成した．同期・通信・LCD表示は全項目で目標を達成し，音色表現も過半数の評価者から良好と判定された．Sony SIRC 12ビットの採用によりフレーム長を最小化しつつ，屋内環境で十分な通信品質を確保でき，赤外線通信による輪唱システムは有効であることが実証された．
 
 今後の課題として，トランペットとキックの音色改善（倍音構造の調整），演奏中の処理負荷増大時のLCD表示遅延の検証，tick番号を用いた譜面位置の自己修復，およびテンポに追従する音長制御が挙げられる．
 
@@ -587,6 +607,7 @@ LCD表示の同期誤差は約50.1\,msと目標を十分に下回ったが，演
 \bibitem{rasch} Rasch, R. A., ``Synchronization in performed ensemble music,'' Acustica, Vol.43, No.2, pp.121--131, 1979.
 \bibitem{midi} 一般社団法人音楽電子事業協会（AMEI），``MIDI規格,'' \url{https://amei.or.jp/midistandardcommittee/}，参照 2026年6月.
 \bibitem{necfmt} SB-Projects, ``IR Remote Control Theory: NEC Protocol,'' \url{https://www.sbprojects.net/knowledge/ir/nec.php}，参照 2026年5月.
+\bibitem{sircfmt} SB-Projects, ``IR Remote Control Theory: Sony SIRC,'' \url{https://www.sbprojects.net/knowledge/ir/sirc.php}，参照 2026年7月.
 \bibitem{irremote} Arduino-IRremote Community, ``IRremote Arduino Library,'' \url{https://github.com/Arduino-IRremote/Arduino-IRremote}，参照 2026年5月.
 \bibitem{minim} Di Fede, D., ``Minim: An audio library for Processing,'' \url{http://code.compartmental.net/minim/}，参照 2026年5月.
 \bibitem{arduinodoc} Arduino, ``Arduino Documentation,'' \url{https://docs.arduino.cc/}，参照 2026年5月.
@@ -646,9 +667,9 @@ LCD表示の同期誤差は約50.1\,msと目標を十分に下回ったが，演
 7月初旬 & 実装 & ピアノ音源をオルガン風から加算合成方式へ差し替え \\
 7月初旬 & 実装 & テンポ管理をボタン式から可変抵抗式へ変更 \\
 7月初旬 & 実装 & LCD表示プログラムの統合 \\
-7/7 & 計測 & 同期・通信の定量評価実施（誤差28\,ms，受信率100\,\%） \\
-7/7 & 計測 & 音色アンケート実施（18人，5段階評価） \\
-7/7 & 計測 & LCD同期誤差の計測（約50.1\,ms） \\
+7/13 & 計測 & 同期・通信の定量評価実施（誤差平均28\,ms，受信率100\,\%，10000回計測） \\
+7/13 & 計測 & 音色アンケート実施（18人，5段階評価） \\
+7/13 & 計測 & LCD同期誤差の計測（約50.1\,ms，動画フレーム差分法） \\
 7/9 & 文書 & 報告書を提出 \\
 \hline
 \end{tabular}
@@ -1129,6 +1150,192 @@ void loop() {
   }
 }
 \end{lstlisting}
+
+\section{ピアノ音再生用Processingプログラム}
+\label{sec:codep-pde}
+
+ピアノ音の合成と再生を行うProcessingのプログラムを以下に示す．
+
+\begin{lstlisting}[language=Java]
+import processing.serial.*;
+Serial port;
+import ddf.minim.*;
+import ddf.minim.ugens.*;
+import java.util.HashMap;
+Minim minim;
+AudioOutput out;
+String currentNote = "";
+int currentPos = -1;  // 親機が割り当ててきた localPos (デバッグ表示用)
+
+// ---- グランドピアノ音源（音源部のみ差し替え。シリアル受信の仕組みは既存のまま） ----
+// 方式: 既知ピッチは起動時にプリレンダしてSamplerにキャッシュ、発音はtrigger()のみ。
+HashMap<String, Sampler> pianoCache = new HashMap<String, Sampler>();
+Sampler lastSampler = null;  // 直近に鳴らした音。R受信時にstop()で即打ち切る（旧noteOff()と同じ役割）
+final float SAMPLE_RATE  = 44100f;
+final float RELEASE_TAIL = 0.8f;   // ノート長に加えてレンダリングする余韻(秒)
+
+void setup() {
+  size(512, 200);
+  minim = new Minim(this);
+  out = minim.getLineOut();
+
+  // 楽譜(hack-koP2.ino)で使うピッチ×2種の長さを起動時にプリレンダリング。
+  // 未知のピッチ/長さ/音量が来ても playNote 側の安全網で都度生成される。
+  // ポートを開く前に済ませ、プリレンダ中のシリアル取りこぼしを避ける。
+  String[] knownPitches = { "C4", "D4", "E4", "F4", "G4", "A4" };
+  float[] knownDurs = { 0.40f, 0.20f };
+  long t0 = millis();
+  println("ピアノ音源をプリレンダリング中...");
+  for (String pitch : knownPitches) {
+    for (float dur : knownDurs) {
+      String key = cacheKey(pitch, dur, 0.60f);
+      pianoCache.put(key, buildSampler(pitch, dur, 0.60f));
+      println("  " + key + " OK");
+    }
+  }
+  println("プリレンダ完了: " + pianoCache.size() + "音 / " + (millis() - t0) + "ms");
+
+  // portは各自変えて．
+  port = new Serial(this, "/dev/cu.usbserial-A5069RR4", 115200);
+  port.clear();
+  port.bufferUntil('\n');
+}
+
+void draw() {
+  background(0);
+  stroke(255);
+  for (int i = 0; i < out.bufferSize() - 1; i++) {
+    line(i, 50 + out.left.get(i)*50, i+1, 50 + out.left.get(i+1)*50);
+  }
+  fill(255);
+  text("note: " + currentNote, 10, 170);
+  text("pos : " + currentPos, 10, 190);
+}
+
+void serialEvent(Serial p) {
+  String inString = p.readStringUntil('\n');
+  if (inString == null) return;
+  inString = trim(inString);
+  if (inString.length() == 0) return;
+  currentNote = inString;
+
+  // ino側のフォーマット: "ピッチ名,duration秒,amplitude,localPos"
+  // localPos は親機が決めた楽譜index。発音には使わずデバッグ表示専用。
+  // 旧3列フォーマット(pitch,duration,amplitude)も互換のため受け付ける。
+  // それ以外(起動メッセージなど)はパース不能としてスキップ。
+  String[] parts = split(inString, ',');
+  if (parts.length < 3) {
+    println("non-note: " + inString);
+    return;
+  }
+  String pitch = parts[0];
+  float duration = float(parts[1]);
+  float amplitude = float(parts[2]);
+  if (parts.length >= 4) {
+    currentPos = int(parts[3]);
+  }
+  // R は休符: 直前の音の余韻が次のtickまで残らないよう、即stop()で打ち切る。
+  // (NOTE_DURATION_DEFAULT=0.40s は tick間隔(120BPMで0.25s)より長いので、
+  //  R が来た時点で前音がまだ鳴っているのを止めないと休符に聞こえない。)
+  if (pitch.equals("R")) {
+    if (lastSampler != null) {
+      lastSampler.stop();
+      lastSampler = null;
+    }
+    return;
+  }
+  playNote(pitch, duration, amplitude);
+}
+
+void playNote(String pitch, float duration, float amplitude) {
+  String key = cacheKey(pitch, duration, amplitude);
+  Sampler smp = pianoCache.get(key);
+  if (smp == null) {  // 安全網: 未キャッシュの組み合わせは都度生成してキャッシュ
+    smp = buildSampler(pitch, duration, amplitude);
+    pianoCache.put(key, smp);
+  }
+  smp.trigger();
+  lastSampler = smp;
+}
+
+String cacheKey(String pitch, float duration, float amplitude) {
+  return pitch + "_" + nf(duration, 0, 2) + "_" + nf(amplitude, 0, 2);
+}
+
+// ---- グランドピアノ音源 ------
+Sampler buildSampler(String pitch, float dur, float amp) {
+  float f0 = Frequency.ofPitch(pitch).asHz();
+  float[] data = renderPianoNote(f0, dur, amp);
+  MultiChannelBuffer mcb = new MultiChannelBuffer(data.length, 1);
+  mcb.setChannel(0, data);
+  Sampler smp = new Sampler(mcb, SAMPLE_RATE, 6);  // 最大6声（余韻の重なり用）
+  smp.patch(out);
+  return smp;
+}
+
+float[] renderPianoNote(float f0, float dur, float amp) {
+  int n = (int)((dur + RELEASE_TAIL) * SAMPLE_RATE);
+  float[] buf = new float[n];
+
+  // 複弦構成（実ピアノ: 高音ほど弦が多い）。デチューンはcent単位
+  float[] cents;
+  if      (f0 >= 350f) cents = new float[] { 0f, 1.2f, -0.8f };
+  else if (f0 >= 150f) cents = new float[] { 0f, 1.0f };
+  else                 cents = new float[] { 0f };
+
+  float p       = 0.9f + 0.5f * constrain((f0 - 110f) / 770f, 0f, 1f);  // 倍音ロールオフ
+  float B       = 0.0002f * pow(f0 / 261.6f, 0.8f);                     // インハーモニシティ
+  float T60     = constrain(6.0f * pow(261.6f / f0, 0.7f), 0.8f, 8.0f); // 残響長(音域依存)
+  float tauBase = T60 / 6.9f;
+  float stringAmp = amp / cents.length;
+
+  for (int s = 0; s < cents.length; s++) {
+    float fs = f0 * pow(2f, cents[s] / 1200f);
+    for (int h = 1; h <= 10; h++) {
+      float fh = h * fs * sqrt(1f + B * h * h);   // インハーモニシティ補正周波数
+      if (fh > SAMPLE_RATE * 0.45f) break;
+      float ah   = stringAmp / pow(h, p);
+      float tauH = tauBase / (1f + 0.6f * (h - 1));  // 高次倍音ほど速く減衰
+      float w    = TWO_PI * fh / SAMPLE_RATE;
+      for (int i = 0; i < n; i++) {
+        float t   = i / SAMPLE_RATE;
+        float env = 0.3f * exp(-t / 0.12f) + 0.7f * exp(-t / tauH);  // 2段階減衰
+        buf[i] += ah * env * sin(w * i);
+      }
+    }
+  }
+
+  // ハンマーノイズ: 最初の15ms、1次LPF(fc=f0*8上限8k)、指数減衰
+  float fc = min(f0 * 8f, 8000f);
+  float a  = 1f - exp(-TWO_PI * fc / SAMPLE_RATE);
+  float lp = 0f;
+  int nNoise = (int)(0.015f * SAMPLE_RATE);
+  randomSeed(12345);  // 打鍵音の再現性
+  for (int i = 0; i < nNoise && i < n; i++) {
+    float t = i / SAMPLE_RATE;
+    float x = random(-1f, 1f);
+    lp += a * (x - lp);
+    buf[i] += amp * 0.15f * lp * exp(-t / 0.008f);
+  }
+
+  // アタック(3ms)とダンパーリリース(dur経過後 τ=0.15s)
+  for (int i = 0; i < n; i++) {
+    float t = i / SAMPLE_RATE;
+    buf[i] *= (1f - exp(-t / 0.003f));
+    if (t > dur) buf[i] *= exp(-(t - dur) / 0.15f);
+  }
+
+  // クリップ防止
+  float peak = 0f;
+  for (int i = 0; i < n; i++) peak = max(peak, abs(buf[i]));
+  if (peak > 0.98f) {
+    float g = 0.98f / peak;
+    for (int i = 0; i < n; i++) buf[i] *= g;
+  }
+  return buf;
+}
+\end{lstlisting}
+
 
 \section{ピアノ音再生用Processingプログラム}
 \label{sec:code-pde}
