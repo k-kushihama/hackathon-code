@@ -19,8 +19,8 @@
 \begin{itembox}[c]{チーム9}
 \centering
 \begin{tabular}{ll}
-手代木 巧（24G1098）&
-久家 力孔（24G1052）\\
+久家 力孔（24G1052）&
+手代木 巧（24G1098）\\
 渡邊 乃斗（24G1145）&
 家田 祐希（25G1010）\\
 木下 遼介（25G1043）&\\
@@ -86,52 +86,7 @@
 
 \begin{figure}[H]
 \begin{center}
-\resizebox{\linewidth}{!}{%
-\begin{tikzpicture}[
-  every node/.style={draw, rounded corners=2pt, align=center, font=\small,
-                     minimum height=1.8em, inner sep=3pt},
-  level 1/.style={sibling distance=42mm, level distance=16mm},
-  level 2/.style={sibling distance=24mm, level distance=14mm},
-  level 3/.style={sibling distance=22mm, level distance=14mm},
-  edge from parent/.style={draw, -Stealth},
-  grow=down
-]
-\node {オーケストラシステム}
-  child { node {Processing}
-    child { node[text width=3.2cm] {音色・エフェクト\\付与関数} }
-    child { node[text width=2.6cm] {音声再生関数} }
-    child { node[text width=3.2cm] {演奏側との\\通信関数}
-      child { node[text width=3.6cm, font=\scriptsize] {楽器音on/off切替用\\赤外線管理プログラム} }
-    }
-  }
-  child { node[text width=2.8cm] {Arduino\\（親機）}
-    child { node[text width=3cm] {演奏側との\\同期プロトコル}
-      child { node[text width=3.4cm, font=\scriptsize] {楽譜進行用\\赤外線管理プログラム} }
-    }
-    child { node[text width=2.6cm] {同期用\\ハードウェア}
-      child { node[font=\scriptsize] {赤外線ライト} }
-    }
-  }
-  child { node[text width=2.8cm] {Arduino\\（子機）}
-    child { node[text width=2.4cm] {楽譜情報}
-      child { node[text width=2.8cm, font=\scriptsize] {音符データ\\（高さ・強さ・長さ）} }
-      child { node[font=\scriptsize] {音符配列} }
-    }
-    child { node[text width=3cm] {Processingとの\\通信関数} }
-    child { node[text width=2.8cm] {指揮側との\\同期プロトコル}
-      child { node[text width=2.8cm, font=\scriptsize] {楽譜進行\\プログラム} }
-      child { node[text width=2.8cm, font=\scriptsize] {楽器音管理\\プログラム} }
-    }
-    child { node[text width=2.4cm] {同期用\\ハードウェア}
-      child { node[font=\scriptsize] {IRセンサ} }
-    }
-    child { node[text width=2.4cm] {LCD表示関数}
-      child { node[text width=2.8cm, font=\scriptsize] {かえるの\\アニメーション\\表示プログラム} }
-      child { node[text width=2.4cm, font=\scriptsize] {歌詞表示用\\プログラム} }
-    }
-  };
-\end{tikzpicture}%
-}% resizebox
+\includegraphics[width=\linewidth]{PBSlast.png}
 \end{center}
 \caption{製品分解構造（PBS）}
 \label{fig:pbs}
@@ -343,7 +298,7 @@ e(t) = 0.3\,e^{-t/0.12} + 0.7\,e^{-t/\tau_h}, \qquad
 \end{equation}
 とした．$\tau_1$は基本音の減衰時定数であり，残響の長さが低音ほど長くなるように音域から決める．式(\ref{eq:envelope})の$\tau_h$は次数とともに小さくなるので，高次倍音ほど速く消える．これは実際のピアノで打鍵直後は明るく，時間とともに丸い音色に変わっていく振る舞いに対応する．このほか，実機のピアノが1音あたり複数の弦を持つことを模して，音域に応じて1〜3本の弦をセント単位でわずかにずらして重ねた．さらに打鍵の瞬間のハンマーノイズとして，最初の15\,msだけローパスフィルタを通した雑音を加え，立ち上がり3\,msのアタックと，音長経過後に時定数0.15\,sで減衰するダンパーリリースを付けている．
 
-もう1つの課題は発音遅延である．上記の合成をすべて発音のたびに計算すると，波形生成に時間がかかり演奏に間に合わないおそれがある．そこで，楽譜に登場する6種類の音高と2種類の音長の組をProcessingの起動時にすべて波形として生成し，MinimのSamplerにキャッシュしておく方式にした．演奏中はキャッシュ済みSamplerのtrigger()を呼ぶだけなので，発音時の処理は音源データの再生と同じで済む．Samplerは同時6声まで発音できる設定とし，前の音の余韻と次の音が自然に重なるようにした．未登録の音高が届いた場合はその場で生成してキャッシュに加える安全網も設けている．なお，このピアノ音源は当初オルガン風の持続音で仮実装しており，第9週に本節で述べた合成方式へ差し替えた．差し替え時には楽譜で使う全音高について試聴による検証を行い，全ケースで楽器音として問題ないことを確認している．波形生成部のコードは付録\ref{sec:code-pde}に示す．
+もう1つの課題は発音遅延である．上記の合成をすべて発音のたびに計算すると，波形生成に時間がかかり演奏に間に合わないおそれがある．そこで，楽譜に登場する6種類の音高と2種類の音長の組をProcessingの起動時にすべて波形として生成し，MinimのSamplerにキャッシュしておく方式にした．演奏中はキャッシュ済みSamplerのtrigger()を呼ぶだけなので，発音時の処理は音源データの再生と同じで済む．Samplerは同時6声まで発音できる設定とし，前の音の余韻と次の音が自然に重なるようにした．未登録の音高が届いた場合はその場で生成してキャッシュに加える安全網も設けている．なお，このピアノ音源は当初オルガン風の持続音で仮実装しており，第9週に本節で述べた合成方式へ差し替えた．差し替え時には楽譜で使う全音高について試聴による検証を行い，全ケースで楽器音として問題ないことを確認している．各波形生成部のコードは付録\ref{sec:codep-pde},\ref{sec:codef-pde},\ref{sec:codet-pde},\ref{sec:coded-pde},に示す．
 
 \subsection{演奏進行の不具合修正}
 \label{sec:bugfix}
@@ -516,7 +471,7 @@ MOP5 & 歌詞・アニメーション同期遅延 & 100\,ms以内 & LCD統合が
 
 \subsubsection{LCD同期の評価結果}
 
-LCD表示と演奏の同期に関する評価結果を表\ref{tab:lcd-result}に示す．同期誤差は目標100\,ms以内に対して約50.1\,msであり，十分な精度で同期できている．
+LCD表示と演奏の同期に関する評価結果を表\ref{tab:lcd-result}に示す．同期誤差は目標55\,ms以内に対して約50.1\,msであり，十分な精度で同期できている．
 
 \begin{table}[H]
 \caption{LCD同期の評価結果}
@@ -527,7 +482,7 @@ LCD表示と演奏の同期に関する評価結果を表\ref{tab:lcd-result}に
 \hline
 評価項目 & 目標 & 結果 & 判定 \\
 \hline
-LCD同期誤差 & 約100\,ms以内 & 約50.1\,ms & 達成 \\
+LCD同期誤差 & 約55\,ms以内 & 約50.1\,ms & 達成 \\
 \hline
 \end{tabular}
 \end{center}
@@ -535,7 +490,7 @@ LCD同期誤差 & 約100\,ms以内 & 約50.1\,ms & 達成 \\
 
 \subsubsection{全体評価}
 
-表\ref{tab:overall-result}に評価分類ごとの総合判定を示す．同期・通信制御では赤外線通信誤差平均28\,ms（目標30\,ms以内），受信率100\,\%（目標95\,\%以上）と全項目で目標を達成した．LCD表示同期も約50.1\,msと目標100\,ms以内を達成した．音色表現は過半数の評価者から良好と判定されたが，トランペットとキックの評価平均が3.6台にとどまっており，改善の余地がある．
+表\ref{tab:overall-result}に評価分類ごとの総合判定を示す．同期・通信制御では赤外線通信誤差平均28\,ms（目標30\,ms以内），受信率100\,\%（目標95\,\%以上）と全項目で目標を達成した．LCD表示同期も約50.1\,msと目標55\,ms以内を達成した．音色表現は過半数の評価者から良好と判定されたが，トランペットとキックの評価平均が3.6台にとどまっており，改善の余地がある．
 
 \begin{table}[H]
 \caption{全体評価}
@@ -599,7 +554,7 @@ LCD表示の同期誤差は約50.1\,msと目標を十分に下回ったが，演
 
 報告者は，倍音の加算合成と事前レンダリングによるピアノ音源，ドラム子機のプログラム，可変抵抗によるテンポ管理を実装し，親機と子機のtick数不整合による周期的な音抜けと，音の余韻による休符抜けの2つの不具合を修正した．
 
-7月13日に実施した定量評価により，演奏タイミング誤差平均28\,ms（目標30\,ms以内），信号受信率10000回中10000回成功（100\,\%），LCD同期誤差約50.1\,ms（目標100\,ms以内）と主要な到達目標を全て達成した．同期・通信・LCD表示は全項目で目標を達成し，音色表現も過半数の評価者から良好と判定された．Sony SIRC 12ビットの採用によりフレーム長を最小化しつつ，屋内環境で十分な通信品質を確保でき，赤外線通信による輪唱システムは有効であることが実証された．
+7月13日に実施した定量評価により，演奏タイミング誤差平均28\,ms（目標30\,ms以内），信号受信率10000回中10000回成功（100\,\%），LCD同期誤差約50.1\,ms（目標55\,ms以内）と主要な到達目標を全て達成した．同期・通信・LCD表示は全項目で目標を達成し，音色表現も過半数の評価者から良好と判定された．Sony SIRC 12ビットの採用によりフレーム長を最小化しつつ，屋内環境で十分な通信品質を確保でき，赤外線通信による輪唱システムは有効であることが実証された．
 
 今後の課題として，トランペットとキックの音色改善（倍音構造の調整），演奏中の処理負荷増大時のLCD表示遅延の検証，tick番号を用いた譜面位置の自己修復，およびテンポに追従する音長制御が挙げられる．
 
@@ -688,7 +643,7 @@ LCD表示の同期誤差は約50.1\,msと目標を十分に下回ったが，演
 親機のスケッチを以下に示す．報告者の担当箇所は，可変抵抗によるテンポ管理を行うhandleTempoPot()と，子機の状態表示LEDの制御である．
 
 \begin{lstlisting}
-#define DECODE_NEC
+#define DECODE_SONY
 #define IR_SEND_PIN 3
 #include <IRremote.hpp>
 
@@ -711,7 +666,7 @@ const int SCORE_TICKS = 32;
 const int TEMPO_MIN_BPM = 60;
 const int TEMPO_MAX_BPM = 150;
 const unsigned long POT_READ_INTERVAL_MS = 50;
-// NOTE: address フィールドは tickCount下位8bit用に転用するため、固定アドレスとしては未使用
+// Sony SIRC 12bit: address(5bit) + command(7bit)。mask は command に載せる
 
 bool isActive[NUM_CHILDREN]    = {false, false, false, false}; // 参加済みフラグ
 long joinTick[NUM_CHILDREN]    = {-1, -1, -1, -1};              // 参加予定tick（未予約は-1）
@@ -914,6 +869,25 @@ void handleStartButton() {
   prevBtnStart = s;
 }
 
+void doTest() {
+  const long TEST_COUNT = 10000;
+  const int SEND_INTERVAL_MS = 30;
+  Serial.println("[TEST] start 10000 sends (mask=0x0F, interval=30ms)");
+  for (long i = 0; i < TEST_COUNT; i++) {
+    digitalWrite(PIN_SYNC_OUT, HIGH);
+    delayMicroseconds(50);
+    digitalWrite(PIN_SYNC_OUT, LOW);
+    IrSender.sendSony(0, 0x0F, 0);
+    if (i % 1000 == 0) {
+      Serial.print("[TEST] ");
+      Serial.print(i);
+      Serial.println("/10000");
+    }
+    delay(SEND_INTERVAL_MS);
+  }
+  Serial.println("[TEST] done 10000/10000");
+}
+
 void handleSerialCommand() {
   while (Serial.available()) {
     char c = (char)Serial.read();
@@ -925,6 +899,8 @@ void handleSerialCommand() {
       doStart();
     } else if (c == 'r' || c == 'R') {
       doReset();
+    } else if (c == 't' || c == 'T') {
+      doTest();
     } else if (c == '?') {
       printHelp();
     }
@@ -978,26 +954,23 @@ void tick() {
     delayMicroseconds(50);
     digitalWrite(PIN_SYNC_OUT, LOW);
 
-    // address に tickCount の下位8bit を乗せて送る。
-    // 子機側はこれを「正解の位置」として受け取り、localPos を補正する
-    // (IR受信失敗による同期ずれを毎tick自己修復できる)。
-    uint8_t tickLow = (uint8_t)(tickCount & 0xFF);
-    IrSender.sendNEC(tickLow, mask, 0);
+    IrSender.sendSony(0, mask, 0);
   }
 }
+
 \end{lstlisting}
 
 \section{子機Arduinoのスケッチ}
 \label{sec:code-ko}
 
-ピアノ・フルート・トランペット・ドラムの4子機で共通のスケッチを以下に示す．書き込み時にchildIdを機体ごとに変更する．
+ピアノ・フルート・トランペット・ドラムの4子機で共通のArduinoスケッチを以下に示す．書き込み時にchildIdを機体ごとに変更する．
 
 \begin{lstlisting}
-#define DECODE_NEC
+#define DECODE_SONY
 #include <IRremote.hpp>
 
 // hack_oya_kai.ino 用プロトコル対応版:
-//   IrSender.sendNEC(IR_ADDRESS=0x00, mask, 0) を受信。
+//   IrSender.sendSony(0, mask, 0) を受信（Sony SIRC 12bit, ~17ms）。
 //   mask の bit(childId) が立っているtickだけ「自分の出番」として
 //   localPos をカウントアップし、その位置の音をホストへ送信する。
 //   親機側にループの概念がないが、メロディ機 (childId != DRUM_CHILD_ID)
@@ -1039,6 +1012,14 @@ const String DRUM_NOTE = "C2";
 
 // 自分の出番が来た回数 (= 親機のtickCountに相当)。受信したtickごとに進む。
 long localPos = -1;  // -1 = まだ一度も自分の出番が来ていない
+
+// テストモード: 't' で ON。受信カウント＋レイテンシCSV出力のみ行う
+bool testMode = false;
+long testRecvCount = 0;
+unsigned long testLatencyMin = 0xFFFFFFFF;
+unsigned long testLatencyMax = 0;
+unsigned long testLatencySum = 0;
+unsigned long lastTestRecvMs = 0;
 
 unsigned long lastReceiveMs = 0;
 unsigned long lastIntervalMs = 250;  // 双子音化区間の半tick遅延に使う
@@ -1083,16 +1064,75 @@ void setup() {
   printReady();
 }
 
+void handleChildSerial() {
+  while (Serial.available()) {
+    char c = (char)Serial.read();
+    if (c == '\r' || c == '\n' || c == ' ') continue;
+    if (c == 't' || c == 'T') {
+      testMode = !testMode;
+      testRecvCount = 0;
+      testLatencyMin = 0xFFFFFFFF;
+      testLatencyMax = 0;
+      testLatencySum = 0;
+      lastTestRecvMs = 0;
+      if (testMode) {
+        Serial.println("[TEST] receive mode ON — waiting for IR...");
+        Serial.println("seq,latency_us");
+      } else {
+        Serial.println("[TEST] receive mode OFF");
+      }
+    }
+  }
+}
+
 void loop() {
+  handleChildSerial();
+
+  // テスト完了検知: 最後の受信から3秒経ったらサマリーを出力して終了
+  if (testMode && testRecvCount > 0 && (millis() - lastTestRecvMs > 3000)) {
+    Serial.println("---");
+    Serial.print("[TEST] received: ");
+    Serial.print(testRecvCount);
+    Serial.println("/10000");
+    Serial.print("[TEST] min=");
+    Serial.print(testLatencyMin);
+    Serial.print("us max=");
+    Serial.print(testLatencyMax);
+    Serial.print("us avg=");
+    Serial.print(testLatencySum / testRecvCount);
+    Serial.println("us");
+    long lost = 10000 - testRecvCount;
+    Serial.print("[TEST] lost: ");
+    Serial.println(lost);
+    testMode = false;
+  }
+
   if (!IrReceiver.decode()) return;
 
   // decode直後にデータを退避し、即座にresumeする。
   // delay()中もIR受信を継続させ、tick取りこぼしを防ぐ。
   uint8_t protocol = IrReceiver.decodedIRData.protocol;
-  uint8_t mask = (protocol == NEC) ? IrReceiver.decodedIRData.command : 0;
+  uint8_t mask = (protocol == SONY) ? IrReceiver.decodedIRData.command : 0;
   IrReceiver.resume();
 
-  if (protocol == NEC) {
+  if (protocol == SONY) {
+    if (testMode) {
+      testRecvCount++;
+      lastTestRecvMs = millis();
+      unsigned long recvUs = micros();
+      unsigned long riseUs = syncRiseUs;
+      unsigned long lat = (riseUs != 0) ? (recvUs - riseUs) : 0;
+      if (lat > 0) {
+        if (lat < testLatencyMin) testLatencyMin = lat;
+        if (lat > testLatencyMax) testLatencyMax = lat;
+        testLatencySum += lat;
+      }
+      Serial.print(testRecvCount);
+      Serial.print(',');
+      Serial.println(lat);
+      return;
+    }
+
     if (mask & (1 << childId)) {
       unsigned long recvUs = micros();
       unsigned long riseUs = syncRiseUs;  // ISRで記録された値をコピー
@@ -1149,6 +1189,7 @@ void loop() {
     }
   }
 }
+
 \end{lstlisting}
 
 \section{ピアノ音再生用Processingプログラム}
@@ -1168,6 +1209,7 @@ String currentNote = "";
 int currentPos = -1;  // 親機が割り当ててきた localPos (デバッグ表示用)
 
 // ---- グランドピアノ音源（音源部のみ差し替え。シリアル受信の仕組みは既存のまま） ----
+// hack_koP2saisei_pianotest.pde と同一の合成アルゴリズム・同一パラメータ（音響検証7/7合格）。
 // 方式: 既知ピッチは起動時にプリレンダしてSamplerにキャッシュ、発音はtrigger()のみ。
 HashMap<String, Sampler> pianoCache = new HashMap<String, Sampler>();
 Sampler lastSampler = null;  // 直近に鳴らした音。R受信時にstop()で即打ち切る（旧noteOff()と同じ役割）
@@ -1262,7 +1304,7 @@ String cacheKey(String pitch, float duration, float amplitude) {
   return pitch + "_" + nf(duration, 0, 2) + "_" + nf(amplitude, 0, 2);
 }
 
-// ---- グランドピアノ音源 ------
+// ---- グランドピアノ音源（pianotestから無改変移植。amplitudeのみ引数化） ------
 Sampler buildSampler(String pitch, float dur, float amp) {
   float f0 = Frequency.ofPitch(pitch).asHz();
   float[] data = renderPianoNote(f0, dur, amp);
@@ -1337,52 +1379,31 @@ float[] renderPianoNote(float f0, float dur, float amp) {
 \end{lstlisting}
 
 
-\section{ピアノ音再生用Processingプログラム}
-\label{sec:code-pde}
+\section{フルート音再生用Processingプログラム}
+\label{sec:codef-pde}
 
-ピアノ音の合成と再生を行うProcessingのプログラムを以下に示す．
+フルート音の合成と再生を行うProcessingのプログラムを以下に示す．
 
 \begin{lstlisting}[language=Java]
 import processing.serial.*;
 Serial port;
 import ddf.minim.*;
 import ddf.minim.ugens.*;
-import java.util.HashMap;
+Waveform currentWaveform;
 Minim minim;
 AudioOutput out;
 String currentNote = "";
 int currentPos = -1;  // 親機が割り当ててきた localPos (デバッグ表示用)
 
-// ---- グランドピアノ音源（音源部のみ差し替え。シリアル受信の仕組みは既存のまま） ----
-// 方式: 既知ピッチは起動時にプリレンダしてSamplerにキャッシュ、発音はtrigger()のみ。
-HashMap<String, Sampler> pianoCache = new HashMap<String, Sampler>();
-Sampler lastSampler = null;  // 直近に鳴らした音。R受信時にstop()で即打ち切る（旧noteOff()と同じ役割）
-final float SAMPLE_RATE  = 44100f;
-final float RELEASE_TAIL = 0.8f;   // ノート長に加えてレンダリングする余韻(秒)
-
 void setup() {
   size(512, 200);
   minim = new Minim(this);
   out = minim.getLineOut();
-
-  // 楽譜(hack-koP2.ino)で使うピッチ×2種の長さを起動時にプリレンダリング。
-  // 未知のピッチ/長さ/音量が来ても playNote 側の安全網で都度生成される。
-  // ポートを開く前に済ませ、プリレンダ中のシリアル取りこぼしを避ける。
-  String[] knownPitches = { "C4", "D4", "E4", "F4", "G4", "A4" };
-  float[] knownDurs = { 0.40f, 0.20f };
-  long t0 = millis();
-  println("ピアノ音源をプリレンダリング中...");
-  for (String pitch : knownPitches) {
-    for (float dur : knownDurs) {
-      String key = cacheKey(pitch, dur, 0.60f);
-      pianoCache.put(key, buildSampler(pitch, dur, 0.60f));
-      println("  " + key + " OK");
-    }
-  }
-  println("プリレンダ完了: " + pianoCache.size() + "音 / " + (millis() - t0) + "ms");
-
+  out.setTempo(120);
+  // フルートは基音が支配的で高次倍音が弱い。第2倍音を少しだけ加える。
+  currentWaveform = WavetableGenerator.gen10(4096, new float[] { 1.0f, 0.18f, 0.06f, 0.02f });
   // portは各自変えて．
-  port = new Serial(this, "/dev/cu.usbserial-A5069RR4", 115200);
+  port = new Serial(this, "/dev/cu.usbmodem64E8335D22342", 115200);
   port.clear();
   port.bufferUntil('\n');
 }
@@ -1420,106 +1441,690 @@ void serialEvent(Serial p) {
   if (parts.length >= 4) {
     currentPos = int(parts[3]);
   }
-  // R は休符: 直前の音の余韻が次のtickまで残らないよう、即stop()で打ち切る。
-  // (NOTE_DURATION_DEFAULT=0.40s は tick間隔(120BPMで0.25s)より長いので、
-  //  R が来た時点で前音がまだ鳴っているのを止めないと休符に聞こえない。)
-  if (pitch.equals("R")) {
-    if (lastSampler != null) {
-      lastSampler.stop();
-      lastSampler = null;
-    }
-    return;
-  }
+  if (pitch.equals("R")) return;
   playNote(pitch, duration, amplitude);
 }
 
 void playNote(String pitch, float duration, float amplitude) {
-  String key = cacheKey(pitch, duration, amplitude);
-  Sampler smp = pianoCache.get(key);
-  if (smp == null) {  // 安全網: 未キャッシュの組み合わせは都度生成してキャッシュ
-    smp = buildSampler(pitch, duration, amplitude);
-    pianoCache.put(key, smp);
+  float freq = Frequency.ofPitch(pitch).asHz();
+  out.playNote(0, duration, new FluteInstrument(freq, amplitude, currentWaveform));
+}
+
+class FluteInstrument implements Instrument {
+  Oscil wave;
+  ADSR ampEnv;
+  Oscil vib;
+  Summer freqSum;
+  Constant baseFreq;
+  float maxAmp;
+
+  FluteInstrument(float frequency, float maxAmp, Waveform wf) {
+    this.maxAmp = maxAmp;
+    freqSum = new Summer();
+    baseFreq = new Constant(frequency);
+    // フルートらしい穏やかなビブラート (約5Hz、±周波数の深さ)。
+    vib = new Oscil(5, frequency * 0.006f, Waves.SINE);
+    baseFreq.patch(freqSum);
+    vib.patch(freqSum);
+    // 振幅はADSR側でかけるので、ここでは 1.0 にしておく (0だと無音になる)。
+    wave = new Oscil(frequency, 1.0f, wf);
+    freqSum.patch(wave.frequency);
+    // ピアノ的な瞬時アタック→減衰ではなく、ソフトに立ち上がり保持するエンベロープ。
+    // ADSR(maxAmp, attack, decay, sustainLevel, release)
+    ampEnv = new ADSR(this.maxAmp, 0.08f, 0.05f, this.maxAmp * 0.9f, 0.12f);
+    wave.patch(ampEnv);
   }
-  smp.trigger();
-  lastSampler = smp;
+
+  void noteOn(float duration) {
+    ampEnv.noteOn();
+    ampEnv.patch(out);
+  }
+
+  void noteOff() {
+    ampEnv.noteOff();
+    ampEnv.unpatchAfterRelease(out);
+  }
+}
+\end{lstlisting}
+
+\section{トランペット音再生用Processingプログラム}
+\label{sec:codet-pde}
+
+トランペット音の合成と再生を行うProcessingのプログラムを以下に示す．
+
+\begin{lstlisting}[language=Java]
+import processing.serial.*;
+Serial port;
+import ddf.minim.*;
+import ddf.minim.ugens.*;
+
+// 1. 変数の宣言
+Waveform lowWave;
+Waveform midWave;
+Waveform highWave;
+
+Minim minim;
+AudioOutput out;
+String currentNote = "";
+
+void setup() {
+  size(512, 200);
+  pixelDensity(1);
+  minim = new Minim(this);
+  out = minim.getLineOut();
+  out.setTempo(120);
+
+
+  lowWave   = WavetableGenerator.gen10(4096, new float[] { 1.0f, 0.72f, 0.5f, 0.3f, 0.1f });
+  midWave   = WavetableGenerator.gen10(4096, new float[] { 1.0f, 0.43f, 0.3f, 0.15f, 0.05f });
+  highWave  = WavetableGenerator.gen10(4096, new float[] { 1.0f, 0.028f, 0.01f });
+
+  // シリアルポート設定
+  port = new Serial(this, "/dev/cu.usbmodem64E83364FFA82", 115200);
+  port.clear();
+  port.bufferUntil('\n');
 }
 
-String cacheKey(String pitch, float duration, float amplitude) {
-  return pitch + "_" + nf(duration, 0, 2) + "_" + nf(amplitude, 0, 2);
+void draw() {
+  background(0);
+  stroke(255);
+  for (int i = 0; i < out.bufferSize() - 1; i++) {
+    line(i, 50 + out.left.get(i)*50, i+1, 50 + out.left.get(i+1)*50);
+  }
+  fill(255);
+  text("note: " + currentNote, 10, 180);
 }
 
-// ---- グランドピアノ音源 ------
-Sampler buildSampler(String pitch, float dur, float amp) {
-  float f0 = Frequency.ofPitch(pitch).asHz();
-  float[] data = renderPianoNote(f0, dur, amp);
-  MultiChannelBuffer mcb = new MultiChannelBuffer(data.length, 1);
-  mcb.setChannel(0, data);
-  Sampler smp = new Sampler(mcb, SAMPLE_RATE, 6);  // 最大6声（余韻の重なり用）
-  smp.patch(out);
-  return smp;
+void serialEvent(Serial p) {
+  String inString = p.readStringUntil('\n');
+  if (inString == null) return;
+  inString = trim(inString);
+  if (inString.length() == 0) return;
+  currentNote = inString;
+
+  String[] parts = split(inString, ',');
+
+  if (parts.length < 3) {
+    if (inString.equals("C2")) {
+      println("🥁 ドラム音(C2)を受信");
+    }
+    return;
+  }
+
+  String pitch = parts[0];
+  if (pitch.equals("R")) {
+    println("♪ [休符]");
+    return;
+  }
+
+  float duration  = float(parts[1]);
+  float amplitude = float(parts[2]);
+
+  playNote(pitch, duration, amplitude);
 }
 
-float[] renderPianoNote(float f0, float dur, float amp) {
-  int n = (int)((dur + RELEASE_TAIL) * SAMPLE_RATE);
-  float[] buf = new float[n];
+void playNote(String pitch, float duration, float amplitude) {
+  try {
+    float freq = Frequency.ofPitch(pitch).asHz();
 
-  // 複弦構成（実ピアノ: 高音ほど弦が多い）。デチューンはcent単位
-  float[] cents;
-  if      (f0 >= 350f) cents = new float[] { 0f, 1.2f, -0.8f };
-  else if (f0 >= 150f) cents = new float[] { 0f, 1.0f };
-  else                 cents = new float[] { 0f };
+    // 3. 周波数に応じて3つのウェーブテーブルの値を正しく出し分け
+    Waveform selectedWave = midWave;
+    if (freq < 550)       selectedWave = lowWave;
+    else if (freq > 900)  selectedWave = highWave;
 
-  float p       = 0.9f + 0.5f * constrain((f0 - 110f) / 770f, 0f, 1f);  // 倍音ロールオフ
-  float B       = 0.0002f * pow(f0 / 261.6f, 0.8f);                     // インハーモニシティ
-  float T60     = constrain(6.0f * pow(261.6f / f0, 0.7f), 0.8f, 8.0f); // 残響長(音域依存)
-  float tauBase = T60 / 6.9f;
-  float stringAmp = amp / cents.length;
+    out.playNote(0, duration, new TrumpetInstrument(freq, amplitude, selectedWave));
+  } catch (Exception e) {
+    // 安全弁
+  }
+}
 
-  for (int s = 0; s < cents.length; s++) {
-    float fs = f0 * pow(2f, cents[s] / 1200f);
-    for (int h = 1; h <= 10; h++) {
-      float fh = h * fs * sqrt(1f + B * h * h);   // インハーモニシティ補正周波数
-      if (fh > SAMPLE_RATE * 0.45f) break;
-      float ah   = stringAmp / pow(h, p);
-      float tauH = tauBase / (1f + 0.6f * (h - 1));  // 高次倍音ほど速く減衰
-      float w    = TWO_PI * fh / SAMPLE_RATE;
-      for (int i = 0; i < n; i++) {
-        float t   = i / SAMPLE_RATE;
-        float env = 0.3f * exp(-t / 0.12f) + 0.7f * exp(-t / tauH);  // 2段階減衰
-        buf[i] += ah * env * sin(w * i);
+class TrumpetInstrument implements Instrument {
+  Oscil wave;
+  Line ampEnv;
+  Oscil vib;
+  Summer freqSum;
+  Constant baseFreq;
+  float maxAmp;
+
+  TrumpetInstrument(float frequency, float maxAmp, Waveform wf) {
+    this.maxAmp = maxAmp;
+    freqSum = new Summer();
+    baseFreq = new Constant(frequency);
+
+    vib = new Oscil(5.5f, 3.0f, Waves.SINE);
+    baseFreq.patch(freqSum);
+    vib.patch(freqSum);
+
+    wave = new Oscil(frequency, 0, wf);
+    freqSum.patch(wave.frequency);
+
+    ampEnv = new Line();
+    ampEnv.patch(wave.amplitude);
+  }
+
+  void noteOn(float duration) {
+    float attackTime = 0.05f;
+    ampEnv.activate(attackTime, 0, this.maxAmp);
+    wave.patch(out);
+  }
+
+  void noteOff() {
+    float fadeOutTime = 0.03f;
+    ampEnv.activate(fadeOutTime, this.maxAmp, 0);
+
+    // 音が消えるのを待ってから安全に切断
+    out.setNoteOffset(fadeOutTime);
+    wave.unpatch(out);
+  }
+}
+\end{lstlisting}
+
+\section{ドラム音再生用Processingプログラム}
+\label{sec:coded-pde}
+
+ドラム音の合成と再生を行うProcessingのプログラムを以下に示す．
+
+\begin{lstlisting}[language=Java]
+import ddf.minim.*;
+import ddf.minim.ugens.*;
+import processing.serial.*;
+
+Minim minim;
+AudioOutput out;
+Serial arduino;
+
+// ==================================================
+// シリアル設定
+// ==================================================
+
+final int SERIAL_PORT_INDEX = 0;   // 環境に合わせて変更
+final int BAUD_RATE = 115200;
+
+// ==================================================
+// キック
+// ==================================================
+
+Oscil kickOsc;
+Multiplier kickAmp;
+
+Oscil kickHarmonic;
+Multiplier kickHarmonicAmp;
+
+// ==================================================
+// シンバル
+// ==================================================
+
+Noise cymNoise;
+Multiplier cymNoiseAmp;
+
+Oscil cymMetal1;
+Oscil cymMetal2;
+Oscil cymMetal3;
+
+Multiplier cymMetalAmp1;
+Multiplier cymMetalAmp2;
+Multiplier cymMetalAmp3;
+
+// ==================================================
+// 自動演奏
+// ==================================================
+
+boolean autoPlay = false;
+int lastTriggerTime = 0;
+int autoStep = 0;
+
+// ==================================================
+// 初期設定
+// ==================================================
+
+void setup() {
+  size(700, 260);
+
+  minim = new Minim(this);
+  out = minim.getLineOut(Minim.MONO, 512);
+
+  setupKick();
+  setupCymbal();
+  setupSerial();
+
+  textSize(18);
+}
+
+void setupKick() {
+  kickOsc = new Oscil(48.0, 1.0, Waves.SINE);
+  kickAmp = new Multiplier(0.0);
+  kickOsc.patch(kickAmp).patch(out);
+
+  kickHarmonic = new Oscil(96.0, 1.0, Waves.SINE);
+  kickHarmonicAmp = new Multiplier(0.0);
+  kickHarmonic.patch(kickHarmonicAmp).patch(out);
+}
+
+void setupCymbal() {
+  cymNoise = new Noise(1.0, Noise.Tint.WHITE);
+  cymNoiseAmp = new Multiplier(0.0);
+  cymNoise.patch(cymNoiseAmp).patch(out);
+
+  cymMetal1 = new Oscil(431.0, 1.0, Waves.SQUARE);
+  cymMetal2 = new Oscil(647.0, 1.0, Waves.SQUARE);
+  cymMetal3 = new Oscil(913.0, 1.0, Waves.SQUARE);
+
+  cymMetalAmp1 = new Multiplier(0.0);
+  cymMetalAmp2 = new Multiplier(0.0);
+  cymMetalAmp3 = new Multiplier(0.0);
+
+  cymMetal1.patch(cymMetalAmp1).patch(out);
+  cymMetal2.patch(cymMetalAmp2).patch(out);
+  cymMetal3.patch(cymMetalAmp3).patch(out);
+}
+
+void setupSerial() {
+  println("=== Serial Ports ===");
+  printArray(Serial.list());
+
+  final String SERIAL_PORT_NAME = "/dev/cu.usbmodem34B7DA64C6002";
+
+  arduino = new Serial(this, SERIAL_PORT_NAME, BAUD_RATE);
+  arduino.bufferUntil('\n');
+}
+
+// ==================================================
+// 画面描画
+// ==================================================
+
+void draw() {
+  background(245);
+  fill(0);
+
+  text("Keyboard test:", 30, 40);
+  text("1: Kick   2: Cymbal", 30, 70);
+  text("A: Auto play ON/OFF", 30, 100);
+  text("Arduino serial: 1 = Kick, 2 = Cymbal", 30, 130);
+  text("Auto: " + (autoPlay ? "ON" : "OFF"), 30, 170);
+
+  if (autoPlay && millis() - lastTriggerTime >= 500) {
+    lastTriggerTime = millis();
+
+    if (autoStep == 0) {
+      playKickSound();
+    } else if (autoStep == 1) {
+      playCymbalSound();
+    } else if (autoStep == 2) {
+      playKickSound();
+    } else if (autoStep == 3) {
+      playCymbalSound();
+    }
+
+    autoStep = (autoStep + 1) % 4;
+  }
+}
+
+// ==================================================
+// シリアル受信
+// ==================================================
+
+void serialEvent(Serial port) {
+  String receivedText = port.readStringUntil('\n');
+
+  if (receivedText == null) return;
+
+  receivedText = trim(receivedText);
+  if (receivedText.length() == 0) return;
+
+  println("recv: " + receivedText);
+
+  try {
+    int note = Integer.parseInt(receivedText);
+
+    if (note == 1) {
+      playKickSound();
+    } else if (note == 2) {
+      playCymbalSound();
+    }
+  }
+  catch (NumberFormatException e) {
+    println("invalid data: " + receivedText);
+  }
+}
+
+// ==================================================
+// キー入力
+// ==================================================
+
+void keyPressed() {
+  if (key == '1') {
+    playKickSound();
+  } else if (key == '2') {
+    playCymbalSound();
+  } else if (key == 'a' || key == 'A') {
+    autoPlay = !autoPlay;
+    lastTriggerTime = millis();
+    autoStep = 0;
+  }
+}
+
+// ==================================================
+// キック音
+// ==================================================
+
+void playKickSound() {
+  new Thread(new Runnable() {
+    public void run() {
+      final int durationMs = 650;
+      final int updateMs = 2;
+      int steps = durationMs / updateMs;
+
+      kickAmp.setValue(0.0);
+      kickHarmonicAmp.setValue(0.0);
+
+      for (int i = 0; i < steps; i++) {
+        float t = i * updateMs / 1000.0;
+
+        float frequency = 48.0 + 122.0 * exp(-28.0 * t);
+        float bodyEnvelope = exp(-8.0 * t);
+        float attack = constrain(t / 0.004, 0.0, 1.0);
+
+        float bodyVolume = 0.82 * bodyEnvelope * attack;
+        float harmonicVolume = 0.025 * exp(-18.0 * t) * attack;
+
+        kickOsc.setFrequency(frequency);
+        kickAmp.setValue(bodyVolume);
+
+        kickHarmonic.setFrequency(frequency * 2.0);
+        kickHarmonicAmp.setValue(harmonicVolume);
+
+        sleepMs(updateMs);
       }
+
+      kickAmp.setValue(0.0);
+      kickHarmonicAmp.setValue(0.0);
+    }
+  }).start();
+}
+
+// ==================================================
+// シンバル音
+// ==================================================
+
+void playCymbalSound() {
+  new Thread(new Runnable() {
+    public void run() {
+      final int durationMs = 700;
+      final int updateMs = 4;
+      int steps = durationMs / updateMs;
+
+      cymNoiseAmp.setValue(0.0);
+      cymMetalAmp1.setValue(0.0);
+      cymMetalAmp2.setValue(0.0);
+      cymMetalAmp3.setValue(0.0);
+
+      for (int i = 0; i < steps; i++) {
+        float t = i / float(steps - 1);
+
+        float fastDecay = exp(-13.0 * t);
+        float slowDecay = exp(-4.0 * t);
+
+        float noiseEnvelope = 0.25 * fastDecay + 0.10 * slowDecay;
+        float metalEnvelope = 0.09 * exp(-9.0 * t);
+        float attack = constrain(t * 45.0, 0.0, 1.0);
+
+        cymNoiseAmp.setValue(noiseEnvelope * attack);
+        cymMetalAmp1.setValue(metalEnvelope * attack);
+        cymMetalAmp2.setValue(metalEnvelope * 0.75 * attack);
+        cymMetalAmp3.setValue(metalEnvelope * 0.50 * attack);
+
+        sleepMs(updateMs);
+      }
+
+      cymNoiseAmp.setValue(0.0);
+      cymMetalAmp1.setValue(0.0);
+      cymMetalAmp2.setValue(0.0);
+      cymMetalAmp3.setValue(0.0);
+    }
+  }).start();
+}
+
+// ==================================================
+// 待機処理
+// ==================================================
+
+void sleepMs(int milliseconds) {
+  try {
+    Thread.sleep(milliseconds);
+  }
+  catch (InterruptedException e) {
+    Thread.currentThread().interrupt();
+  }
+}
+
+// ==================================================
+// 終了処理
+// ==================================================
+
+void stop() {
+  if (kickAmp != null) kickAmp.setValue(0.0);
+  if (kickHarmonicAmp != null) kickHarmonicAmp.setValue(0.0);
+  if (cymNoiseAmp != null) cymNoiseAmp.setValue(0.0);
+  if (cymMetalAmp1 != null) cymMetalAmp1.setValue(0.0);
+  if (cymMetalAmp2 != null) cymMetalAmp2.setValue(0.0);
+  if (cymMetalAmp3 != null) cymMetalAmp3.setValue(0.0);
+
+  if (arduino != null) arduino.stop();
+  if (out != null) out.close();
+  if (minim != null) minim.stop();
+
+  super.stop();
+}
+\end{lstlisting}
+
+
+\section{LCD表示子機用Ardiunoプログラム}
+\label{sec:lcdmatrix}
+LCD表示に必要なプログラムを以下に示す．
+\begin{lstlisting}[language=Java]
+#define DECODE_NEC
+#include <IRremote.hpp>
+#include <LiquidCrystal.h>
+
+int childId = 0;
+const int PIN_IR_RECV = 6;
+
+// LCD 1台のみ（EN=11）
+LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
+
+// ---- カエルのカスタム文字 ----
+// 左右共通（char 0-2: 上段固定, char 3-5: 下段口パク）
+
+byte frog0[8] = {
+  B00000, B00011, B00100, B01101,
+  B01100, B00111, B00111, B01111
+};
+byte frog1_open[8] = {
+  B11111, B11110, B11100, B11110,
+  B01111, B00001, B00000, B00000
+};
+byte frog1_close[8] = {
+  B11111, B11100, B11111, B11111,
+  B01111, B00001, B00000, B00000
+};
+byte frog2[8] = {
+  B00000, B10001, B01010, B01010,
+  B01110, B11111, B11111, B10101
+};
+byte frog3_open[8] = {
+  B11111, B00000, B00000, B00000,
+  B00000, B11111, B00000, B00000
+};
+byte frog3_close[8] = {
+  B11111, B00000, B11111, B11111,
+  B11111, B11111, B00000, B00000
+};
+byte frog4[8] = {
+  B00000, B11000, B00100, B10110,
+  B00110, B11100, B11100, B11110
+};
+byte frog5_open[8] = {
+  B11111, B01111, B00111, B01111,
+  B11110, B10000, B00000, B00000
+};
+byte frog5_close[8] = {
+  B11111, B00111, B11111, B11111,
+  B11110, B10000, B00000, B00000
+};
+
+
+// ---- 歌詞テーブル ----
+#define TOTAL_TICKS 32
+
+const char* lyrics[TOTAL_TICKS] = {
+  "KA",   //  0
+  "E",    //  1
+  "RU",   //  2
+  "NO",   //  3
+  "U",    //  4
+  "TA",   //  5
+  "GA",   //  6
+  " ",    //  7
+  "KI",   //  8
+  "KO",   //  9
+  "E",    // 10
+  "TE",   // 11
+  "KU",   // 12
+  "RU",   // 13
+  "YO",   // 14
+  " ",    // 15
+  "GU",   // 16
+  "WA",   // 17
+  "GU",   // 18
+  "WA",   // 19
+  "GU",   // 20
+  "WA",   // 21
+  "GU",   // 22
+  "WA",   // 23
+  "KERO", // 24
+  "KERO", // 25
+  "KERO", // 26
+  "KERO", // 27
+  "GWA!", // 28
+  "GWA!", // 29
+  "GWA!", // 30
+  " ",    // 31
+};
+
+
+// ---- 状態変数 ----
+long localPos  = -1;
+bool frogOpen  = false;
+
+// 歌詞エリア: 列3-12（幅10）× 2行
+#define LYRIC_COL_START 3
+#define LYRIC_WIDTH     10
+
+int displayCol = 0;
+int displayRow = 0;
+
+
+// ---- 関数 ----
+
+// カスタム文字3-5を口の開閉に合わせて更新し、左右カエルを再描画
+void updateFrogs(bool open) {
+  if (open) {
+    lcd.createChar(3, frog1_open);
+    lcd.createChar(4, frog3_open);
+    lcd.createChar(5, frog5_open);
+  } else {
+    lcd.createChar(3, frog1_close);
+    lcd.createChar(4, frog3_close);
+    lcd.createChar(5, frog5_close);
+  }
+  // createChar後はカーソルをホームに戻してから書き直す
+  // 左カエル（列0）
+  lcd.setCursor(0, 0);
+  lcd.write(byte(0)); lcd.write(byte(1)); lcd.write(byte(2));
+  lcd.setCursor(0, 1);
+  lcd.write(byte(3)); lcd.write(byte(4)); lcd.write(byte(5));
+  // 右カエル（列13）
+  lcd.setCursor(13, 0);
+  lcd.write(byte(0)); lcd.write(byte(1)); lcd.write(byte(2));
+  lcd.setCursor(13, 1);
+  lcd.write(byte(3)); lcd.write(byte(4)); lcd.write(byte(5));
+}
+
+// 歌詞エリア（列3-12）だけをスペースで埋めてクリア
+void clearLyricArea() {
+  for (int row = 0; row < 2; row++) {
+    lcd.setCursor(LYRIC_COL_START, row);
+    for (int c = 0; c < LYRIC_WIDTH; c++) lcd.print(' ');
+  }
+  displayCol = 0;
+  displayRow = 0;
+}
+
+void showLyric(int pos) {
+  const char* word = lyrics[pos];
+  int len = strlen(word);
+
+  if (displayCol + len > LYRIC_WIDTH) {
+    if (displayRow == 0) {
+      displayRow = 1;
+      displayCol = 0;
+    } else {
+      clearLyricArea();
     }
   }
 
-  // ハンマーノイズ: 最初の15ms、1次LPF(fc=f0*8上限8k)、指数減衰
-  float fc = min(f0 * 8f, 8000f);
-  float a  = 1f - exp(-TWO_PI * fc / SAMPLE_RATE);
-  float lp = 0f;
-  int nNoise = (int)(0.015f * SAMPLE_RATE);
-  randomSeed(12345);  // 打鍵音の再現性
-  for (int i = 0; i < nNoise && i < n; i++) {
-    float t = i / SAMPLE_RATE;
-    float x = random(-1f, 1f);
-    lp += a * (x - lp);
-    buf[i] += amp * 0.15f * lp * exp(-t / 0.008f);
-  }
-
-  // アタック(3ms)とダンパーリリース(dur経過後 τ=0.15s)
-  for (int i = 0; i < n; i++) {
-    float t = i / SAMPLE_RATE;
-    buf[i] *= (1f - exp(-t / 0.003f));
-    if (t > dur) buf[i] *= exp(-(t - dur) / 0.15f);
-  }
-
-  // クリップ防止
-  float peak = 0f;
-  for (int i = 0; i < n; i++) peak = max(peak, abs(buf[i]));
-  if (peak > 0.98f) {
-    float g = 0.98f / peak;
-    for (int i = 0; i < n; i++) buf[i] *= g;
-  }
-  return buf;
+  lcd.setCursor(LYRIC_COL_START + displayCol, displayRow);
+  lcd.print(word);
+  displayCol += len;
 }
+
+
+void setup() {
+  Serial.begin(115200);
+  lcd.begin(16, 2);
+
+  lcd.createChar(0, frog0);
+  lcd.createChar(1, frog2);
+  lcd.createChar(2, frog4);
+  lcd.createChar(3, frog1_close);
+  lcd.createChar(4, frog3_close);
+  lcd.createChar(5, frog5_close);
+
+  lcd.clear();
+  updateFrogs(false);
+
+  IrReceiver.begin(PIN_IR_RECV);
+  Serial.println("setup OK");
+}
+
+void loop() {
+  if (!IrReceiver.decode()) return;
+  IrReceiver.printIRResultShort(&Serial);
+
+  if (IrReceiver.decodedIRData.protocol == NEC) {
+    uint8_t mask = IrReceiver.decodedIRData.command;
+
+    if (mask & (1 << childId)) {
+      localPos++;
+      if (localPos >= TOTAL_TICKS) {
+        localPos = 0;
+        clearLyricArea();
+      }
+
+      showLyric((int)localPos);
+      Serial.println("kasiOK");
+      delay(10);
+
+      frogOpen = !frogOpen;
+      updateFrogs(frogOpen);
+      Serial.println("kaoOK");
+      delay(10);
+    }
+  }
+
+  IrReceiver.resume();
+}
+
 \end{lstlisting}
 
 \end{document}
