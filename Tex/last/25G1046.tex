@@ -35,7 +35,7 @@
 %% 以降本文
 \section{はじめに}
 
-近年，IoT技術の普及によって，複数のデバイスがネットワークを介してリアルタイムに連携するシステムが様々な分野で実用化されている\cite{sakamura2017}．IoT技術やプログラミング教育の重要性が高まるなか\cite{mitsui2018}，STEAM教育やものづくりを通じた実践的学習の有効性が示されており\cite{miyakawa2020, nakamura2022}，大学教育においてもPBLやハッカソン形式の授業が学生の主体性向上に寄与することが報告されている\cite{kido2015, yoshikawa2021, itagaki2021}．製造業における機械の協調制御やスマートホームの機器連携など，複数の自律した機器を同期させる技術は現代の組み込みシステムに広く求められている．合奏はこの同期という課題が音として直接聞こえる題材である．Raschによると，合奏において奏者間の発音タイミングのずれはおよそ30〜50\,msの範囲に収まっており，これを大きく超えるずれは聴き手に同期の乱れとして知覚される\cite{rasch}．つまり，複数の機器で合奏を成立させるには，数十ms以内の精度で状態を共有し続ける必要がある．
+近年，IoT技術の普及によって，複数のデバイスがネットワークを介してリアルタイムに連携するシステムが様々な分野で実用化されている\cite{sakamura2017}．IoT技術やプログラミング教育の重要性が高まるなか\cite{mitsui2018}，STEAM教育やものづくりを通じた実践的学習の有効性が示されており\cite{miyakawa2020,nakamura2022}，大学教育においてもPBLやハッカソン形式の授業が学生の主体性向上に寄与することが報告されている\cite{kido2015,yoshikawa2021,itagaki2021}．IoTを題材としたチーム開発型PBLの効果も実証されており\cite{igaki2018}，ハッカソンを人材育成に活用する事例\cite{hashimoto2019}やオンラインでの実践報告\cite{matsumoto2022}も増えている．さらに，IoTロボットを用いた協調学習\cite{noguchi2020}やプログラミング教育を通じた多世代間の教え合いの可能性\cite{kusaka2020}も示されている．製造業における機械の協調制御やスマートホームの機器連携など，複数の自律した機器を同期させる技術は現代の組み込みシステムに広く求められている．合奏はこの同期という課題が音として直接聞こえる題材である．Raschによると，合奏において奏者間の発音タイミングのずれはおよそ30〜50\,msの範囲に収まっており，これを大きく超えるずれは聴き手に同期の乱れとして知覚される\cite{rasch}．つまり，複数の機器で合奏を成立させるには，数十ms以内の精度で状態を共有し続ける必要がある．
 
 電子楽器の同期に関する既存技術としては，MIDIやWi-Fi・Bluetoothを用いたシステムが挙げられる．MIDIは音高やタイミング，強さといった精密な情報を伝達できる規格である\cite{midi}が，専用のインターフェースと対応ライブラリが必要であり，同期のきっかけだけを伝えたい本プロジェクトの用途には過剰な仕様となる．Wi-FiやBluetoothを用いた合奏システムは遅延補正の技術も発達しているものの，通信インフラの品質に動作が左右されるため，多数の機器が電波を発する実験室環境では干渉や接続不安定のリスクが残る．そこで本プロジェクトでは，伝達する情報を「どの楽器がいま演奏に参加しているか」という最小限の同期情報に限定し，赤外線通信で実現する方針を採った．赤外線はネットワーク環境を必要とせず，LEDと受光モジュールだけで構成できるため，小規模な組み込みシステムに低コストで導入できる\cite{necfmt}．
 
@@ -51,7 +51,7 @@
 
 \subsection{システム構成}
 
-システムの構成を図\ref{fig:system}に示す．本システムは，指揮側の親機Arduino 1台，演奏側の子機Arduino 4台，および楽器音を再生するPC 4台から構成される．いずれのArduinoもArduino Uno R4を用いた．ワンボードマイコンは教育現場でのプログラミング学習に広く活用されており\cite{kato2019, nishi2015}，無線通信を用いた教材開発の事例も報告されている\cite{kontani2024}．親機には赤外線LED，演奏開始・リセット・子機参加用のタクトスイッチ，およびテンポ調整用の可変抵抗を接続する．各子機には赤外線受光モジュールOSRB38C9AA\cite{osrb}を接続し，USBシリアルでPCと接続する．PC側ではProcessingが動作し，子機から届いた音符情報をもとに楽器音を合成してスピーカから出力する．楽器音の生成にはProcessingのサウンドライブラリであるMinim\cite{minim}を用いた．
+システムの構成を図\ref{fig:system}に示す．本システムは，指揮側の親機Arduino 1台，演奏側の子機Arduino 4台，および楽器音を再生するPC 4台から構成される．いずれのArduinoもArduino Uno R4を用いた．ワンボードマイコンは教育現場でのプログラミング学習に広く活用されており\cite{kato2019,nishi2015}，無線通信を用いた教材開発の事例も報告されている\cite{kontani2024}．親機には赤外線LED，演奏開始・リセット・子機参加用のタクトスイッチ，およびテンポ調整用の可変抵抗を接続する．各子機には赤外線受光モジュールOSRB38C9AA\cite{osrb}を接続し，USBシリアルでPCと接続する．PC側ではProcessingが動作し，子機から届いた音符情報をもとに楽器音を合成してスピーカから出力する．楽器音の生成にはProcessingのサウンドライブラリであるMinim\cite{minim}を用いた．
 
 
 システム全体のデータの流れは一方向である．親機は現在のtick番号と参加楽器マスクを赤外線でブロードキャストし，子機はそれを受けて自分の譜面配列を参照し，該当する音符情報をProcessingへ送信する．Processingは受信した音符情報から楽器音を合成して再生する．子機はLCDへの表示出力も並行して行う．
@@ -70,7 +70,7 @@
   \node[box, below=1.4cm of ko] (pc) {PC（Processing）$\times 4$};
   \node[sbox, right=1.4cm of pc] (sp) {スピーカ};
   \draw[->] (ui) -- (oya);
-  \draw[->] (oya) -- node[lbl, right] {赤外線（NEC）\\参加マスク + tick番号} (ko);
+  \draw[->] (oya) -- node[lbl, right] {赤外線（Sony SIRC）\\参加マスク} (ko);
   \draw[->] (ko) -- node[lbl, above] {歌詞・口パク} (lcd);
   \draw[->] (ko) -- node[lbl, right] {シリアル通信\\音高・音長・音量・位置} (pc);
   \draw[->] (pc) -- node[lbl, above] {楽器音} (sp);
@@ -86,7 +86,7 @@
 
 \begin{figure}[H]
 \begin{center}
-\includegraphics[width=\linewidth]{PBSlast.png}
+\includegraphics[width=0.8\linewidth]{PBSlast.png}
 \end{center}
 \caption{製品分解構造（PBS）}
 \label{fig:pbs}
@@ -94,7 +94,7 @@
 
 \subsection{赤外線同期プロトコル}
 
-親機と子機の間の同期には，Sony SIRC 12ビットフォーマット\cite{sircfmt}を用いた．送受信にはArduino用ライブラリのIRremote\cite{irremote}を利用している．赤外線リモコンプロトコルとしてはNECフォーマット\cite{necfmt}（固定32ビット）が広く知られるが，NECはアドレスとコマンドの各8ビットに対する反転バイトをノイズ検出用に付加するため，フレーム長が大きい．本システムで実際に送信するデータは楽器マスクの4ビットのみであり，通信遅延を目標の30\,ms以内に抑えるために，ビット幅を12/15/20ビットから選択できるSony SIRCの最短12ビット（コマンド7ビット＋アドレス5ビット）を採用した．SIRCにはNECのような反転バイトによるエラー検出がないが，屋内環境では目視レベルの赤外線ノイズが少なく，10000回の受信テストで全て成功していることから実用上の問題はない．加えて，赤外線は室内に人数がいても，ある程度の遮蔽物があっても受信できることが確認された．
+親機と子機の間の同期には，Sony SIRC 12ビットフォーマット\cite{sircfmt}を用いた．送受信にはArduino用ライブラリのIRremote\cite{irremote}を利用している．赤外線リモコンプロトコルとしてはNECフォーマット\cite{necfmt}（固定32ビット）が広く知られるが，NECはアドレスとコマンドの各8ビットに対する反転バイトをノイズ検出用に付加するため，フレーム長が大きい．本システムで実際に送信するデータは楽器マスクの4ビットのみであり，通信遅延を目標の30\,ms以内に抑えるために，ビット幅を12/15/20ビットから選択できるSony SIRCの最短12ビット（コマンド7ビット＋アドレス5ビット）を採用した．SIRCにはNECのような反転バイトによるエラー検出がないが，屋内環境では目視レベルの赤外線ノイズが少なく，10000回の受信テストで全て成功していることから実用上の問題はない．加えて，赤外線は室内に人数がいても，送受信経路上に人体や機材などの部分的な遮蔽物がある状態でも受信できることが確認された．
 
 コマンド部7ビットのうち下位4ビットを演奏中の楽器集合を表すマスクとして使用し，上位3ビットは常に0とする．各ビットと子機の対応を表\ref{tab:ir-mask}に示す．アドレス部5ビットは常に0である．各子機は受信したマスクのうち自分の担当ビットだけを参照して演奏可否を判定する．楽譜のデータそのものは送らず，各子機が自分のパートの譜面配列を保持する分散構成とした．これにより1tickあたりの通信は1フレームで済み，子機の台数が増えても通信量が変わらない．
 
@@ -538,7 +538,7 @@ MOP1（演奏タイミング誤差）とMOP2（信号受信率）の定量計測
 
 7月13日の定量計測により，いくつかの新たな知見が得られた．
 
-赤外線通信方式をSony SIRC 12ビットに変更したことで，演奏タイミング誤差の目標値30\,msを平均28\,msで達成できた．NECフォーマット（固定32ビット）に対し，SIRCは12ビットとフレーム長が短く，またNECが持つ反転バイトによるエラー検出を省いているため，送受信にかかる時間が短縮された．信号受信率は10000回の試行で全て成功し100\,\%を記録した．送受信距離が適切に保たれていれば通信エラーは発生せず，室内に人数がいても，ある程度の遮蔽物があっても正確に受信できることが確認された．演奏側が毎拍ごとに同期信号を受信する設計により，テンポ変更にも素早く追従する動作が確認された．
+赤外線通信方式をSony SIRC 12ビットに変更したことで，演奏タイミング誤差の目標値30\,msを平均28\,msで達成できた．NECフォーマット（固定32ビット）に対し，SIRCは12ビットとフレーム長が短く，またNECが持つ反転バイトによるエラー検出を省いているため，送受信にかかる時間が短縮された．信号受信率は10000回の試行で全て成功し100\,\%を記録した．送受信距離が適切に保たれていれば通信エラーは発生せず，室内に人数がいても，送受信経路上に人体や機材などの部分的な遮蔽物がある状態でも正確に受信できることが確認された．演奏側が毎拍ごとに同期信号を受信する設計により，テンポ変更にも素早く追従する動作が確認された．
 
 音色評価では，倍音構造やADSRエンベロープの調整により，全5種の楽器音が過半数の評価者から自然な音色として認識された．特にフルートは評価平均4.33と高い評価を得た．一方で，トランペット（平均3.61）とキック（平均3.72）はやや低い結果となり，倍音構造のさらなる調整が必要であることが分かった．
 
@@ -557,42 +557,6 @@ LCD表示の同期誤差は約50.1\,msと目標を十分に下回ったが，演
 7月13日に実施した定量評価により，演奏タイミング誤差平均28\,ms（目標30\,ms以内），信号受信率10000回中10000回成功（100\,\%），LCD同期誤差約50.1\,ms（目標55\,ms以内）と主要な到達目標を全て達成した．同期・通信・LCD表示は全項目で目標を達成し，音色表現も過半数の評価者から良好と判定された．Sony SIRC 12ビットの採用によりフレーム長を最小化しつつ，屋内環境で十分な通信品質を確保でき，赤外線通信による輪唱システムは有効であることが実証された．
 
 今後の課題として，トランペットとキックの音色改善（倍音構造の調整），演奏中の処理負荷増大時のLCD表示遅延の検証，tick番号を用いた譜面位置の自己修復，およびテンポに追従する音長制御が挙げられる．
-
-\begin{thebibliography}{99}
-\bibitem{rasch} Rasch, R. A., ``Synchronization in performed ensemble music,'' Acustica, Vol.43, No.2, pp.121--131, 1979.
-\bibitem{midi} 一般社団法人音楽電子事業協会（AMEI），``MIDI規格,'' \url{https://amei.or.jp/midistandardcommittee/}，参照 2026年6月.
-\bibitem{necfmt} SB-Projects, ``IR Remote Control Theory: NEC Protocol,'' \url{https://www.sbprojects.net/knowledge/ir/nec.php}，参照 2026年5月.
-\bibitem{sircfmt} SB-Projects, ``IR Remote Control Theory: Sony SIRC,'' \url{https://www.sbprojects.net/knowledge/ir/sirc.php}，参照 2026年7月.
-\bibitem{irremote} Arduino-IRremote Community, ``IRremote Arduino Library,'' \url{https://github.com/Arduino-IRremote/Arduino-IRremote}，参照 2026年5月.
-\bibitem{minim} Di Fede, D., ``Minim: An audio library for Processing,'' \url{http://code.compartmental.net/minim/}，参照 2026年5月.
-\bibitem{arduinodoc} Arduino, ``Arduino Documentation,'' \url{https://docs.arduino.cc/}，参照 2026年5月.
-\bibitem{osrb} OptoSupply, ``OSRB38C9AA Infrared Receiver Module Datasheet,'' 参照 2026年6月.
-\bibitem{fletcher} Fletcher, H., Blackham, E. D. and Stratton, R., ``Quality of Piano Tones,'' The Journal of the Acoustical Society of America, Vol.34, No.6, pp.749--761, 1962.
-\bibitem{nishiguchi} 西口磯春，``ピアノの音響とその物理モデル,'' RISTニュース，神奈川工科大学，No.56，pp.3--15，2014.
-\bibitem{arrighi} Arrighi, R., Alais, D. and Burr, D., ``Perceptual synchrony of audiovisual streams for natural and artificial motion sequences,'' Journal of Vision, Vol.6, No.3, pp.260--268, 2006.
-%% 社会的背景
-\bibitem{mitsui2018} 三井一希, 佐藤和紀, 萩原丈博, 竹内慎一, 堀田龍也, ``IoTブロックを活用したプログラミング教育の試行,'' デジタル教科書研究, Vol.7, 2018.
-\bibitem{itagaki2021} 板垣翔大, 中村好則, 安藤明伸, 門田和雄, ``小学校におけるIoT教材を活用したPBL型授業に関する探索的研究,'' 日本教育工学会論文誌, Vol.44, No.3, 2021.
-\bibitem{miyakawa2020} 宮川洋一, 森山潤, ``STEM, STEAM, エンジニアリング教育概念の比較教育からの論点整理,'' 日本産業技術教育学会誌, Vol.62, No.3, pp.197--, 2020.
-\bibitem{nakamura2022} 中村大輝, 松浦拓也, ``学校教育における「ものづくり」を中心としたSTEAM教育実践,'' 科学教育研究, Vol.37, No.3, 2022.
-\bibitem{sakamura2017} 坂村健, ``INIAD：IoT時代の新しい学び舎,'' 情報の科学と技術, Vol.67, No.11, pp.582--, 2017.
-%% 技術的背景
-\bibitem{kato2019} 加藤直樹, 松田孝, 上野朝大, 濵田大地, ``小学校理科におけるワンボードマイコンを用いるプログラミング教育の提案,'' 初等教育カリキュラム研究, Vol.1, pp.37--, 2019.
-\bibitem{nishi2015} 西仁司, 清水幹郎, 青山義弘, 小松貴大, 高久有一, 斉藤徹, ``マイコンでのロボット制御を通した情報工学の基礎教育,'' 第31回ファジィシステムシンポジウム講演論文集, WC4-2, 2015.
-\bibitem{kontani2024} 紺谷正樹, 熊谷浩二, 山本利一, 山口哲男, ``無線通信インタフェースによるプログラム転送を可能にした教材の開発とセキュリティに関する授業実践,'' 日本産業技術教育学会誌, Vol.66, No.1, pp.37--47, 2024.
-\bibitem{kobayashi2013} 小林敬太, 佐藤賢文, 神戸英利, 三井浩康, ``組込みシステム技術者育成のための実践的カリキュラム,'' 工学教育, Vol.61, No.4, pp.36--, 2013.
-%% 教育手法
-\bibitem{kido2015} 木戸冬子, ``大学におけるハッカソン実施の試み：ハッカソン研究会の活動,'' 研究 技術 計画, Vol.30, pp.138--, 2015.
-\bibitem{matsumoto2022} 松本慎平, 中島亨輔, Azelin Mohamed Noor, ``オンラインコミュニケーションツールを用いた英語によるプログラミングハッカソンの実践,'' コンピュータ利用教育学会, Vol.51, pp.75--, 2022.
-\bibitem{noguchi2020} 野口孝文, 布施泉, 千田和範, 稲守栄, ``IoT機能を持つロボットを用いた協調学習環境,'' 教育システム情報学会誌, Vol.37, No.2, pp.106--119, 2020.
-\bibitem{kusaka2020} 日下菜穂子, 末宗佳倫, 下村篤子, 上田信行, ``プログラミング教育を介した多世代が教えあう協調学習の生涯発達における可能性,'' 発達心理学研究, Vol.31, No.4, pp.201--, 2020.
-\bibitem{igaki2018} 井垣宏, 武元貴一, 上田悠貴, ``基礎的なIoT教育のためのチーム開発を重視したPBL授業の提案,'' コンピュータソフトウェア, Vol.35, No.1, pp.54--, 2018.
-\bibitem{yoshikawa2021} 吉川祐樹, 川勝望, 林和彦, ``全学科全学年に横断したPBL型授業による学生の主体性の向上について,'' 工学教育, Vol.69, No.2, pp.2--, 2021.
-\bibitem{hashimoto2019} 橋本武彦, ``データサイエンティストの採用・育成におけるハッカソンの活用,'' データサイエンス研究, Vol.3, No.1, pp.25--, 2019.
-%% プレゼン参考文献
-\bibitem{kuwahara2019} 桑原圭裕, ``映像と音の同期 ---「動画先行の原則」の模擬と応用,'' 映像学, Vol.102, pp.54--74, 2019.
-\bibitem{nagao2012} 長尾翼 他, ``音の遅延条件がアンサンブル演奏に与える影響に関する検討,'' 日本音響学会講演論文集, pp.997--998, 2012.
-\end{thebibliography}
 
 \section{変更履歴}
 
@@ -622,14 +586,49 @@ LCD表示の同期誤差は約50.1\,msと目標を十分に下回ったが，演
 7月初旬 & 実装 & ピアノ音源をオルガン風から加算合成方式へ差し替え \\
 7月初旬 & 実装 & テンポ管理をボタン式から可変抵抗式へ変更 \\
 7月初旬 & 実装 & LCD表示プログラムの統合 \\
+7/8 & 計測 & 音色アンケート実施（18人，5段階評価） \\
+7/8 & 計測 & LCD同期誤差の計測（約50.1\,ms，動画フレーム差分法） \\
 7/13 & 計測 & 同期・通信の定量評価実施（誤差平均28\,ms，受信率100\,\%，10000回計測） \\
-7/13 & 計測 & 音色アンケート実施（18人，5段階評価） \\
-7/13 & 計測 & LCD同期誤差の計測（約50.1\,ms，動画フレーム差分法） \\
-7/9 & 文書 & 報告書を提出 \\
 \hline
 \end{tabular}
 \end{center}
 \end{table}
+
+\begin{thebibliography}{99}
+\bibitem{rasch} Rasch, R. A., ``Synchronization in performed ensemble music,'' Acustica, Vol.43, No.2, pp.121--131, 1979.
+\bibitem{midi} 一般社団法人音楽電子事業協会（AMEI），``MIDI規格,'' \url{https://amei.or.jp/midistandardcommittee/}，参照 2026年6月.
+\bibitem{necfmt} SB-Projects, ``IR Remote Control Theory: NEC Protocol,'' \url{https://www.sbprojects.net/knowledge/ir/nec.php}，参照 2026年5月.
+\bibitem{sircfmt} SB-Projects, ``IR Remote Control Theory: Sony SIRC,'' \url{https://www.sbprojects.net/knowledge/ir/sirc.php}，参照 2026年7月.
+\bibitem{irremote} Arduino-IRremote Community, ``IRremote Arduino Library,'' \url{https://github.com/Arduino-IRremote/Arduino-IRremote}，参照 2026年5月.
+\bibitem{minim} Di Fede, D., ``Minim: An audio library for Processing,'' \url{http://code.compartmental.net/minim/}，参照 2026年5月.
+\bibitem{arduinodoc} Arduino, ``Arduino Documentation,'' \url{https://docs.arduino.cc/}，参照 2026年5月.
+\bibitem{osrb} OptoSupply, ``OSRB38C9AA Infrared Receiver Module Datasheet,'' 参照 2026年6月.
+\bibitem{fletcher} Fletcher, H., Blackham, E. D. and Stratton, R., ``Quality of Piano Tones,'' The Journal of the Acoustical Society of America, Vol.34, No.6, pp.749--761, 1962.
+\bibitem{nishiguchi} 西口磯春，``ピアノの音響とその物理モデル,'' RISTニュース，神奈川工科大学，No.56，pp.3--15，2014.
+\bibitem{arrighi} Arrighi, R., Alais, D. and Burr, D., ``Perceptual synchrony of audiovisual streams for natural and artificial motion sequences,'' Journal of Vision, Vol.6, No.3, pp.260--268, 2006.
+%% 社会的背景
+\bibitem{mitsui2018} 三井一希, 佐藤和紀, 萩原丈博, 竹内慎一, 堀田龍也, ``IoTブロックを活用したプログラミング教育の試行,'' デジタル教科書研究, Vol.7, 2018.
+\bibitem{itagaki2021} 板垣翔大, 中村好則, 安藤明伸, 門田和雄, ``小学校におけるIoT教材を活用したPBL型授業に関する探索的研究,'' 日本教育工学会論文誌, Vol.44, No.3, 2021.
+\bibitem{miyakawa2020} 宮川洋一, 森山潤, ``STEM, STEAM, エンジニアリング教育概念の比較教育からの論点整理,'' 日本産業技術教育学会誌, Vol.62, No.3, p.197, 2020.
+\bibitem{nakamura2022} 中村大輝, 松浦拓也, ``学校教育における「ものづくり」を中心としたSTEAM教育実践,'' 科学教育研究, Vol.37, No.3, 2022.
+\bibitem{sakamura2017} 坂村健, ``INIAD：IoT時代の新しい学び舎,'' 情報の科学と技術, Vol.67, No.11, p.582, 2017.
+%% 技術的背景
+\bibitem{kato2019} 加藤直樹, 松田孝, 上野朝大, 濵田大地, ``小学校理科におけるワンボードマイコンを用いるプログラミング教育の提案,'' 初等教育カリキュラム研究, Vol.1, p.37, 2019.
+\bibitem{nishi2015} 西仁司, 清水幹郎, 青山義弘, 小松貴大, 高久有一, 斉藤徹, ``マイコンでのロボット制御を通した情報工学の基礎教育,'' 第31回ファジィシステムシンポジウム講演論文集, WC4-2, 2015.
+\bibitem{kontani2024} 紺谷正樹, 熊谷浩二, 山本利一, 山口哲男, ``無線通信インタフェースによるプログラム転送を可能にした教材の開発とセキュリティに関する授業実践,'' 日本産業技術教育学会誌, Vol.66, No.1, pp.37--47, 2024.
+\bibitem{kobayashi2013} 小林敬太, 佐藤賢文, 神戸英利, 三井浩康, ``組込みシステム技術者育成のための実践的カリキュラム,'' 工学教育, Vol.61, No.4, p.36, 2013.
+%% 教育手法
+\bibitem{kido2015} 木戸冬子, ``大学におけるハッカソン実施の試み：ハッカソン研究会の活動,'' 研究 技術 計画, Vol.30, p.138, 2015.
+\bibitem{matsumoto2022} 松本慎平, 中島亨輔, Azelin Mohamed Noor, ``オンラインコミュニケーションツールを用いた英語によるプログラミングハッカソンの実践,'' コンピュータ利用教育学会, Vol.51, p.75, 2022.
+\bibitem{noguchi2020} 野口孝文, 布施泉, 千田和範, 稲守栄, ``IoT機能を持つロボットを用いた協調学習環境,'' 教育システム情報学会誌, Vol.37, No.2, pp.106--119, 2020.
+\bibitem{kusaka2020} 日下菜穂子, 末宗佳倫, 下村篤子, 上田信行, ``プログラミング教育を介した多世代が教えあう協調学習の生涯発達における可能性,'' 発達心理学研究, Vol.31, No.4, p.201, 2020.
+\bibitem{igaki2018} 井垣宏, 武元貴一, 上田悠貴, ``基礎的なIoT教育のためのチーム開発を重視したPBL授業の提案,'' コンピュータソフトウェア, Vol.35, No.1, p.54, 2018.
+\bibitem{yoshikawa2021} 吉川祐樹, 川勝望, 林和彦, ``全学科全学年に横断したPBL型授業による学生の主体性の向上について,'' 工学教育, Vol.69, No.2, p.2, 2021.
+\bibitem{hashimoto2019} 橋本武彦, ``データサイエンティストの採用・育成におけるハッカソンの活用,'' データサイエンス研究, Vol.3, No.1, p.25, 2019.
+%% プレゼン参考文献
+\bibitem{kuwahara2019} 桑原圭裕, ``映像と音の同期 ---「動画先行の原則」の模擬と応用,'' 映像学, Vol.102, pp.54--74, 2019.
+\bibitem{nagao2012} 長尾翼 他, ``音の遅延条件がアンサンブル演奏に与える影響に関する検討,'' 日本音響学会講演論文集, pp.997--998, 2012.
+\end{thebibliography}
 
 \clearpage
 \appendix
