@@ -594,6 +594,7 @@ LCD表示の同期誤差は約50.1\,msと目標を十分に下回ったが，演
 \end{center}
 \end{table}
 
+\clearpage
 \begin{thebibliography}{99}
 \bibitem{rasch} Rasch, R. A., ``Synchronization in performed ensemble music,'' Acustica, Vol.43, No.2, pp.121--131, 1979.
 \bibitem{midi} 一般社団法人音楽電子事業協会（AMEI），``MIDI規格,'' \url{https://amei.or.jp/midistandardcommittee/}，参照 2026年6月.
@@ -642,29 +643,29 @@ LCD表示の同期誤差は約50.1\,msと目標を十分に下回ったが，演
 親機のスケッチを以下に示す．報告者の担当箇所は，可変抵抗によるテンポ管理を行うhandleTempoPot()と，子機の状態表示LEDの制御である．
 
 \begin{lstlisting}
-#define DECODE_SONY
-#define IR_SEND_PIN 3
-#include <IRremote.hpp>
+#define DECODE_SONY  // Sony SIRCプロトコルのデコードを有効化
+#define IR_SEND_PIN 3  // 赤外線LEDの送信ピンをD3に設定
+#include <IRremote.hpp>  // 赤外線送受信ライブラリを読み込む
 
-const int NUM_CHILDREN = 4;
+const int NUM_CHILDREN = 4;  // 子機の台数(ピアノ/フルート/トランペット/ドラム)
 
 const int PIN_BTN_ORDER[NUM_CHILDREN] = {4, 5, 6, 7};  // 子機ごとの「参加/退場」トグルボタン
 // 各子機ボタン横のLED (D4→A0, D5→A1, D6→A2, D7→A3)。
 // ボタン押下毎に必ずトグル (参加予約/取消/退場予約/取消 のいずれでも反転)。
-const int PIN_LED_CHILD[NUM_CHILDREN] = {A0, A1, A2, A3};
-const int PIN_BTN_START = 8;
+const int PIN_LED_CHILD[NUM_CHILDREN] = {A0, A1, A2, A3};  // 参加状態表示LEDのピン配列(上コメント参照)
+const int PIN_BTN_START = 8;  // 演奏開始ボタンのピン(D8)
 const int PIN_POT_TEMPO = A5;     // BPM可変抵抗器 (uxcell 10kΩ シングルターン)。回転で 60〜150 BPM
-const int PIN_BTN_RESET = 10;
-const int LED_INDICATOR = 13;
+const int PIN_BTN_RESET = 10;  // リセットボタンのピン(D10)
+const int LED_INDICATOR = 13;  // 動作確認用の内蔵LED(D13)
 const int PIN_SYNC_OUT = 9;       // 子機D3への同期パルス出力（遅延計測用）
 
 const int QUANTIZE_TICKS = 8;     // 参加予約のアライメント(0,8,16,...)
 // 子機の TOTAL_TICKS (=楽譜1周分のIR tick数) と一致させる必要がある。
 // 退場予約はこの倍数(子機の譜面ループ末尾)にアライメントする。
-const int SCORE_TICKS = 32;
-const int TEMPO_MIN_BPM = 60;
-const int TEMPO_MAX_BPM = 150;
-const unsigned long POT_READ_INTERVAL_MS = 50;
+const int SCORE_TICKS = 32;  // 子機の楽譜1周分のtick数(退場アライメントの基準)
+const int TEMPO_MIN_BPM = 60;  // テンポ下限(可変抵抗の最小側)
+const int TEMPO_MAX_BPM = 150;  // テンポ上限(可変抵抗の最大側)
+const unsigned long POT_READ_INTERVAL_MS = 50;  // 可変抵抗の読み取り間隔(50ms)
 // Sony SIRC 12bit: address(5bit) + command(7bit)。mask は command に載せる
 
 bool isActive[NUM_CHILDREN]    = {false, false, false, false}; // 参加済みフラグ
@@ -672,53 +673,53 @@ long joinTick[NUM_CHILDREN]    = {-1, -1, -1, -1};              // 参加予定t
 long leaveTick[NUM_CHILDREN]   = {-1, -1, -1, -1};              // 退場予定tick（未予約は-1）
 long joinedAtTick[NUM_CHILDREN] = {-1, -1, -1, -1};             // 実際に参加発火したtick(退場アライメント計算用)
 
-bool isPlaying  = false;
-int  tempoBpm   = 120;
-long tickCount  = 0;
-unsigned long lastTickMs = 0;
+bool isPlaying  = false;  // 演奏中かどうかのフラグ
+int  tempoBpm   = 120;  // 現在のテンポ(BPM)。初期値は120
+long tickCount  = 0;  // 演奏開始からの累積tick数
+unsigned long lastTickMs = 0;  // 前回tickを打った時刻(ms)
 
-int prevBtnOrder[NUM_CHILDREN] = {HIGH, HIGH, HIGH, HIGH};
-int prevBtnStart = HIGH;
-int prevBtnReset = HIGH;
+int prevBtnOrder[NUM_CHILDREN] = {HIGH, HIGH, HIGH, HIGH};  // 参加ボタンの前回値(立下り検出用)
+int prevBtnStart = HIGH;  // 開始ボタンの前回値(立下り検出用)
+int prevBtnReset = HIGH;  // リセットボタンの前回値(立下り検出用)
 
 // ポテンショメータ読み取りの平滑化と更新間引き用
-unsigned long lastPotReadMs = 0;
-int smoothedPotRaw = -1;
-int lastReportedBpm = -1;
+unsigned long lastPotReadMs = 0;  // 前回可変抵抗を読んだ時刻(ms)
+int smoothedPotRaw = -1;  // 平滑化後のADC生値(-1は未初期化)
+int lastReportedBpm = -1;  // 前回ログ出力したBPM(変化検出用)
 
-void setup() {
-  Serial.begin(115200);
-  IrSender.begin(IR_SEND_PIN);
+void setup() {  // 起動時に一度だけ実行される初期化関数
+  Serial.begin(115200);  // PCとのシリアル通信を115200bpsで開始
+  IrSender.begin(IR_SEND_PIN);  // 赤外線送信をD3ピンで初期化
 
-  for (int i = 0; i < NUM_CHILDREN; i++) {
-    pinMode(PIN_BTN_ORDER[i], INPUT_PULLUP);
-    pinMode(PIN_LED_CHILD[i], OUTPUT);
-    digitalWrite(PIN_LED_CHILD[i], LOW);
+  for (int i = 0; i < NUM_CHILDREN; i++) {  // 全子機分のピンを順に設定
+    pinMode(PIN_BTN_ORDER[i], INPUT_PULLUP);  // 参加ボタンを内部プルアップ入力に設定
+    pinMode(PIN_LED_CHILD[i], OUTPUT);  // 状態表示LEDを出力に設定
+    digitalWrite(PIN_LED_CHILD[i], LOW);  // 起動時はLEDを消灯
   }
-  pinMode(PIN_BTN_START, INPUT_PULLUP);
-  pinMode(PIN_BTN_RESET, INPUT_PULLUP);
+  pinMode(PIN_BTN_START, INPUT_PULLUP);  // 開始ボタンをプルアップ入力に設定
+  pinMode(PIN_BTN_RESET, INPUT_PULLUP);  // リセットボタンをプルアップ入力に設定
   // PIN_POT_TEMPO はアナログ入力なので pinMode 不要（pull-up は付けない）
-  pinMode(LED_INDICATOR, OUTPUT);
-  pinMode(PIN_SYNC_OUT, OUTPUT);
-  digitalWrite(PIN_SYNC_OUT, LOW);
+  pinMode(LED_INDICATOR, OUTPUT);  // インジケータLEDを出力に設定
+  pinMode(PIN_SYNC_OUT, OUTPUT);  // 同期パルス出力ピンを出力に設定
+  digitalWrite(PIN_SYNC_OUT, LOW);  // 同期パルスを初期LOWにしておく
 
-  printHelp();
+  printHelp();  // 操作方法をシリアルに表示
 }
 
-void loop() {
-  handleSerialCommand();
-  handleOrderButtons();
-  handleResetButton();
-  handleTempoPot();
-  handleStartButton();
+void loop() {  // メインループ(起動後ずっと繰り返す)
+  handleSerialCommand();  // PCからのシリアルコマンドを処理
+  handleOrderButtons();  // 各子機の参加/退場ボタンを処理
+  handleResetButton();  // リセットボタンを処理
+  handleTempoPot();  // 可変抵抗によるテンポ調整を処理
+  handleStartButton();  // 開始ボタンを処理
 
-  if (isPlaying) {
-    unsigned long now = millis();
-    unsigned long interval = 60000UL / (unsigned long)tempoBpm / 2UL;
-    if (now - lastTickMs >= interval) {
-      lastTickMs = now;
-      tick();
-      tickCount++;
+  if (isPlaying) {  // 演奏中のときだけtick処理を行う
+    unsigned long now = millis();  // 現在時刻(ms)を取得
+    unsigned long interval = 60000UL / (unsigned long)tempoBpm / 2UL;  // 8分音符1つ分の時間間隔を計算
+    if (now - lastTickMs >= interval) {  // 前回tickから間隔が経過したか判定
+      lastTickMs = now;  // tick時刻を更新
+      tick();  // 1tick分の処理(マスク送信等)を実行
+      tickCount++;  // 累積tick数を1増やす
     }
   }
 
@@ -727,9 +728,9 @@ void loop() {
   // 4状態の遷移は tick() で join/leave 反映後も継続する:
   //   未参加+予約なし(OFF) → 未参加+joinTick(ON) → tickでjoin → 参加+予約なし(ON)
   //   → 参加+leaveTick(OFF) → tickでleave → 未参加+予約なし(OFF)
-  for (int i = 0; i < NUM_CHILDREN; i++) {
-    bool on = isActive[i] != ((joinTick[i] != -1) || (leaveTick[i] != -1));
-    digitalWrite(PIN_LED_CHILD[i], on ? HIGH : LOW);
+  for (int i = 0; i < NUM_CHILDREN; i++) {  // 全子機のLED状態を更新
+    bool on = isActive[i] != ((joinTick[i] != -1) || (leaveTick[i] != -1));  // 参加意思があれば点灯(XORでトグル表現)
+    digitalWrite(PIN_LED_CHILD[i], on ? HIGH : LOW);  // 計算結果に従いLEDを点灯/消灯
   }
 }
 
@@ -738,222 +739,222 @@ void loop() {
 //   参加予約中 → その予約を取消（参加しない）
 //   参加中     → 次の区切りから退場予約
 //   退場予約中 → その予約を取消（残留）
-void toggleChild(int i) {
-  if (i < 0 || i >= NUM_CHILDREN) return;
-  if (!isPlaying) {
-    Serial.println("[!] 再生中のみ操作できます");
-    return;
+void toggleChild(int i) {  // 子機iの参加/退場状態をトグルする
+  if (i < 0 || i >= NUM_CHILDREN) return;  // 範囲外の子機番号は無視
+  if (!isPlaying) {  // 停止中は操作を受け付けない
+    Serial.println("[!] 再生中のみ操作できます");  // 再生中のみ操作可能と警告表示
+    return;  // 処理を中断
   }
 
-  long joinBoundary = ((tickCount / QUANTIZE_TICKS) + 1) * QUANTIZE_TICKS;
+  long joinBoundary = ((tickCount / QUANTIZE_TICKS) + 1) * QUANTIZE_TICKS;  // 次の区切り(8tick境界)を参加tickに計算
 
-  if (isActive[i]) {
-    if (leaveTick[i] != -1) {
-      leaveTick[i] = -1;
-      Serial.print("child ");
-      Serial.print(i);
-      Serial.println(" leave cancelled (stay)");
-    } else {
+  if (isActive[i]) {  // すでに参加中の場合
+    if (leaveTick[i] != -1) {  // 退場予約済みなら
+      leaveTick[i] = -1;  // 退場予約を取り消す
+      Serial.print("child ");  // ログ出力(子機番号の前置き)
+      Serial.print(i);  // 子機番号を出力
+      Serial.println(" leave cancelled (stay)");  // 退場取消(残留)を通知
+    } else {  // 退場予約がなければ新規に退場予約
       // 子機が現在のループを最後まで弾き切ってから抜けるよう、
       // joinedAtTick から数えて次の SCORE_TICKS 境界に揃える。
-      long ticksSinceJoin = tickCount - joinedAtTick[i];
-      long loopsCompleted = ticksSinceJoin / SCORE_TICKS;
-      leaveTick[i] = joinedAtTick[i] + (loopsCompleted + 1) * SCORE_TICKS;
-      Serial.print("child ");
-      Serial.print(i);
-      Serial.print(" will leave at tick ");
-      Serial.print(leaveTick[i]);
-      Serial.print(" (end of loop ");
-      Serial.print(loopsCompleted + 1);
-      Serial.println(")");
+      long ticksSinceJoin = tickCount - joinedAtTick[i];  // 参加してからの経過tick数
+      long loopsCompleted = ticksSinceJoin / SCORE_TICKS;  // 完了した楽譜ループ数
+      leaveTick[i] = joinedAtTick[i] + (loopsCompleted + 1) * SCORE_TICKS;  // 次のループ末尾を退場tickに設定
+      Serial.print("child ");  // ログ出力
+      Serial.print(i);  // 子機番号を出力
+      Serial.print(" will leave at tick ");  // 退場予定tickの前置き
+      Serial.print(leaveTick[i]);  // 退場予定tickを出力
+      Serial.print(" (end of loop ");  // 何ループ目の末尾かの前置き
+      Serial.print(loopsCompleted + 1);  // ループ番号を出力
+      Serial.println(")");  // 行を閉じる
     }
-  } else {
-    if (joinTick[i] != -1) {
-      joinTick[i] = -1;
-      Serial.print("child ");
-      Serial.print(i);
-      Serial.println(" join cancelled");
-    } else {
-      joinTick[i] = joinBoundary;
-      Serial.print("child ");
-      Serial.print(i);
-      Serial.print(" will join at tick ");
-      Serial.println(joinTick[i]);
+  } else {  // 未参加の場合
+    if (joinTick[i] != -1) {  // 参加予約済みなら
+      joinTick[i] = -1;  // 参加予約を取り消す
+      Serial.print("child ");  // ログ出力
+      Serial.print(i);  // 子機番号を出力
+      Serial.println(" join cancelled");  // 参加取消を通知
+    } else {  // 参加予約がなければ新規に参加予約
+      joinTick[i] = joinBoundary;  // 次の区切りを参加tickに設定
+      Serial.print("child ");  // ログ出力
+      Serial.print(i);  // 子機番号を出力
+      Serial.print(" will join at tick ");  // 参加予定tickの前置き
+      Serial.println(joinTick[i]);  // 参加予定tickを出力
     }
   }
 }
 
 // 参加ボタン：押すごとに 参加予約⇄退場予約 をトグルする（リアルタイム、次の区切りに反映）
-void handleOrderButtons() {
-  for (int i = 0; i < NUM_CHILDREN; i++) {
-    int s = digitalRead(PIN_BTN_ORDER[i]);
-    if (prevBtnOrder[i] == HIGH && s == LOW) {
-      toggleChild(i);
-      delay(30);
+void handleOrderButtons() {  // 参加/退場ボタンの押下を検出する関数
+  for (int i = 0; i < NUM_CHILDREN; i++) {  // 全子機のボタンを順に確認
+    int s = digitalRead(PIN_BTN_ORDER[i]);  // 現在のボタン状態を読む
+    if (prevBtnOrder[i] == HIGH && s == LOW) {  // HIGH→LOWの立下り(押した瞬間)を検出
+      toggleChild(i);  // 該当子機の状態をトグル
+      delay(30);  // チャタリング防止に30ms待つ
     }
-    prevBtnOrder[i] = s;
+    prevBtnOrder[i] = s;  // 今回の状態を次回比較用に保存
   }
 }
 
-void doReset() {
-  isPlaying = false;
-  tickCount = 0;
-  for (int i = 0; i < NUM_CHILDREN; i++) {
-    isActive[i] = false;
-    joinTick[i] = -1;
-    leaveTick[i] = -1;
-    joinedAtTick[i] = -1;
+void doReset() {  // 全状態を初期化して停止する関数
+  isPlaying = false;  // 再生を停止
+  tickCount = 0;  // tickカウンタを0に戻す
+  for (int i = 0; i < NUM_CHILDREN; i++) {  // 全子機分の状態を初期化
+    isActive[i] = false;  // 参加状態を解除
+    joinTick[i] = -1;  // 参加予約をクリア
+    leaveTick[i] = -1;  // 退場予約をクリア
+    joinedAtTick[i] = -1;  // 参加発火tickをクリア
   }
-  digitalWrite(LED_INDICATOR, LOW);
-  Serial.println("reset");
+  digitalWrite(LED_INDICATOR, LOW);  // インジケータLEDを消灯
+  Serial.println("reset");  // リセット完了をログ出力
 }
 
-void handleResetButton() {
-  int s = digitalRead(PIN_BTN_RESET);
-  if (prevBtnReset == HIGH && s == LOW) {
-    doReset();
-    delay(30);
+void handleResetButton() {  // リセットボタンの押下を検出する関数
+  int s = digitalRead(PIN_BTN_RESET);  // ボタン状態を読む
+  if (prevBtnReset == HIGH && s == LOW) {  // 立下り(押下)を検出
+    doReset();  // リセット処理を実行
+    delay(30);  // チャタリング防止
   }
-  prevBtnReset = s;
+  prevBtnReset = s;  // 状態を保存
 }
 
 // 可変抵抗（A5）の値を 60〜150 BPM に線形マップしてリアルタイム反映する。
 // 50ms間隔で読み取り、指数移動平均で軽くノイズを抑える。
 // 既存の tick 周期計算は毎ループ tempoBpm を参照しているため、即座に反映される。
-void handleTempoPot() {
-  unsigned long now = millis();
-  if (now - lastPotReadMs < POT_READ_INTERVAL_MS) return;
-  lastPotReadMs = now;
+void handleTempoPot() {  // 可変抵抗を読んでテンポに反映する関数
+  unsigned long now = millis();  // 現在時刻を取得
+  if (now - lastPotReadMs < POT_READ_INTERVAL_MS) return;  // 前回から50ms未満なら読まずに戻る
+  lastPotReadMs = now;  // 読み取り時刻を更新
 
-  int raw = analogRead(PIN_POT_TEMPO);
-  if (smoothedPotRaw < 0) smoothedPotRaw = raw;
-  else smoothedPotRaw = (smoothedPotRaw * 3 + raw) / 4;
+  int raw = analogRead(PIN_POT_TEMPO);  // 可変抵抗のADC値(0〜1023)を読む
+  if (smoothedPotRaw < 0) smoothedPotRaw = raw;  // 初回はそのまま初期値にする
+  else smoothedPotRaw = (smoothedPotRaw * 3 + raw) / 4;  // 指数移動平均でノイズを平滑化
 
-  int newBpm = map(smoothedPotRaw, 0, 1023, TEMPO_MIN_BPM, TEMPO_MAX_BPM);
-  newBpm = constrain(newBpm, TEMPO_MIN_BPM, TEMPO_MAX_BPM);
-  tempoBpm = newBpm;
+  int newBpm = map(smoothedPotRaw, 0, 1023, TEMPO_MIN_BPM, TEMPO_MAX_BPM);  // ADC値を60〜150BPMへ線形変換
+  newBpm = constrain(newBpm, TEMPO_MIN_BPM, TEMPO_MAX_BPM);  // 範囲外に出ないようクランプ
+  tempoBpm = newBpm;  // テンポを更新(次tickから即反映)
 
   // 微小変動でシリアルが埋まらないよう、2BPM以上変わったときだけログ
-  if (lastReportedBpm < 0 || abs(newBpm - lastReportedBpm) >= 2) {
-    Serial.print("tempo=");
-    Serial.println(tempoBpm);
-    lastReportedBpm = newBpm;
+  if (lastReportedBpm < 0 || abs(newBpm - lastReportedBpm) >= 2) {  // 2BPM以上変化したときだけログ
+    Serial.print("tempo=");  // テンポ値の前置きを出力
+    Serial.println(tempoBpm);  // 現在のテンポを出力
+    lastReportedBpm = newBpm;  // 報告済みBPMを更新
   }
 }
 
 // 再生開始：誰も参加していない状態から開始する（参加はボタンで都度行う）
-void doStart() {
-  if (isPlaying) {
-    Serial.println("[!] already playing");
-    return;
+void doStart() {  // 演奏を開始する関数
+  if (isPlaying) {  // すでに再生中なら
+    Serial.println("[!] already playing");  // 二重開始を警告
+    return;  // 何もせず戻る
   }
-  isPlaying  = true;
-  tickCount  = 0;
-  lastTickMs = millis() - (60000UL / (unsigned long)tempoBpm / 2UL);
-  for (int i = 0; i < NUM_CHILDREN; i++) {
-    isActive[i] = false;
-    joinTick[i] = -1;
-    leaveTick[i] = -1;
-    joinedAtTick[i] = -1;
+  isPlaying  = true;  // 再生中フラグを立てる
+  tickCount  = 0;  // tickカウンタを初期化
+  lastTickMs = millis() - (60000UL / (unsigned long)tempoBpm / 2UL);  // すぐ最初のtickが出るよう時刻を過去にずらす
+  for (int i = 0; i < NUM_CHILDREN; i++) {  // 全子機の状態を初期化
+    isActive[i] = false;  // 参加状態を解除
+    joinTick[i] = -1;  // 参加予約をクリア
+    leaveTick[i] = -1;  // 退場予約をクリア
+    joinedAtTick[i] = -1;  // 参加発火tickをクリア
   }
-  Serial.println("start");
+  Serial.println("start");  // 開始をログ出力
 }
 
-void handleStartButton() {
-  int s = digitalRead(PIN_BTN_START);
-  if (prevBtnStart == HIGH && s == LOW) {
-    doStart();
-    delay(30);
+void handleStartButton() {  // 開始ボタンの押下を検出する関数
+  int s = digitalRead(PIN_BTN_START);  // ボタン状態を読む
+  if (prevBtnStart == HIGH && s == LOW) {  // 立下り(押下)を検出
+    doStart();  // 演奏開始処理を実行
+    delay(30);  // チャタリング防止
   }
-  prevBtnStart = s;
+  prevBtnStart = s;  // 状態を保存
 }
 
-void doTest() {
-  const long TEST_COUNT = 10000;
-  const int SEND_INTERVAL_MS = 30;
-  Serial.println("[TEST] start 10000 sends (mask=0x0F, interval=30ms)");
-  for (long i = 0; i < TEST_COUNT; i++) {
-    digitalWrite(PIN_SYNC_OUT, HIGH);
-    delayMicroseconds(50);
-    digitalWrite(PIN_SYNC_OUT, LOW);
-    IrSender.sendSony(0, 0x0F, 0);
-    if (i % 1000 == 0) {
-      Serial.print("[TEST] ");
-      Serial.print(i);
-      Serial.println("/10000");
+void doTest() {  // 通信品質計測用のテスト送信関数
+  const long TEST_COUNT = 10000;  // 送信回数(1万回)
+  const int SEND_INTERVAL_MS = 30;  // 送信間隔(30ms)
+  Serial.println("[TEST] start 10000 sends (mask=0x0F, interval=30ms)");  // テスト開始をログ出力
+  for (long i = 0; i < TEST_COUNT; i++) {  // 1万回のループ
+    digitalWrite(PIN_SYNC_OUT, HIGH);  // 同期パルスを立てる(計測起点)
+    delayMicroseconds(50);  // 50us保持
+    digitalWrite(PIN_SYNC_OUT, LOW);  // 同期パルスを下げる
+    IrSender.sendSony(0, 0x0F, 0);  // 全子機宛(mask=0x0F)でSony信号を送信
+    if (i % 1000 == 0) {  // 1000回ごとに
+      Serial.print("[TEST] ");  // 進捗の前置き
+      Serial.print(i);  // 現在の送信回数
+      Serial.println("/10000");  // 総数を出力
     }
-    delay(SEND_INTERVAL_MS);
+    delay(SEND_INTERVAL_MS);  // 次の送信まで30ms待つ
   }
-  Serial.println("[TEST] done 10000/10000");
+  Serial.println("[TEST] done 10000/10000");  // テスト完了をログ出力
 }
 
-void handleSerialCommand() {
-  while (Serial.available()) {
-    char c = (char)Serial.read();
-    if (c == '\r' || c == '\n' || c == ' ') continue;
+void handleSerialCommand() {  // シリアル入力コマンドを処理する関数
+  while (Serial.available()) {  // 受信バッファがある間繰り返す
+    char c = (char)Serial.read();  // 1文字読み取る
+    if (c == '\r' || c == '\n' || c == ' ') continue;  // 改行・空白は無視
 
-    if (c >= '0' && c <= ('0' + NUM_CHILDREN - 1)) {
-      toggleChild(c - '0');
-    } else if (c == 's' || c == 'S') {
-      doStart();
-    } else if (c == 'r' || c == 'R') {
-      doReset();
-    } else if (c == 't' || c == 'T') {
-      doTest();
-    } else if (c == '?') {
-      printHelp();
+    if (c >= '0' && c <= ('0' + NUM_CHILDREN - 1)) {  // '0'〜'3'なら子機番号として扱う
+      toggleChild(c - '0');  // 対応子機をトグル
+    } else if (c == 's' || c == 'S') {  // 's'なら
+      doStart();  // 演奏開始
+    } else if (c == 'r' || c == 'R') {  // 'r'なら
+      doReset();  // リセット
+    } else if (c == 't' || c == 'T') {  // 't'なら
+      doTest();  // テスト送信
+    } else if (c == '?') {  // '?'なら
+      printHelp();  // ヘルプ表示
     }
   }
 }
 
-void printHelp() {
-  Serial.println("=== hack_oya_kai help ===");
-  Serial.println("0..3 : 子機の参加/退場トグル (D4..D7 ボタンと同じ動作)");
-  Serial.println("       未参加→参加予約 / 参加中→退場予約 / 予約中に再度押すと取消");
-  Serial.println("s    : start");
-  Serial.println("r    : reset (即時の強制停止)");
-  Serial.println("?    : help");
-  Serial.println("(BPM は A5 のポテンショメータで 60-150 を連続調整)");
-  Serial.print("Current BPM=");
-  Serial.println(tempoBpm);
+void printHelp() {  // 操作方法をシリアルに表示する関数
+  Serial.println("=== hack_oya_kai help ===");  // ヘルプの見出しを出力
+  Serial.println("0..3 : 子機の参加/退場トグル (D4..D7 ボタンと同じ動作)");  // 数字キーの説明
+  Serial.println("       未参加→参加予約 / 参加中→退場予約 / 予約中に再度押すと取消");  // トグル遷移の説明
+  Serial.println("s    : start");  // sキーの説明
+  Serial.println("r    : reset (即時の強制停止)");  // rキーの説明
+  Serial.println("?    : help");  // ?キーの説明
+  Serial.println("(BPM は A5 のポテンショメータで 60-150 を連続調整)");  // テンポ調整方法の説明
+  Serial.print("Current BPM=");  // 現在BPMの前置き
+  Serial.println(tempoBpm);  // 現在のテンポを出力
 }
 
-void tick() {
-  digitalWrite(LED_INDICATOR, (tickCount % 2) ? HIGH : LOW);
+void tick() {  // 1tickごとにマスクを送信する中核関数
+  digitalWrite(LED_INDICATOR, (tickCount % 2) ? HIGH : LOW);  // tickごとにインジケータLEDを点滅
 
-  uint8_t mask = 0;
-  for (int i = 0; i < NUM_CHILDREN; i++) {
+  uint8_t mask = 0;  // 送信する参加楽器マスクを初期化
+  for (int i = 0; i < NUM_CHILDREN; i++) {  // 全子機について
     // 参加予約していたtickに到達したら有効化
-    if (!isActive[i] && joinTick[i] != -1 && tickCount >= joinTick[i]) {
-      isActive[i] = true;
-      joinTick[i] = -1;
+    if (!isActive[i] && joinTick[i] != -1 && tickCount >= joinTick[i]) {  // 参加予約tickに到達したら
+      isActive[i] = true;  // 参加状態にする
+      joinTick[i] = -1;  // 参加予約をクリア
       joinedAtTick[i] = tickCount;   // 退場アライメント計算の起点
-      Serial.print("child ");
-      Serial.print(i);
-      Serial.println(" joined");
+      Serial.print("child ");  // ログ出力
+      Serial.print(i);  // 子機番号を出力
+      Serial.println(" joined");  // 参加をログ出力
     }
     // 退場予約していたtickに到達したら無効化 (このtickからは送らない)
-    if (isActive[i] && leaveTick[i] != -1 && tickCount >= leaveTick[i]) {
-      isActive[i] = false;
-      leaveTick[i] = -1;
-      joinedAtTick[i] = -1;
-      Serial.print("child ");
-      Serial.print(i);
-      Serial.println(" left");
+    if (isActive[i] && leaveTick[i] != -1 && tickCount >= leaveTick[i]) {  // 退場予約tickに到達したら
+      isActive[i] = false;  // 参加状態を解除
+      leaveTick[i] = -1;  // 退場予約をクリア
+      joinedAtTick[i] = -1;  // 参加発火tickをクリア
+      Serial.print("child ");  // ログ出力
+      Serial.print(i);  // 子機番号を出力
+      Serial.println(" left");  // 退場をログ出力
     }
-    if (isActive[i]) {
-      mask |= (uint8_t)(1 << i);
+    if (isActive[i]) {  // 参加中の子機は
+      mask |= (uint8_t)(1 << i);  // マスクの該当ビットを立てる
     }
   }
 
-  if (mask != 0) {
+  if (mask != 0) {  // 参加中の子機が1つでもあれば
     // 子機D3への同期パルス。IR送信直前に立てて、子機ISRのmicros()と
     // 本ループのsendNEC完了までの遅延を子機側で計測できるようにする。
-    digitalWrite(PIN_SYNC_OUT, HIGH);
-    delayMicroseconds(50);
-    digitalWrite(PIN_SYNC_OUT, LOW);
+    digitalWrite(PIN_SYNC_OUT, HIGH);  // 送信直前に同期パルスを立てる(遅延計測用)
+    delayMicroseconds(50);  // 50us保持
+    digitalWrite(PIN_SYNC_OUT, LOW);  // 同期パルスを下げる
 
-    IrSender.sendSony(0, mask, 0);
+    IrSender.sendSony(0, mask, 0);  // 参加マスクをSony SIRCで全子機へ送信
   }
 }
 
@@ -965,8 +966,8 @@ void tick() {
 ピアノ・フルート・トランペット・ドラムの4子機で共通のArduinoスケッチを以下に示す．書き込み時にchildIdを機体ごとに変更する．
 
 \begin{lstlisting}
-#define DECODE_SONY
-#include <IRremote.hpp>
+#define DECODE_SONY  // Sony SIRCプロトコルのデコードを有効化
+#include <IRremote.hpp>  // 赤外線受信ライブラリを読み込む
 
 // hack_oya_kai.ino 用プロトコル対応版:
 //   IrSender.sendSony(0, mask, 0) を受信（Sony SIRC 12bit, ~17ms）。
@@ -977,211 +978,211 @@ void tick() {
 //   (ドラム機は元々楽譜を持たず鳴らし続けるだけなので、この対象外)
 
 // 書き込む機体ごとに値を変えて Upload する: 0,1,2 = メロディ機, 3 = ドラム機。
-int childId = 0;
-const int DRUM_CHILD_ID = 3;
-const int PIN_IR_RECV = 2;
+int childId = 0;  // 自分の担当ビット番号(機体ごとに0〜3へ変更)
+const int DRUM_CHILD_ID = 3;  // ドラム機のID(3番はドラム扱い)
+const int PIN_IR_RECV = 2;  // 赤外線受光モジュールの入力ピン(D2)
 const int PIN_SYNC_IN = 3;            // 親機D9からの同期パルス入力（遅延計測用）
-const int LED_INDICATOR = 13;
+const int LED_INDICATOR = 13;  // 動作確認用の内蔵LED(D13)
 
-const int SCORE_LENGTH = 40;
-const String myScore[SCORE_LENGTH] = {
-  "C4", "D4", "E4", "F4", "E4", "D4", "C4", "R",
-  "E4", "F4", "G4", "A4", "G4", "F4", "E4", "R",
-  "C4", "R",  "C4", "R",  "C4", "R",  "C4", "R",
-  "C4", "C4", "D4", "D4", "E4", "E4", "F4", "F4",
-  "E4", "R",  "D4", "R",  "C4", "R" , "R" , "R"
+const int SCORE_LENGTH = 40;  // 楽譜配列の要素数(音符数)
+const String myScore[SCORE_LENGTH] = {  // この子機が演奏する楽譜(音名の並び)
+  "C4", "D4", "E4", "F4", "E4", "D4", "C4", "R",  // 1〜8音目(冒頭ドレミファミレド)
+  "E4", "F4", "G4", "A4", "G4", "F4", "E4", "R",  // 9〜16音目(ミファソラソファミ)
+  "C4", "R",  "C4", "R",  "C4", "R",  "C4", "R",  // 17〜24音目(ドを休符を挟んで4回)
+  "C4", "C4", "D4", "D4", "E4", "E4", "F4", "F4",  // 25〜32音目(各音2回、以降16分音符)
+  "E4", "R",  "D4", "R",  "C4", "R" , "R" , "R"  // 33〜40音目(ミレドと休符で締め)
 };
 
 // index 24 以降は1IR=2音(16分音符相当)で発音する。
-const int DOUBLE_START = 24;
+const int DOUBLE_START = 24;  // この位置以降は1tickで2音(16分音符)鳴らす
 
 // 1周(ループ)に必要なtick数。
 //   通常区間: 0 .. DOUBLE_START-1 (1tick=1音)
 //   倍速区間: DOUBLE_START .. (1tick=2音) なので tick数は半分になる
 // 例) DOUBLE_START=24, SCORE_LENGTH=40 → 24 + (40-24)/2 = 32
-const int TOTAL_TICKS = DOUBLE_START + (SCORE_LENGTH - DOUBLE_START) / 2;
+const int TOTAL_TICKS = DOUBLE_START + (SCORE_LENGTH - DOUBLE_START) / 2;  // 楽譜1周に要するtick数(=32)
 
 // Processing への通信フォーマット: "ピッチ名,duration秒,amplitude,localPos\n"
-const float NOTE_DURATION_DEFAULT = 0.40f;
-const float NOTE_DURATION_HALF    = 0.20f;
-const float NOTE_AMPLITUDE        = 0.60f;
+const float NOTE_DURATION_DEFAULT = 0.40f;  // 通常音符の長さ(秒)
+const float NOTE_DURATION_HALF    = 0.20f;  // 倍速区間の音符長(秒)
+const float NOTE_AMPLITUDE        = 0.60f;  // 音量(0〜1)
 
 // ドラム機が drum.pde に送るキック合図 (drum.pde は "C2" 単独行を期待)。
-const String DRUM_NOTE = "C2";
+const String DRUM_NOTE = "C2";  // ドラム機がキックとして送る合図
 
 // 自分の出番が来た回数 (= 親機のtickCountに相当)。受信したtickごとに進む。
 long localPos = -1;  // -1 = まだ一度も自分の出番が来ていない
 
 // テストモード: 't' で ON。受信カウント＋レイテンシCSV出力のみ行う
-bool testMode = false;
-long testRecvCount = 0;
-unsigned long testLatencyMin = 0xFFFFFFFF;
-unsigned long testLatencyMax = 0;
-unsigned long testLatencySum = 0;
-unsigned long lastTestRecvMs = 0;
+bool testMode = false;  // テストモードのON/OFF
+long testRecvCount = 0;  // テスト中の受信回数
+unsigned long testLatencyMin = 0xFFFFFFFF;  // 遅延の最小値(初期値は最大に)
+unsigned long testLatencyMax = 0;  // 遅延の最大値
+unsigned long testLatencySum = 0;  // 遅延の合計(平均算出用)
+unsigned long lastTestRecvMs = 0;  // 最後にテスト受信した時刻
 
-unsigned long lastReceiveMs = 0;
+unsigned long lastReceiveMs = 0;  // 前回IRを受信した時刻(ms)
 unsigned long lastIntervalMs = 250;  // 双子音化区間の半tick遅延に使う
 
 // 遅延計測: 親機の同期パルス立ち上がり時刻をISRで記録
-volatile unsigned long syncRiseUs = 0;
+volatile unsigned long syncRiseUs = 0;  // 同期パルス立ち上がり時刻(ISRで更新)
 
-void onSyncRise() {
-  syncRiseUs = micros();
+void onSyncRise() {  // 同期パルス割り込み時に呼ばれるISR
+  syncRiseUs = micros();  // 立ち上がり時刻をusで記録
 }
 
-void sendNoteToHost(const String& pitch, float duration, float amplitude, long pos) {
-  Serial.print(pitch);
-  Serial.print(',');
-  Serial.print(duration, 3);
-  Serial.print(',');
-  Serial.print(amplitude, 3);
-  Serial.print(',');
-  Serial.println(pos);
+void sendNoteToHost(const String& pitch, float duration, float amplitude, long pos) {  // Processingへ音符情報を送る関数
+  Serial.print(pitch);  // 音名を送信
+  Serial.print(',');  // 区切りカンマ
+  Serial.print(duration, 3);  // 音の長さを小数3桁で送信
+  Serial.print(',');  // 区切りカンマ
+  Serial.print(amplitude, 3);  // 音量を小数3桁で送信
+  Serial.print(',');  // 区切りカンマ
+  Serial.println(pos);  // localPosを送信して改行
 }
 
-void printReady() {
-  Serial.print("hack-ko ready CHILD_ID=");
-  Serial.print(childId);
-  Serial.println(childId == DRUM_CHILD_ID ? " (DRUM)" : " (MELODY)");
+void printReady() {  // 起動完了メッセージを出す関数
+  Serial.print("hack-ko ready CHILD_ID=");  // 準備完了とID前置き
+  Serial.print(childId);  // 自分のIDを出力
+  Serial.println(childId == DRUM_CHILD_ID ? " (DRUM)" : " (MELODY)");  // ドラム機かメロディ機かを表示
 }
 
-void setup() {
-  Serial.begin(115200);
+void setup() {  // 起動時の初期化関数
+  Serial.begin(115200);  // シリアル通信を115200bpsで開始
 
   // UNO R4 等の native USB CDC は Serial.begin() 直後はホスト未接続のことがある。
   // 最大3秒だけCDC接続完了を待つ (タイムアウトしてもそのまま進む)。
-  unsigned long boot_t = millis();
-  while (!Serial && (millis() - boot_t) < 3000) { ; }
+  unsigned long boot_t = millis();  // 起動時刻を記録
+  while (!Serial && (millis() - boot_t) < 3000) { ; }  // 最大3秒だけUSB接続を待つ
 
-  IrReceiver.begin(PIN_IR_RECV);
-  pinMode(PIN_SYNC_IN, INPUT);
-  attachInterrupt(digitalPinToInterrupt(PIN_SYNC_IN), onSyncRise, RISING);
-  pinMode(LED_INDICATOR, OUTPUT);
+  IrReceiver.begin(PIN_IR_RECV);  // 赤外線受信をD2で開始
+  pinMode(PIN_SYNC_IN, INPUT);  // 同期パルス入力ピンを入力に設定
+  attachInterrupt(digitalPinToInterrupt(PIN_SYNC_IN), onSyncRise, RISING);  // 立ち上がりでISRを呼ぶよう割り込み設定
+  pinMode(LED_INDICATOR, OUTPUT);  // インジケータLEDを出力に設定
 
-  delay(100);
-  printReady();
+  delay(100);  // 安定待ちに100ms
+  printReady();  // 起動完了を通知
 }
 
-void handleChildSerial() {
-  while (Serial.available()) {
-    char c = (char)Serial.read();
-    if (c == '\r' || c == '\n' || c == ' ') continue;
-    if (c == 't' || c == 'T') {
-      testMode = !testMode;
-      testRecvCount = 0;
-      testLatencyMin = 0xFFFFFFFF;
-      testLatencyMax = 0;
-      testLatencySum = 0;
-      lastTestRecvMs = 0;
-      if (testMode) {
-        Serial.println("[TEST] receive mode ON — waiting for IR...");
-        Serial.println("seq,latency_us");
-      } else {
-        Serial.println("[TEST] receive mode OFF");
+void handleChildSerial() {  // PCからのコマンド(テスト切替)を処理
+  while (Serial.available()) {  // 受信がある間繰り返す
+    char c = (char)Serial.read();  // 1文字読む
+    if (c == '\r' || c == '\n' || c == ' ') continue;  // 改行・空白は無視
+    if (c == 't' || c == 'T') {  // 't'ならテストモードを切替
+      testMode = !testMode;  // ON/OFFを反転
+      testRecvCount = 0;  // 受信カウントをリセット
+      testLatencyMin = 0xFFFFFFFF;  // 最小遅延をリセット
+      testLatencyMax = 0;  // 最大遅延をリセット
+      testLatencySum = 0;  // 遅延合計をリセット
+      lastTestRecvMs = 0;  // 最終受信時刻をリセット
+      if (testMode) {  // テストON時は
+        Serial.println("[TEST] receive mode ON — waiting for IR...");  // 待機メッセージを出力
+        Serial.println("seq,latency_us");  // CSVヘッダを出力
+      } else {  // テストOFF時は
+        Serial.println("[TEST] receive mode OFF");  // 終了メッセージを出力
       }
     }
   }
 }
 
-void loop() {
-  handleChildSerial();
+void loop() {  // メインループ
+  handleChildSerial();  // シリアルコマンドを処理
 
   // テスト完了検知: 最後の受信から3秒経ったらサマリーを出力して終了
-  if (testMode && testRecvCount > 0 && (millis() - lastTestRecvMs > 3000)) {
-    Serial.println("---");
-    Serial.print("[TEST] received: ");
-    Serial.print(testRecvCount);
-    Serial.println("/10000");
-    Serial.print("[TEST] min=");
-    Serial.print(testLatencyMin);
-    Serial.print("us max=");
-    Serial.print(testLatencyMax);
-    Serial.print("us avg=");
-    Serial.print(testLatencySum / testRecvCount);
-    Serial.println("us");
-    long lost = 10000 - testRecvCount;
-    Serial.print("[TEST] lost: ");
-    Serial.println(lost);
-    testMode = false;
+  if (testMode && testRecvCount > 0 && (millis() - lastTestRecvMs > 3000)) {  // テスト中で3秒受信が途絶えたら集計
+    Serial.println("---");  // 区切り線を出力
+    Serial.print("[TEST] received: ");  // 受信数の前置き
+    Serial.print(testRecvCount);  // 受信回数を出力
+    Serial.println("/10000");  // 総数を出力
+    Serial.print("[TEST] min=");  // 最小遅延の前置き
+    Serial.print(testLatencyMin);  // 最小遅延を出力
+    Serial.print("us max=");  // 最大遅延の前置き
+    Serial.print(testLatencyMax);  // 最大遅延を出力
+    Serial.print("us avg=");  // 平均遅延の前置き
+    Serial.print(testLatencySum / testRecvCount);  // 平均遅延を計算して出力
+    Serial.println("us");  // 単位を出力
+    long lost = 10000 - testRecvCount;  // 取りこぼした回数を計算
+    Serial.print("[TEST] lost: ");  // ロスト数の前置き
+    Serial.println(lost);  // ロスト数を出力
+    testMode = false;  // テストモードを終了
   }
 
-  if (!IrReceiver.decode()) return;
+  if (!IrReceiver.decode()) return;  // IR信号を受信していなければ戻る
 
   // decode直後にデータを退避し、即座にresumeする。
   // delay()中もIR受信を継続させ、tick取りこぼしを防ぐ。
-  uint8_t protocol = IrReceiver.decodedIRData.protocol;
-  uint8_t mask = (protocol == SONY) ? IrReceiver.decodedIRData.command : 0;
-  IrReceiver.resume();
+  uint8_t protocol = IrReceiver.decodedIRData.protocol;  // 受信プロトコルを退避
+  uint8_t mask = (protocol == SONY) ? IrReceiver.decodedIRData.command : 0;  // Sonyならコマンド(マスク)を取り出す
+  IrReceiver.resume();  // 次の受信に備えて即座に再開
 
-  if (protocol == SONY) {
-    if (testMode) {
-      testRecvCount++;
-      lastTestRecvMs = millis();
-      unsigned long recvUs = micros();
-      unsigned long riseUs = syncRiseUs;
-      unsigned long lat = (riseUs != 0) ? (recvUs - riseUs) : 0;
-      if (lat > 0) {
-        if (lat < testLatencyMin) testLatencyMin = lat;
-        if (lat > testLatencyMax) testLatencyMax = lat;
-        testLatencySum += lat;
+  if (protocol == SONY) {  // 受信がSony信号のときだけ処理
+    if (testMode) {  // テストモード中は計測だけ行う
+      testRecvCount++;  // 受信回数を1増やす
+      lastTestRecvMs = millis();  // 最終受信時刻を更新
+      unsigned long recvUs = micros();  // 受信時刻をusで取得
+      unsigned long riseUs = syncRiseUs;  // ISRが記録した同期時刻を取得
+      unsigned long lat = (riseUs != 0) ? (recvUs - riseUs) : 0;  // 同期からの遅延を計算
+      if (lat > 0) {  // 遅延が計測できたら
+        if (lat < testLatencyMin) testLatencyMin = lat;  // 最小値を更新
+        if (lat > testLatencyMax) testLatencyMax = lat;  // 最大値を更新
+        testLatencySum += lat;  // 合計に加算
       }
-      Serial.print(testRecvCount);
-      Serial.print(',');
-      Serial.println(lat);
-      return;
+      Serial.print(testRecvCount);  // シーケンス番号を出力
+      Serial.print(',');  // 区切りカンマ
+      Serial.println(lat);  // 遅延値を出力(CSV)
+      return;  // テスト中は発音せず戻る
     }
 
-    if (mask & (1 << childId)) {
-      unsigned long recvUs = micros();
+    if (mask & (1 << childId)) {  // 自分の担当ビットが立っていれば出番
+      unsigned long recvUs = micros();  // 受信時刻を取得
       unsigned long riseUs = syncRiseUs;  // ISRで記録された値をコピー
-      Serial.print("[RECV] millis=");
-      Serial.print(millis());
-      Serial.print(" child=");
-      Serial.print(childId);
-      Serial.print(" localPos=");
-      Serial.print(localPos + 1);
-      if (riseUs != 0) {
-        Serial.print(" latency=");
-        Serial.print(recvUs - riseUs);
-        Serial.print("us");
+      Serial.print("[RECV] millis=");  // 受信ログの前置き
+      Serial.print(millis());  // 受信時刻(ms)を出力
+      Serial.print(" child=");  // 子機番号の前置き
+      Serial.print(childId);  // 自分のIDを出力
+      Serial.print(" localPos=");  // 楽譜位置の前置き
+      Serial.print(localPos + 1);  // 次の楽譜位置を出力
+      if (riseUs != 0) {  // 同期時刻が取れていれば
+        Serial.print(" latency=");  // 遅延の前置き
+        Serial.print(recvUs - riseUs);  // 遅延値を出力
+        Serial.print("us");  // 単位を出力
       }
-      Serial.println();
-      localPos++;
+      Serial.println();  // ログ行を閉じる
+      localPos++;  // 楽譜位置を1進める
 
-      if (childId == DRUM_CHILD_ID) {
-        Serial.println(DRUM_NOTE);
-        digitalWrite(LED_INDICATOR, HIGH);
-        delay(15);
-        digitalWrite(LED_INDICATOR, LOW);
-      } else {
-        if (localPos >= TOTAL_TICKS) {
-          localPos = 0;
+      if (childId == DRUM_CHILD_ID) {  // ドラム機の場合
+        Serial.println(DRUM_NOTE);  // キック合図(C2)を送信
+        digitalWrite(LED_INDICATOR, HIGH);  // LEDを点灯
+        delay(15);  // 15ms点灯
+        digitalWrite(LED_INDICATOR, LOW);  // LEDを消灯
+      } else {  // メロディ機の場合
+        if (localPos >= TOTAL_TICKS) {  // 楽譜末尾を超えたら
+          localPos = 0;  // 先頭へ戻り自力でループ
         }
 
-        unsigned long now = millis();
-        if (lastReceiveMs != 0) {
-          unsigned long interval = now - lastReceiveMs;
+        unsigned long now = millis();  // 現在時刻を取得
+        if (lastReceiveMs != 0) {  // 前回受信時刻があれば
+          unsigned long interval = now - lastReceiveMs;  // tick間隔を計算
           // 演奏停止→再開時の大きなギャップでdelayが膨張するのを防ぐ
-          if (interval >= 50 && interval <= 2000 && interval <= lastIntervalMs * 3) {
-            lastIntervalMs = interval;
+          if (interval >= 50 && interval <= 2000 && interval <= lastIntervalMs * 3) {  // 妥当な間隔のときだけ採用
+            lastIntervalMs = interval;  // 直近のtick間隔を更新
           }
         }
-        lastReceiveMs = now;
+        lastReceiveMs = now;  // 受信時刻を保存
 
-        if (localPos >= 0 && localPos < DOUBLE_START) {
-          sendNoteToHost(myScore[localPos], NOTE_DURATION_DEFAULT, NOTE_AMPLITUDE, localPos);
-          digitalWrite(LED_INDICATOR, (localPos % 2) ? HIGH : LOW);
-        } else if (localPos >= DOUBLE_START) {
-          int scoreIdx = DOUBLE_START + 2 * (int)(localPos - DOUBLE_START);
-          if (scoreIdx < SCORE_LENGTH) {
-            sendNoteToHost(myScore[scoreIdx], NOTE_DURATION_HALF, NOTE_AMPLITUDE, localPos);
-            digitalWrite(LED_INDICATOR, (localPos % 2) ? HIGH : LOW);
+        if (localPos >= 0 && localPos < DOUBLE_START) {  // 通常区間(1tick=1音)なら
+          sendNoteToHost(myScore[localPos], NOTE_DURATION_DEFAULT, NOTE_AMPLITUDE, localPos);  // 該当音符をProcessingへ送信
+          digitalWrite(LED_INDICATOR, (localPos % 2) ? HIGH : LOW);  // 位置に応じLEDを点滅
+        } else if (localPos >= DOUBLE_START) {  // 倍速区間(1tick=2音)なら
+          int scoreIdx = DOUBLE_START + 2 * (int)(localPos - DOUBLE_START);  // 楽譜配列の実インデックスを算出
+          if (scoreIdx < SCORE_LENGTH) {  // 範囲内なら1音目を
+            sendNoteToHost(myScore[scoreIdx], NOTE_DURATION_HALF, NOTE_AMPLITUDE, localPos);  // 1音目を送信
+            digitalWrite(LED_INDICATOR, (localPos % 2) ? HIGH : LOW);  // LEDを点滅
           }
-          if (scoreIdx + 1 < SCORE_LENGTH) {
-            unsigned long halfDelay = min(lastIntervalMs / 2, 200UL);
-            delay(halfDelay);
-            sendNoteToHost(myScore[scoreIdx + 1], NOTE_DURATION_HALF, NOTE_AMPLITUDE, localPos);
+          if (scoreIdx + 1 < SCORE_LENGTH) {  // 2音目が範囲内なら
+            unsigned long halfDelay = min(lastIntervalMs / 2, 200UL);  // 半tick分の待ち時間を計算
+            delay(halfDelay);  // 半tick待つ
+            sendNoteToHost(myScore[scoreIdx + 1], NOTE_DURATION_HALF, NOTE_AMPLITUDE, localPos);  // 2音目を送信
           }
         }
       }
@@ -1197,183 +1198,183 @@ void loop() {
 ピアノ音の合成と再生を行うProcessingのプログラムを以下に示す．
 
 \begin{lstlisting}[language=Java]
-import processing.serial.*;
-Serial port;
-import ddf.minim.*;
-import ddf.minim.ugens.*;
-import java.util.HashMap;
-Minim minim;
-AudioOutput out;
-String currentNote = "";
+import processing.serial.*;  // シリアル通信ライブラリを読み込む
+Serial port;  // Arduinoと通信するシリアルポート
+import ddf.minim.*;  // 音声合成ライブラリMinimを読み込む
+import ddf.minim.ugens.*;  // Minimの音源生成ユニット群を読み込む
+import java.util.HashMap;  // キャッシュ用のHashMapを読み込む
+Minim minim;  // Minim本体のインスタンス
+AudioOutput out;  // 音声出力先
+String currentNote = "";  // 現在表示中の音名(画面表示用)
 int currentPos = -1;  // 親機が割り当ててきた localPos (デバッグ表示用)
 
 // ---- グランドピアノ音源（音源部のみ差し替え。シリアル受信の仕組みは既存のまま） ----
 // hack_koP2saisei_pianotest.pde と同一の合成アルゴリズム・同一パラメータ（音響検証7/7合格）。
 // 方式: 既知ピッチは起動時にプリレンダしてSamplerにキャッシュ、発音はtrigger()のみ。
-HashMap<String, Sampler> pianoCache = new HashMap<String, Sampler>();
+HashMap<String, Sampler> pianoCache = new HashMap<String, Sampler>();  // 生成済みピアノ音のキャッシュ
 Sampler lastSampler = null;  // 直近に鳴らした音。R受信時にstop()で即打ち切る（旧noteOff()と同じ役割）
-final float SAMPLE_RATE  = 44100f;
+final float SAMPLE_RATE  = 44100f;  // サンプリング周波数(44.1kHz)
 final float RELEASE_TAIL = 0.8f;   // ノート長に加えてレンダリングする余韻(秒)
 
-void setup() {
-  size(512, 200);
-  minim = new Minim(this);
-  out = minim.getLineOut();
+void setup() {  // 起動時の初期化関数
+  size(512, 200);  // 波形表示ウィンドウのサイズ
+  minim = new Minim(this);  // Minimを初期化
+  out = minim.getLineOut();  // ライン出力を取得
 
   // 楽譜(hack-koP2.ino)で使うピッチ×2種の長さを起動時にプリレンダリング。
   // 未知のピッチ/長さ/音量が来ても playNote 側の安全網で都度生成される。
   // ポートを開く前に済ませ、プリレンダ中のシリアル取りこぼしを避ける。
-  String[] knownPitches = { "C4", "D4", "E4", "F4", "G4", "A4" };
-  float[] knownDurs = { 0.40f, 0.20f };
-  long t0 = millis();
-  println("ピアノ音源をプリレンダリング中...");
-  for (String pitch : knownPitches) {
-    for (float dur : knownDurs) {
-      String key = cacheKey(pitch, dur, 0.60f);
-      pianoCache.put(key, buildSampler(pitch, dur, 0.60f));
-      println("  " + key + " OK");
+  String[] knownPitches = { "C4", "D4", "E4", "F4", "G4", "A4" };  // 事前生成する音名の一覧
+  float[] knownDurs = { 0.40f, 0.20f };  // 事前生成する音の長さ2種
+  long t0 = millis();  // プリレンダ開始時刻を記録
+  println("ピアノ音源をプリレンダリング中...");  // 進捗メッセージを表示
+  for (String pitch : knownPitches) {  // 各音名について
+    for (float dur : knownDurs) {  // 各長さについて
+      String key = cacheKey(pitch, dur, 0.60f);  // キャッシュキーを生成
+      pianoCache.put(key, buildSampler(pitch, dur, 0.60f));  // 音を生成してキャッシュに登録
+      println("  " + key + " OK");  // 生成完了を表示
     }
   }
-  println("プリレンダ完了: " + pianoCache.size() + "音 / " + (millis() - t0) + "ms");
+  println("プリレンダ完了: " + pianoCache.size() + "音 / " + (millis() - t0) + "ms");  // 生成数と所要時間を表示
 
   // portは各自変えて．
-  port = new Serial(this, "/dev/cu.usbserial-A5069RR4", 115200);
-  port.clear();
-  port.bufferUntil('\n');
+  port = new Serial(this, "/dev/cu.usbserial-A5069RR4", 115200);  // シリアルポートを開く
+  port.clear();  // 受信バッファをクリア
+  port.bufferUntil('\n');  // 改行までを1メッセージとして受信
 }
 
-void draw() {
-  background(0);
-  stroke(255);
-  for (int i = 0; i < out.bufferSize() - 1; i++) {
-    line(i, 50 + out.left.get(i)*50, i+1, 50 + out.left.get(i+1)*50);
+void draw() {  // 毎フレームの描画関数
+  background(0);  // 背景を黒で塗る
+  stroke(255);  // 描画色を白に
+  for (int i = 0; i < out.bufferSize() - 1; i++) {  // 出力バッファの各サンプルについて
+    line(i, 50 + out.left.get(i)*50, i+1, 50 + out.left.get(i+1)*50);  // 波形を線で描画
   }
-  fill(255);
-  text("note: " + currentNote, 10, 170);
-  text("pos : " + currentPos, 10, 190);
+  fill(255);  // 文字色を白に
+  text("note: " + currentNote, 10, 170);  // 現在の音名を表示
+  text("pos : " + currentPos, 10, 190);  // 現在の楽譜位置を表示
 }
 
-void serialEvent(Serial p) {
-  String inString = p.readStringUntil('\n');
-  if (inString == null) return;
-  inString = trim(inString);
-  if (inString.length() == 0) return;
-  currentNote = inString;
+void serialEvent(Serial p) {  // シリアル受信時に呼ばれる関数
+  String inString = p.readStringUntil('\n');  // 1行読み取る
+  if (inString == null) return;  // 空なら戻る
+  inString = trim(inString);  // 前後の空白を除去
+  if (inString.length() == 0) return;  // 空行なら戻る
+  currentNote = inString;  // 受信文字列を表示用に保存
 
   // ino側のフォーマット: "ピッチ名,duration秒,amplitude,localPos"
   // localPos は親機が決めた楽譜index。発音には使わずデバッグ表示専用。
   // 旧3列フォーマット(pitch,duration,amplitude)も互換のため受け付ける。
   // それ以外(起動メッセージなど)はパース不能としてスキップ。
-  String[] parts = split(inString, ',');
-  if (parts.length < 3) {
-    println("non-note: " + inString);
-    return;
+  String[] parts = split(inString, ',');  // カンマ区切りで分解
+  if (parts.length < 3) {  // 3要素未満なら音符でない
+    println("non-note: " + inString);  // 音符以外としてログ
+    return;  // 戻る
   }
-  String pitch = parts[0];
-  float duration = float(parts[1]);
-  float amplitude = float(parts[2]);
-  if (parts.length >= 4) {
-    currentPos = int(parts[3]);
+  String pitch = parts[0];  // 1列目=音名
+  float duration = float(parts[1]);  // 2列目=長さ(秒)
+  float amplitude = float(parts[2]);  // 3列目=音量
+  if (parts.length >= 4) {  // 4列目があれば
+    currentPos = int(parts[3]);  // localPosを表示用に保存
   }
   // R は休符: 直前の音の余韻が次のtickまで残らないよう、即stop()で打ち切る。
   // (NOTE_DURATION_DEFAULT=0.40s は tick間隔(120BPMで0.25s)より長いので、
   //  R が来た時点で前音がまだ鳴っているのを止めないと休符に聞こえない。)
-  if (pitch.equals("R")) {
-    if (lastSampler != null) {
-      lastSampler.stop();
-      lastSampler = null;
+  if (pitch.equals("R")) {  // Rは休符なので
+    if (lastSampler != null) {  // 直前の音が鳴っていれば
+      lastSampler.stop();  // 即座に止めて余韻を切る
+      lastSampler = null;  // 参照をクリア
     }
-    return;
+    return;  // 発音せず戻る
   }
-  playNote(pitch, duration, amplitude);
+  playNote(pitch, duration, amplitude);  // 音名に対応する音を再生
 }
 
-void playNote(String pitch, float duration, float amplitude) {
-  String key = cacheKey(pitch, duration, amplitude);
-  Sampler smp = pianoCache.get(key);
+void playNote(String pitch, float duration, float amplitude) {  // 指定の音を鳴らす関数
+  String key = cacheKey(pitch, duration, amplitude);  // キャッシュキーを生成
+  Sampler smp = pianoCache.get(key);  // キャッシュから音を取得
   if (smp == null) {  // 安全網: 未キャッシュの組み合わせは都度生成してキャッシュ
-    smp = buildSampler(pitch, duration, amplitude);
-    pianoCache.put(key, smp);
+    smp = buildSampler(pitch, duration, amplitude);  // 未生成なら新たに合成
+    pianoCache.put(key, smp);  // キャッシュに登録
   }
-  smp.trigger();
-  lastSampler = smp;
+  smp.trigger();  // 音を発音
+  lastSampler = smp;  // 直近の音として保存
 }
 
-String cacheKey(String pitch, float duration, float amplitude) {
-  return pitch + "_" + nf(duration, 0, 2) + "_" + nf(amplitude, 0, 2);
+String cacheKey(String pitch, float duration, float amplitude) {  // キャッシュキー文字列を作る関数
+  return pitch + "_" + nf(duration, 0, 2) + "_" + nf(amplitude, 0, 2);  // 音名・長さ・音量を連結
 }
 
 // ---- グランドピアノ音源（pianotestから無改変移植。amplitudeのみ引数化） ------
-Sampler buildSampler(String pitch, float dur, float amp) {
-  float f0 = Frequency.ofPitch(pitch).asHz();
-  float[] data = renderPianoNote(f0, dur, amp);
-  MultiChannelBuffer mcb = new MultiChannelBuffer(data.length, 1);
-  mcb.setChannel(0, data);
+Sampler buildSampler(String pitch, float dur, float amp) {  // ピアノ音を合成してSamplerにする関数
+  float f0 = Frequency.ofPitch(pitch).asHz();  // 音名から基本周波数を求める
+  float[] data = renderPianoNote(f0, dur, amp);  // 波形データを生成
+  MultiChannelBuffer mcb = new MultiChannelBuffer(data.length, 1);  // 1chのバッファを用意
+  mcb.setChannel(0, data);  // 波形データを書き込む
   Sampler smp = new Sampler(mcb, SAMPLE_RATE, 6);  // 最大6声（余韻の重なり用）
-  smp.patch(out);
-  return smp;
+  smp.patch(out);  // 出力に接続
+  return smp;  // 生成したSamplerを返す
 }
 
-float[] renderPianoNote(float f0, float dur, float amp) {
-  int n = (int)((dur + RELEASE_TAIL) * SAMPLE_RATE);
-  float[] buf = new float[n];
+float[] renderPianoNote(float f0, float dur, float amp) {  // ピアノ波形を数値計算で生成する関数
+  int n = (int)((dur + RELEASE_TAIL) * SAMPLE_RATE);  // 余韻を含む総サンプル数
+  float[] buf = new float[n];  // 波形バッファを確保
 
   // 複弦構成（実ピアノ: 高音ほど弦が多い）。デチューンはcent単位
-  float[] cents;
-  if      (f0 >= 350f) cents = new float[] { 0f, 1.2f, -0.8f };
-  else if (f0 >= 150f) cents = new float[] { 0f, 1.0f };
-  else                 cents = new float[] { 0f };
+  float[] cents;  // 各弦のデチューン量(cent)
+  if      (f0 >= 350f) cents = new float[] { 0f, 1.2f, -0.8f };  // 高音域は3本弦
+  else if (f0 >= 150f) cents = new float[] { 0f, 1.0f };  // 中音域は2本弦
+  else                 cents = new float[] { 0f };  // 低音域は1本弦
 
   float p       = 0.9f + 0.5f * constrain((f0 - 110f) / 770f, 0f, 1f);  // 倍音ロールオフ
   float B       = 0.0002f * pow(f0 / 261.6f, 0.8f);                     // インハーモニシティ
   float T60     = constrain(6.0f * pow(261.6f / f0, 0.7f), 0.8f, 8.0f); // 残響長(音域依存)
-  float tauBase = T60 / 6.9f;
-  float stringAmp = amp / cents.length;
+  float tauBase = T60 / 6.9f;  // 基準となる減衰時定数
+  float stringAmp = amp / cents.length;  // 弦数で割った1本あたりの振幅
 
-  for (int s = 0; s < cents.length; s++) {
-    float fs = f0 * pow(2f, cents[s] / 1200f);
-    for (int h = 1; h <= 10; h++) {
+  for (int s = 0; s < cents.length; s++) {  // 各弦について
+    float fs = f0 * pow(2f, cents[s] / 1200f);  // デチューンを反映した弦の周波数
+    for (int h = 1; h <= 10; h++) {  // 第1〜10倍音について
       float fh = h * fs * sqrt(1f + B * h * h);   // インハーモニシティ補正周波数
-      if (fh > SAMPLE_RATE * 0.45f) break;
-      float ah   = stringAmp / pow(h, p);
+      if (fh > SAMPLE_RATE * 0.45f) break;  // ナイキスト付近を超える倍音は打ち切り
+      float ah   = stringAmp / pow(h, p);  // 倍音次数に応じ振幅を減衰
       float tauH = tauBase / (1f + 0.6f * (h - 1));  // 高次倍音ほど速く減衰
-      float w    = TWO_PI * fh / SAMPLE_RATE;
-      for (int i = 0; i < n; i++) {
-        float t   = i / SAMPLE_RATE;
+      float w    = TWO_PI * fh / SAMPLE_RATE;  // 1サンプルあたりの位相増分
+      for (int i = 0; i < n; i++) {  // 全サンプルについて
+        float t   = i / SAMPLE_RATE;  // 経過時間(秒)
         float env = 0.3f * exp(-t / 0.12f) + 0.7f * exp(-t / tauH);  // 2段階減衰
-        buf[i] += ah * env * sin(w * i);
+        buf[i] += ah * env * sin(w * i);  // 倍音成分を波形に加算
       }
     }
   }
 
   // ハンマーノイズ: 最初の15ms、1次LPF(fc=f0*8上限8k)、指数減衰
-  float fc = min(f0 * 8f, 8000f);
-  float a  = 1f - exp(-TWO_PI * fc / SAMPLE_RATE);
-  float lp = 0f;
-  int nNoise = (int)(0.015f * SAMPLE_RATE);
+  float fc = min(f0 * 8f, 8000f);  // ノイズLPFのカットオフ周波数
+  float a  = 1f - exp(-TWO_PI * fc / SAMPLE_RATE);  // 1次LPFの係数
+  float lp = 0f;  // LPFの状態変数
+  int nNoise = (int)(0.015f * SAMPLE_RATE);  // ノイズを乗せる長さ(15ms分)
   randomSeed(12345);  // 打鍵音の再現性
-  for (int i = 0; i < nNoise && i < n; i++) {
-    float t = i / SAMPLE_RATE;
-    float x = random(-1f, 1f);
-    lp += a * (x - lp);
-    buf[i] += amp * 0.15f * lp * exp(-t / 0.008f);
+  for (int i = 0; i < nNoise && i < n; i++) {  // ノイズ区間の各サンプルについて
+    float t = i / SAMPLE_RATE;  // 経過時間
+    float x = random(-1f, 1f);  // 白色ノイズを生成
+    lp += a * (x - lp);  // LPFを通す
+    buf[i] += amp * 0.15f * lp * exp(-t / 0.008f);  // 減衰させて打鍵音として加算
   }
 
   // アタック(3ms)とダンパーリリース(dur経過後 τ=0.15s)
-  for (int i = 0; i < n; i++) {
-    float t = i / SAMPLE_RATE;
-    buf[i] *= (1f - exp(-t / 0.003f));
-    if (t > dur) buf[i] *= exp(-(t - dur) / 0.15f);
+  for (int i = 0; i < n; i++) {  // 全サンプルについて
+    float t = i / SAMPLE_RATE;  // 経過時間
+    buf[i] *= (1f - exp(-t / 0.003f));  // 3msのソフトアタックを掛ける
+    if (t > dur) buf[i] *= exp(-(t - dur) / 0.15f);  // 音符長経過後はダンパーで減衰
   }
 
   // クリップ防止
-  float peak = 0f;
-  for (int i = 0; i < n; i++) peak = max(peak, abs(buf[i]));
-  if (peak > 0.98f) {
-    float g = 0.98f / peak;
-    for (int i = 0; i < n; i++) buf[i] *= g;
+  float peak = 0f;  // 最大振幅を求める変数
+  for (int i = 0; i < n; i++) peak = max(peak, abs(buf[i]));  // 波形のピークを探索
+  if (peak > 0.98f) {  // ピークが0.98を超えたら
+    float g = 0.98f / peak;  // 収める倍率を計算
+    for (int i = 0; i < n; i++) buf[i] *= g;  // 全体を縮小してクリップ防止
   }
-  return buf;
+  return buf;  // 完成した波形を返す
 }
 \end{lstlisting}
 
@@ -1384,104 +1385,104 @@ float[] renderPianoNote(float f0, float dur, float amp) {
 フルート音の合成と再生を行うProcessingのプログラムを以下に示す．
 
 \begin{lstlisting}[language=Java]
-import processing.serial.*;
-Serial port;
-import ddf.minim.*;
-import ddf.minim.ugens.*;
-Waveform currentWaveform;
-Minim minim;
-AudioOutput out;
-String currentNote = "";
+import processing.serial.*;  // シリアル通信ライブラリを読み込む
+Serial port;  // シリアルポート
+import ddf.minim.*;  // 音声合成ライブラリMinim
+import ddf.minim.ugens.*;  // Minimの音源ユニット群
+Waveform currentWaveform;  // フルート用の波形テーブル
+Minim minim;  // Minim本体
+AudioOutput out;  // 音声出力先
+String currentNote = "";  // 現在の音名(表示用)
 int currentPos = -1;  // 親機が割り当ててきた localPos (デバッグ表示用)
 
-void setup() {
-  size(512, 200);
-  minim = new Minim(this);
-  out = minim.getLineOut();
-  out.setTempo(120);
+void setup() {  // 起動時の初期化関数
+  size(512, 200);  // 波形表示ウィンドウのサイズ
+  minim = new Minim(this);  // Minimを初期化
+  out = minim.getLineOut();  // ライン出力を取得
+  out.setTempo(120);  // 基準テンポを120に設定
   // フルートは基音が支配的で高次倍音が弱い。第2倍音を少しだけ加える。
-  currentWaveform = WavetableGenerator.gen10(4096, new float[] { 1.0f, 0.18f, 0.06f, 0.02f });
+  currentWaveform = WavetableGenerator.gen10(4096, new float[] { 1.0f, 0.18f, 0.06f, 0.02f });  // 基音中心の倍音構成で波形を生成
   // portは各自変えて．
-  port = new Serial(this, "/dev/cu.usbmodem64E8335D22342", 115200);
-  port.clear();
-  port.bufferUntil('\n');
+  port = new Serial(this, "/dev/cu.usbmodem64E8335D22342", 115200);  // シリアルポートを開く
+  port.clear();  // 受信バッファをクリア
+  port.bufferUntil('\n');  // 改行までを1メッセージとして受信
 }
 
-void draw() {
-  background(0);
-  stroke(255);
-  for (int i = 0; i < out.bufferSize() - 1; i++) {
-    line(i, 50 + out.left.get(i)*50, i+1, 50 + out.left.get(i+1)*50);
+void draw() {  // 毎フレームの描画関数
+  background(0);  // 背景を黒で塗る
+  stroke(255);  // 描画色を白に
+  for (int i = 0; i < out.bufferSize() - 1; i++) {  // 出力バッファの各サンプルについて
+    line(i, 50 + out.left.get(i)*50, i+1, 50 + out.left.get(i+1)*50);  // 波形を線で描画
   }
-  fill(255);
-  text("note: " + currentNote, 10, 170);
-  text("pos : " + currentPos, 10, 190);
+  fill(255);  // 文字色を白に
+  text("note: " + currentNote, 10, 170);  // 現在の音名を表示
+  text("pos : " + currentPos, 10, 190);  // 現在の楽譜位置を表示
 }
 
-void serialEvent(Serial p) {
-  String inString = p.readStringUntil('\n');
-  if (inString == null) return;
-  inString = trim(inString);
-  if (inString.length() == 0) return;
-  currentNote = inString;
+void serialEvent(Serial p) {  // シリアル受信時に呼ばれる関数
+  String inString = p.readStringUntil('\n');  // 1行読み取る
+  if (inString == null) return;  // 空なら戻る
+  inString = trim(inString);  // 前後の空白を除去
+  if (inString.length() == 0) return;  // 空行なら戻る
+  currentNote = inString;  // 表示用に保存
 
   // ino側のフォーマット: "ピッチ名,duration秒,amplitude,localPos"
   // localPos は親機が決めた楽譜index。発音には使わずデバッグ表示専用。
   // 旧3列フォーマット(pitch,duration,amplitude)も互換のため受け付ける。
   // それ以外(起動メッセージなど)はパース不能としてスキップ。
-  String[] parts = split(inString, ',');
-  if (parts.length < 3) {
-    println("non-note: " + inString);
-    return;
+  String[] parts = split(inString, ',');  // カンマ区切りで分解
+  if (parts.length < 3) {  // 3要素未満なら音符でない
+    println("non-note: " + inString);  // 音符以外としてログ
+    return;  // 戻る
   }
-  String pitch = parts[0];
-  float duration = float(parts[1]);
-  float amplitude = float(parts[2]);
-  if (parts.length >= 4) {
-    currentPos = int(parts[3]);
+  String pitch = parts[0];  // 1列目=音名
+  float duration = float(parts[1]);  // 2列目=長さ(秒)
+  float amplitude = float(parts[2]);  // 3列目=音量
+  if (parts.length >= 4) {  // 4列目があれば
+    currentPos = int(parts[3]);  // localPosを表示用に保存
   }
-  if (pitch.equals("R")) return;
-  playNote(pitch, duration, amplitude);
+  if (pitch.equals("R")) return;  // 休符なら発音せず戻る
+  playNote(pitch, duration, amplitude);  // 音を再生
 }
 
-void playNote(String pitch, float duration, float amplitude) {
-  float freq = Frequency.ofPitch(pitch).asHz();
-  out.playNote(0, duration, new FluteInstrument(freq, amplitude, currentWaveform));
+void playNote(String pitch, float duration, float amplitude) {  // 指定の音を鳴らす関数
+  float freq = Frequency.ofPitch(pitch).asHz();  // 音名から周波数を求める
+  out.playNote(0, duration, new FluteInstrument(freq, amplitude, currentWaveform));  // フルート楽器を生成して演奏
 }
 
-class FluteInstrument implements Instrument {
-  Oscil wave;
-  ADSR ampEnv;
-  Oscil vib;
-  Summer freqSum;
-  Constant baseFreq;
-  float maxAmp;
+class FluteInstrument implements Instrument {  // フルート音を定義する楽器クラス
+  Oscil wave;  // 主音を出す発振器
+  ADSR ampEnv;  // 振幅のエンベロープ
+  Oscil vib;  // ビブラート用の発振器
+  Summer freqSum;  // 基音とビブラートを合成する加算器
+  Constant baseFreq;  // 基準周波数を出す定数源
+  float maxAmp;  // 最大振幅
 
-  FluteInstrument(float frequency, float maxAmp, Waveform wf) {
-    this.maxAmp = maxAmp;
-    freqSum = new Summer();
-    baseFreq = new Constant(frequency);
+  FluteInstrument(float frequency, float maxAmp, Waveform wf) {  // コンストラクタ(音を組み立てる)
+    this.maxAmp = maxAmp;  // 最大振幅を保存
+    freqSum = new Summer();  // 周波数加算器を生成
+    baseFreq = new Constant(frequency);  // 基準周波数を設定
     // フルートらしい穏やかなビブラート (約5Hz、±周波数の深さ)。
-    vib = new Oscil(5, frequency * 0.006f, Waves.SINE);
-    baseFreq.patch(freqSum);
-    vib.patch(freqSum);
+    vib = new Oscil(5, frequency * 0.006f, Waves.SINE);  // 約5Hzのビブラートを生成
+    baseFreq.patch(freqSum);  // 基準周波数を加算器へ
+    vib.patch(freqSum);  // ビブラートを加算器へ
     // 振幅はADSR側でかけるので、ここでは 1.0 にしておく (0だと無音になる)。
-    wave = new Oscil(frequency, 1.0f, wf);
-    freqSum.patch(wave.frequency);
+    wave = new Oscil(frequency, 1.0f, wf);  // 主発振器を生成(振幅は後段で制御)
+    freqSum.patch(wave.frequency);  // 合成周波数を発振器へ入力
     // ピアノ的な瞬時アタック→減衰ではなく、ソフトに立ち上がり保持するエンベロープ。
     // ADSR(maxAmp, attack, decay, sustainLevel, release)
-    ampEnv = new ADSR(this.maxAmp, 0.08f, 0.05f, this.maxAmp * 0.9f, 0.12f);
-    wave.patch(ampEnv);
+    ampEnv = new ADSR(this.maxAmp, 0.08f, 0.05f, this.maxAmp * 0.9f, 0.12f);  // 柔らかい立上りのADSRを設定
+    wave.patch(ampEnv);  // 発振器をエンベロープへ接続
   }
 
-  void noteOn(float duration) {
-    ampEnv.noteOn();
-    ampEnv.patch(out);
+  void noteOn(float duration) {  // 発音開始時の処理
+    ampEnv.noteOn();  // エンベロープを立ち上げる
+    ampEnv.patch(out);  // 出力に接続
   }
 
-  void noteOff() {
-    ampEnv.noteOff();
-    ampEnv.unpatchAfterRelease(out);
+  void noteOff() {  // 発音終了時の処理
+    ampEnv.noteOff();  // エンベロープを解放
+    ampEnv.unpatchAfterRelease(out);  // 減衰後に出力から切断
   }
 }
 \end{lstlisting}
@@ -1492,128 +1493,128 @@ class FluteInstrument implements Instrument {
 トランペット音の合成と再生を行うProcessingのプログラムを以下に示す．
 
 \begin{lstlisting}[language=Java]
-import processing.serial.*;
-Serial port;
-import ddf.minim.*;
-import ddf.minim.ugens.*;
+import processing.serial.*;  // シリアル通信ライブラリを読み込む
+Serial port;  // シリアルポート
+import ddf.minim.*;  // 音声合成ライブラリMinim
+import ddf.minim.ugens.*;  // Minimの音源ユニット群
 
 // 1. 変数の宣言
-Waveform lowWave;
-Waveform midWave;
-Waveform highWave;
+Waveform lowWave;  // 低音域用の波形テーブル
+Waveform midWave;  // 中音域用の波形テーブル
+Waveform highWave;  // 高音域用の波形テーブル
 
-Minim minim;
-AudioOutput out;
-String currentNote = "";
+Minim minim;  // Minim本体
+AudioOutput out;  // 音声出力先
+String currentNote = "";  // 現在の音名(表示用)
 
-void setup() {
-  size(512, 200);
-  pixelDensity(1);
-  minim = new Minim(this);
-  out = minim.getLineOut();
-  out.setTempo(120);
+void setup() {  // 起動時の初期化関数
+  size(512, 200);  // 波形表示ウィンドウのサイズ
+  pixelDensity(1);  // ピクセル密度を1に固定
+  minim = new Minim(this);  // Minimを初期化
+  out = minim.getLineOut();  // ライン出力を取得
+  out.setTempo(120);  // 基準テンポを120に設定
 
 
-  lowWave   = WavetableGenerator.gen10(4096, new float[] { 1.0f, 0.72f, 0.5f, 0.3f, 0.1f });
-  midWave   = WavetableGenerator.gen10(4096, new float[] { 1.0f, 0.43f, 0.3f, 0.15f, 0.05f });
-  highWave  = WavetableGenerator.gen10(4096, new float[] { 1.0f, 0.028f, 0.01f });
+  lowWave   = WavetableGenerator.gen10(4096, new float[] { 1.0f, 0.72f, 0.5f, 0.3f, 0.1f });  // 低音域は倍音を豊かに
+  midWave   = WavetableGenerator.gen10(4096, new float[] { 1.0f, 0.43f, 0.3f, 0.15f, 0.05f });  // 中音域は中程度の倍音
+  highWave  = WavetableGenerator.gen10(4096, new float[] { 1.0f, 0.028f, 0.01f });  // 高音域はほぼ基音のみ
 
   // シリアルポート設定
-  port = new Serial(this, "/dev/cu.usbmodem64E83364FFA82", 115200);
-  port.clear();
-  port.bufferUntil('\n');
+  port = new Serial(this, "/dev/cu.usbmodem64E83364FFA82", 115200);  // シリアルポートを開く
+  port.clear();  // 受信バッファをクリア
+  port.bufferUntil('\n');  // 改行までを1メッセージとして受信
 }
 
-void draw() {
-  background(0);
-  stroke(255);
-  for (int i = 0; i < out.bufferSize() - 1; i++) {
-    line(i, 50 + out.left.get(i)*50, i+1, 50 + out.left.get(i+1)*50);
+void draw() {  // 毎フレームの描画関数
+  background(0);  // 背景を黒で塗る
+  stroke(255);  // 描画色を白に
+  for (int i = 0; i < out.bufferSize() - 1; i++) {  // 出力バッファの各サンプルについて
+    line(i, 50 + out.left.get(i)*50, i+1, 50 + out.left.get(i+1)*50);  // 波形を線で描画
   }
-  fill(255);
-  text("note: " + currentNote, 10, 180);
+  fill(255);  // 文字色を白に
+  text("note: " + currentNote, 10, 180);  // 現在の音名を表示
 }
 
-void serialEvent(Serial p) {
-  String inString = p.readStringUntil('\n');
-  if (inString == null) return;
-  inString = trim(inString);
-  if (inString.length() == 0) return;
-  currentNote = inString;
+void serialEvent(Serial p) {  // シリアル受信時に呼ばれる関数
+  String inString = p.readStringUntil('\n');  // 1行読み取る
+  if (inString == null) return;  // 空なら戻る
+  inString = trim(inString);  // 前後の空白を除去
+  if (inString.length() == 0) return;  // 空行なら戻る
+  currentNote = inString;  // 表示用に保存
 
-  String[] parts = split(inString, ',');
+  String[] parts = split(inString, ',');  // カンマ区切りで分解
 
-  if (parts.length < 3) {
-    if (inString.equals("C2")) {
-      println("🥁 ドラム音(C2)を受信");
+  if (parts.length < 3) {  // 3要素未満なら音符でない
+    if (inString.equals("C2")) {  // C2ならドラムのキック合図
+      println("🥁 ドラム音(C2)を受信");  // 受信をログ表示
     }
-    return;
+    return;  // 音符でないので戻る
   }
 
-  String pitch = parts[0];
-  if (pitch.equals("R")) {
-    println("♪ [休符]");
-    return;
+  String pitch = parts[0];  // 1列目=音名
+  if (pitch.equals("R")) {  // 休符なら
+    println("♪ [休符]");  // 休符をログ表示
+    return;  // 発音せず戻る
   }
 
-  float duration  = float(parts[1]);
-  float amplitude = float(parts[2]);
+  float duration  = float(parts[1]);  // 2列目=長さ(秒)
+  float amplitude = float(parts[2]);  // 3列目=音量
 
-  playNote(pitch, duration, amplitude);
+  playNote(pitch, duration, amplitude);  // 音を再生
 }
 
-void playNote(String pitch, float duration, float amplitude) {
-  try {
-    float freq = Frequency.ofPitch(pitch).asHz();
+void playNote(String pitch, float duration, float amplitude) {  // 指定の音を鳴らす関数
+  try {  // 不正な音名に備えて例外処理
+    float freq = Frequency.ofPitch(pitch).asHz();  // 音名から周波数を求める
 
     // 3. 周波数に応じて3つのウェーブテーブルの値を正しく出し分け
-    Waveform selectedWave = midWave;
-    if (freq < 550)       selectedWave = lowWave;
-    else if (freq > 900)  selectedWave = highWave;
+    Waveform selectedWave = midWave;  // 既定は中音域波形
+    if (freq < 550)       selectedWave = lowWave;  // 550Hz未満は低音域波形
+    else if (freq > 900)  selectedWave = highWave;  // 900Hz超は高音域波形
 
-    out.playNote(0, duration, new TrumpetInstrument(freq, amplitude, selectedWave));
-  } catch (Exception e) {
+    out.playNote(0, duration, new TrumpetInstrument(freq, amplitude, selectedWave));  // トランペット楽器で演奏
+  } catch (Exception e) {  // 例外が出ても
     // 安全弁
   }
 }
 
-class TrumpetInstrument implements Instrument {
-  Oscil wave;
-  Line ampEnv;
-  Oscil vib;
-  Summer freqSum;
-  Constant baseFreq;
-  float maxAmp;
+class TrumpetInstrument implements Instrument {  // トランペット音を定義する楽器クラス
+  Oscil wave;  // 主音を出す発振器
+  Line ampEnv;  // 振幅の直線エンベロープ
+  Oscil vib;  // ビブラート用の発振器
+  Summer freqSum;  // 基音とビブラートを合成する加算器
+  Constant baseFreq;  // 基準周波数を出す定数源
+  float maxAmp;  // 最大振幅
 
-  TrumpetInstrument(float frequency, float maxAmp, Waveform wf) {
-    this.maxAmp = maxAmp;
-    freqSum = new Summer();
-    baseFreq = new Constant(frequency);
+  TrumpetInstrument(float frequency, float maxAmp, Waveform wf) {  // コンストラクタ(音を組み立てる)
+    this.maxAmp = maxAmp;  // 最大振幅を保存
+    freqSum = new Summer();  // 周波数加算器を生成
+    baseFreq = new Constant(frequency);  // 基準周波数を設定
 
-    vib = new Oscil(5.5f, 3.0f, Waves.SINE);
-    baseFreq.patch(freqSum);
-    vib.patch(freqSum);
+    vib = new Oscil(5.5f, 3.0f, Waves.SINE);  // 5.5Hz・深さ3Hzのビブラート
+    baseFreq.patch(freqSum);  // 基準周波数を加算器へ
+    vib.patch(freqSum);  // ビブラートを加算器へ
 
-    wave = new Oscil(frequency, 0, wf);
-    freqSum.patch(wave.frequency);
+    wave = new Oscil(frequency, 0, wf);  // 主発振器(振幅0で開始)
+    freqSum.patch(wave.frequency);  // 合成周波数を発振器へ入力
 
-    ampEnv = new Line();
-    ampEnv.patch(wave.amplitude);
+    ampEnv = new Line();  // 振幅制御用の直線を生成
+    ampEnv.patch(wave.amplitude);  // 発振器の振幅に接続
   }
 
-  void noteOn(float duration) {
-    float attackTime = 0.05f;
-    ampEnv.activate(attackTime, 0, this.maxAmp);
-    wave.patch(out);
+  void noteOn(float duration) {  // 発音開始時の処理
+    float attackTime = 0.05f;  // 立上り時間(50ms)
+    ampEnv.activate(attackTime, 0, this.maxAmp);  // 0から最大振幅へ立ち上げる
+    wave.patch(out);  // 発振器を出力に接続
   }
 
-  void noteOff() {
-    float fadeOutTime = 0.03f;
-    ampEnv.activate(fadeOutTime, this.maxAmp, 0);
+  void noteOff() {  // 発音終了時の処理
+    float fadeOutTime = 0.03f;  // フェードアウト時間(30ms)
+    ampEnv.activate(fadeOutTime, this.maxAmp, 0);  // 最大振幅から0へ下げる
 
     // 音が消えるのを待ってから安全に切断
-    out.setNoteOffset(fadeOutTime);
-    wave.unpatch(out);
+    out.setNoteOffset(fadeOutTime);  // フェードアウト分だけ切断を遅らせる
+    wave.unpatch(out);  // 発振器を出力から切断
   }
 }
 \end{lstlisting}
@@ -1624,137 +1625,137 @@ class TrumpetInstrument implements Instrument {
 ドラム音の合成と再生を行うProcessingのプログラムを以下に示す．
 
 \begin{lstlisting}[language=Java]
-import ddf.minim.*;
-import ddf.minim.ugens.*;
-import processing.serial.*;
+import ddf.minim.*;  // 音声合成ライブラリMinim
+import ddf.minim.ugens.*;  // Minimの音源ユニット群
+import processing.serial.*;  // シリアル通信ライブラリ
 
-Minim minim;
-AudioOutput out;
-Serial arduino;
+Minim minim;  // Minim本体
+AudioOutput out;  // 音声出力先
+Serial arduino;  // Arduinoと通信するシリアルポート
 
 // ==================================================
 // シリアル設定
 // ==================================================
 
 final int SERIAL_PORT_INDEX = 0;   // 環境に合わせて変更
-final int BAUD_RATE = 115200;
+final int BAUD_RATE = 115200;  // シリアル通信速度
 
 // ==================================================
 // キック
 // ==================================================
 
-Oscil kickOsc;
-Multiplier kickAmp;
+Oscil kickOsc;  // キックの基音発振器
+Multiplier kickAmp;  // キック基音の音量制御
 
-Oscil kickHarmonic;
-Multiplier kickHarmonicAmp;
+Oscil kickHarmonic;  // キックの倍音発振器
+Multiplier kickHarmonicAmp;  // キック倍音の音量制御
 
 // ==================================================
 // シンバル
 // ==================================================
 
-Noise cymNoise;
-Multiplier cymNoiseAmp;
+Noise cymNoise;  // シンバルのノイズ源
+Multiplier cymNoiseAmp;  // シンバルノイズの音量制御
 
-Oscil cymMetal1;
-Oscil cymMetal2;
-Oscil cymMetal3;
+Oscil cymMetal1;  // シンバル金属倍音1
+Oscil cymMetal2;  // シンバル金属倍音2
+Oscil cymMetal3;  // シンバル金属倍音3
 
-Multiplier cymMetalAmp1;
-Multiplier cymMetalAmp2;
-Multiplier cymMetalAmp3;
+Multiplier cymMetalAmp1;  // 金属倍音1の音量制御
+Multiplier cymMetalAmp2;  // 金属倍音2の音量制御
+Multiplier cymMetalAmp3;  // 金属倍音3の音量制御
 
 // ==================================================
 // 自動演奏
 // ==================================================
 
-boolean autoPlay = false;
-int lastTriggerTime = 0;
-int autoStep = 0;
+boolean autoPlay = false;  // 自動演奏のON/OFF
+int lastTriggerTime = 0;  // 前回自動発音した時刻
+int autoStep = 0;  // 自動演奏のステップ位置
 
 // ==================================================
 // 初期設定
 // ==================================================
 
-void setup() {
-  size(700, 260);
+void setup() {  // 起動時の初期化関数
+  size(700, 260);  // ウィンドウサイズ
 
-  minim = new Minim(this);
-  out = minim.getLineOut(Minim.MONO, 512);
+  minim = new Minim(this);  // Minimを初期化
+  out = minim.getLineOut(Minim.MONO, 512);  // モノラルのライン出力を取得
 
-  setupKick();
-  setupCymbal();
-  setupSerial();
+  setupKick();  // キック音源を構築
+  setupCymbal();  // シンバル音源を構築
+  setupSerial();  // シリアル通信を初期化
 
-  textSize(18);
+  textSize(18);  // 画面文字サイズを設定
 }
 
-void setupKick() {
-  kickOsc = new Oscil(48.0, 1.0, Waves.SINE);
-  kickAmp = new Multiplier(0.0);
-  kickOsc.patch(kickAmp).patch(out);
+void setupKick() {  // キック音源を組み立てる関数
+  kickOsc = new Oscil(48.0, 1.0, Waves.SINE);  // 48Hzの正弦波で基音を作る
+  kickAmp = new Multiplier(0.0);  // 音量制御(初期は無音)
+  kickOsc.patch(kickAmp).patch(out);  // 発振器→音量→出力へ接続
 
-  kickHarmonic = new Oscil(96.0, 1.0, Waves.SINE);
-  kickHarmonicAmp = new Multiplier(0.0);
-  kickHarmonic.patch(kickHarmonicAmp).patch(out);
+  kickHarmonic = new Oscil(96.0, 1.0, Waves.SINE);  // 96Hz(倍音)の発振器
+  kickHarmonicAmp = new Multiplier(0.0);  // 倍音の音量制御
+  kickHarmonic.patch(kickHarmonicAmp).patch(out);  // 倍音→音量→出力へ接続
 }
 
-void setupCymbal() {
-  cymNoise = new Noise(1.0, Noise.Tint.WHITE);
-  cymNoiseAmp = new Multiplier(0.0);
-  cymNoise.patch(cymNoiseAmp).patch(out);
+void setupCymbal() {  // シンバル音源を組み立てる関数
+  cymNoise = new Noise(1.0, Noise.Tint.WHITE);  // 白色ノイズを生成
+  cymNoiseAmp = new Multiplier(0.0);  // ノイズの音量制御
+  cymNoise.patch(cymNoiseAmp).patch(out);  // ノイズ→音量→出力へ接続
 
-  cymMetal1 = new Oscil(431.0, 1.0, Waves.SQUARE);
-  cymMetal2 = new Oscil(647.0, 1.0, Waves.SQUARE);
-  cymMetal3 = new Oscil(913.0, 1.0, Waves.SQUARE);
+  cymMetal1 = new Oscil(431.0, 1.0, Waves.SQUARE);  // 431Hzの矩形波(金属倍音1)
+  cymMetal2 = new Oscil(647.0, 1.0, Waves.SQUARE);  // 647Hzの矩形波(金属倍音2)
+  cymMetal3 = new Oscil(913.0, 1.0, Waves.SQUARE);  // 913Hzの矩形波(金属倍音3)
 
-  cymMetalAmp1 = new Multiplier(0.0);
-  cymMetalAmp2 = new Multiplier(0.0);
-  cymMetalAmp3 = new Multiplier(0.0);
+  cymMetalAmp1 = new Multiplier(0.0);  // 金属倍音1の音量制御
+  cymMetalAmp2 = new Multiplier(0.0);  // 金属倍音2の音量制御
+  cymMetalAmp3 = new Multiplier(0.0);  // 金属倍音3の音量制御
 
-  cymMetal1.patch(cymMetalAmp1).patch(out);
-  cymMetal2.patch(cymMetalAmp2).patch(out);
-  cymMetal3.patch(cymMetalAmp3).patch(out);
+  cymMetal1.patch(cymMetalAmp1).patch(out);  // 倍音1→音量→出力へ接続
+  cymMetal2.patch(cymMetalAmp2).patch(out);  // 倍音2→音量→出力へ接続
+  cymMetal3.patch(cymMetalAmp3).patch(out);  // 倍音3→音量→出力へ接続
 }
 
-void setupSerial() {
-  println("=== Serial Ports ===");
-  printArray(Serial.list());
+void setupSerial() {  // シリアル通信を初期化する関数
+  println("=== Serial Ports ===");  // ポート一覧の見出しを表示
+  printArray(Serial.list());  // 利用可能なポートを列挙
 
-  final String SERIAL_PORT_NAME = "/dev/cu.usbmodem34B7DA64C6002";
+  final String SERIAL_PORT_NAME = "/dev/cu.usbmodem34B7DA64C6002";  // 使用するポート名
 
-  arduino = new Serial(this, SERIAL_PORT_NAME, BAUD_RATE);
-  arduino.bufferUntil('\n');
+  arduino = new Serial(this, SERIAL_PORT_NAME, BAUD_RATE);  // シリアルポートを開く
+  arduino.bufferUntil('\n');  // 改行までを1メッセージとして受信
 }
 
 // ==================================================
 // 画面描画
 // ==================================================
 
-void draw() {
-  background(245);
-  fill(0);
+void draw() {  // 毎フレームの描画関数
+  background(245);  // 背景を明るい灰色で塗る
+  fill(0);  // 文字色を黒に
 
-  text("Keyboard test:", 30, 40);
-  text("1: Kick   2: Cymbal", 30, 70);
-  text("A: Auto play ON/OFF", 30, 100);
-  text("Arduino serial: 1 = Kick, 2 = Cymbal", 30, 130);
-  text("Auto: " + (autoPlay ? "ON" : "OFF"), 30, 170);
+  text("Keyboard test:", 30, 40);  // 操作説明を表示
+  text("1: Kick   2: Cymbal", 30, 70);  // キー割り当てを表示
+  text("A: Auto play ON/OFF", 30, 100);  // 自動演奏キーの説明
+  text("Arduino serial: 1 = Kick, 2 = Cymbal", 30, 130);  // シリアル入力の説明
+  text("Auto: " + (autoPlay ? "ON" : "OFF"), 30, 170);  // 自動演奏の状態を表示
 
-  if (autoPlay && millis() - lastTriggerTime >= 500) {
-    lastTriggerTime = millis();
+  if (autoPlay && millis() - lastTriggerTime >= 500) {  // 自動演奏中で500ms経過したら
+    lastTriggerTime = millis();  // 発音時刻を更新
 
-    if (autoStep == 0) {
-      playKickSound();
-    } else if (autoStep == 1) {
-      playCymbalSound();
-    } else if (autoStep == 2) {
-      playKickSound();
-    } else if (autoStep == 3) {
-      playCymbalSound();
+    if (autoStep == 0) {  // ステップ0では
+      playKickSound();  // キックを鳴らす
+    } else if (autoStep == 1) {  // ステップ1では
+      playCymbalSound();  // シンバルを鳴らす
+    } else if (autoStep == 2) {  // ステップ2では
+      playKickSound();  // キックを鳴らす
+    } else if (autoStep == 3) {  // ステップ3では
+      playCymbalSound();  // シンバルを鳴らす
     }
 
-    autoStep = (autoStep + 1) % 4;
+    autoStep = (autoStep + 1) % 4;  // ステップを進める(4拍で1周)
   }
 }
 
@@ -1762,27 +1763,27 @@ void draw() {
 // シリアル受信
 // ==================================================
 
-void serialEvent(Serial port) {
-  String receivedText = port.readStringUntil('\n');
+void serialEvent(Serial port) {  // シリアル受信時に呼ばれる関数
+  String receivedText = port.readStringUntil('\n');  // 1行読み取る
 
-  if (receivedText == null) return;
+  if (receivedText == null) return;  // 空なら戻る
 
-  receivedText = trim(receivedText);
-  if (receivedText.length() == 0) return;
+  receivedText = trim(receivedText);  // 前後の空白を除去
+  if (receivedText.length() == 0) return;  // 空行なら戻る
 
-  println("recv: " + receivedText);
+  println("recv: " + receivedText);  // 受信内容をログ表示
 
-  try {
-    int note = Integer.parseInt(receivedText);
+  try {  // 数値変換に備えて例外処理
+    int note = Integer.parseInt(receivedText);  // 受信文字列を整数に変換
 
-    if (note == 1) {
-      playKickSound();
-    } else if (note == 2) {
-      playCymbalSound();
+    if (note == 1) {  // 1なら
+      playKickSound();  // キックを鳴らす
+    } else if (note == 2) {  // 2なら
+      playCymbalSound();  // シンバルを鳴らす
     }
   }
-  catch (NumberFormatException e) {
-    println("invalid data: " + receivedText);
+  catch (NumberFormatException e) {  // 数値でなければ
+    println("invalid data: " + receivedText);  // 不正データとしてログ
   }
 }
 
@@ -1790,15 +1791,15 @@ void serialEvent(Serial port) {
 // キー入力
 // ==================================================
 
-void keyPressed() {
-  if (key == '1') {
-    playKickSound();
-  } else if (key == '2') {
-    playCymbalSound();
-  } else if (key == 'a' || key == 'A') {
-    autoPlay = !autoPlay;
-    lastTriggerTime = millis();
-    autoStep = 0;
+void keyPressed() {  // キー入力時に呼ばれる関数
+  if (key == '1') {  // 1キーで
+    playKickSound();  // キックを鳴らす
+  } else if (key == '2') {  // 2キーで
+    playCymbalSound();  // シンバルを鳴らす
+  } else if (key == 'a' || key == 'A') {  // aキーで
+    autoPlay = !autoPlay;  // 自動演奏をON/OFF切替
+    lastTriggerTime = millis();  // 発音時刻を初期化
+    autoStep = 0;  // ステップを先頭に戻す
   }
 }
 
@@ -1806,93 +1807,93 @@ void keyPressed() {
 // キック音
 // ==================================================
 
-void playKickSound() {
-  new Thread(new Runnable() {
-    public void run() {
-      final int durationMs = 650;
-      final int updateMs = 2;
-      int steps = durationMs / updateMs;
+void playKickSound() {  // キック音を鳴らす関数
+  new Thread(new Runnable() {  // 別スレッドでエンベロープを制御
+    public void run() {  // スレッドの本体
+      final int durationMs = 650;  // 発音の総時間(650ms)
+      final int updateMs = 2;  // 音量を更新する周期(2ms)
+      int steps = durationMs / updateMs;  // 更新回数
 
-      kickAmp.setValue(0.0);
-      kickHarmonicAmp.setValue(0.0);
+      kickAmp.setValue(0.0);  // 基音の音量を0に初期化
+      kickHarmonicAmp.setValue(0.0);  // 倍音の音量を0に初期化
 
-      for (int i = 0; i < steps; i++) {
-        float t = i * updateMs / 1000.0;
+      for (int i = 0; i < steps; i++) {  // 各更新ステップについて
+        float t = i * updateMs / 1000.0;  // 経過時間(秒)
 
-        float frequency = 48.0 + 122.0 * exp(-28.0 * t);
-        float bodyEnvelope = exp(-8.0 * t);
-        float attack = constrain(t / 0.004, 0.0, 1.0);
+        float frequency = 48.0 + 122.0 * exp(-28.0 * t);  // 高い音から48Hzへ急降下する周波数
+        float bodyEnvelope = exp(-8.0 * t);  // 胴鳴りの減衰エンベロープ
+        float attack = constrain(t / 0.004, 0.0, 1.0);  // 4msの立上りを掛ける
 
-        float bodyVolume = 0.82 * bodyEnvelope * attack;
-        float harmonicVolume = 0.025 * exp(-18.0 * t) * attack;
+        float bodyVolume = 0.82 * bodyEnvelope * attack;  // 基音の音量を計算
+        float harmonicVolume = 0.025 * exp(-18.0 * t) * attack;  // 倍音の音量を計算
 
-        kickOsc.setFrequency(frequency);
-        kickAmp.setValue(bodyVolume);
+        kickOsc.setFrequency(frequency);  // 基音の周波数を更新
+        kickAmp.setValue(bodyVolume);  // 基音の音量を設定
 
-        kickHarmonic.setFrequency(frequency * 2.0);
-        kickHarmonicAmp.setValue(harmonicVolume);
+        kickHarmonic.setFrequency(frequency * 2.0);  // 倍音を基音の2倍に設定
+        kickHarmonicAmp.setValue(harmonicVolume);  // 倍音の音量を設定
 
-        sleepMs(updateMs);
+        sleepMs(updateMs);  // 2ms待って次の更新へ
       }
 
-      kickAmp.setValue(0.0);
-      kickHarmonicAmp.setValue(0.0);
+      kickAmp.setValue(0.0);  // 最後に基音を無音化
+      kickHarmonicAmp.setValue(0.0);  // 倍音も無音化
     }
-  }).start();
+  }).start();  // スレッドを開始
 }
 
 // ==================================================
 // シンバル音
 // ==================================================
 
-void playCymbalSound() {
-  new Thread(new Runnable() {
-    public void run() {
-      final int durationMs = 700;
-      final int updateMs = 4;
-      int steps = durationMs / updateMs;
+void playCymbalSound() {  // シンバル音を鳴らす関数
+  new Thread(new Runnable() {  // 別スレッドでエンベロープを制御
+    public void run() {  // スレッドの本体
+      final int durationMs = 700;  // 発音の総時間(700ms)
+      final int updateMs = 4;  // 音量を更新する周期(4ms)
+      int steps = durationMs / updateMs;  // 更新回数
 
-      cymNoiseAmp.setValue(0.0);
-      cymMetalAmp1.setValue(0.0);
-      cymMetalAmp2.setValue(0.0);
-      cymMetalAmp3.setValue(0.0);
+      cymNoiseAmp.setValue(0.0);  // ノイズ音量を0に初期化
+      cymMetalAmp1.setValue(0.0);  // 金属倍音1を0に初期化
+      cymMetalAmp2.setValue(0.0);  // 金属倍音2を0に初期化
+      cymMetalAmp3.setValue(0.0);  // 金属倍音3を0に初期化
 
-      for (int i = 0; i < steps; i++) {
-        float t = i / float(steps - 1);
+      for (int i = 0; i < steps; i++) {  // 各更新ステップについて
+        float t = i / float(steps - 1);  // 0〜1に正規化した進行度
 
-        float fastDecay = exp(-13.0 * t);
-        float slowDecay = exp(-4.0 * t);
+        float fastDecay = exp(-13.0 * t);  // 速い減衰成分
+        float slowDecay = exp(-4.0 * t);  // 遅い減衰成分
 
-        float noiseEnvelope = 0.25 * fastDecay + 0.10 * slowDecay;
-        float metalEnvelope = 0.09 * exp(-9.0 * t);
-        float attack = constrain(t * 45.0, 0.0, 1.0);
+        float noiseEnvelope = 0.25 * fastDecay + 0.10 * slowDecay;  // ノイズのエンベロープ
+        float metalEnvelope = 0.09 * exp(-9.0 * t);  // 金属倍音のエンベロープ
+        float attack = constrain(t * 45.0, 0.0, 1.0);  // 急峻な立上りを掛ける
 
-        cymNoiseAmp.setValue(noiseEnvelope * attack);
-        cymMetalAmp1.setValue(metalEnvelope * attack);
-        cymMetalAmp2.setValue(metalEnvelope * 0.75 * attack);
-        cymMetalAmp3.setValue(metalEnvelope * 0.50 * attack);
+        cymNoiseAmp.setValue(noiseEnvelope * attack);  // ノイズの音量を設定
+        cymMetalAmp1.setValue(metalEnvelope * attack);  // 金属倍音1の音量を設定
+        cymMetalAmp2.setValue(metalEnvelope * 0.75 * attack);  // 金属倍音2の音量を設定
+        cymMetalAmp3.setValue(metalEnvelope * 0.50 * attack);  // 金属倍音3の音量を設定
 
-        sleepMs(updateMs);
+        sleepMs(updateMs);  // 4ms待って次の更新へ
       }
 
-      cymNoiseAmp.setValue(0.0);
-      cymMetalAmp1.setValue(0.0);
-      cymMetalAmp2.setValue(0.0);
-      cymMetalAmp3.setValue(0.0);
+      cymNoiseAmp.setValue(0.0);  // 最後にノイズを無音化
+      cymMetalAmp1.setValue(0.0);  // 金属倍音1を無音化
+      cymMetalAmp2.setValue(0.0);  // 金属倍音2を無音化
+      cymMetalAmp3.setValue(0.0);  // 金属倍音3を無音化
     }
-  }).start();
+  }).start();  // スレッドを開始
 }
 
 // ==================================================
 // 待機処理
 // ==================================================
 
-void sleepMs(int milliseconds) {
-  try {
-    Thread.sleep(milliseconds);
+void sleepMs(int milliseconds) {  // 指定ミリ秒だけ待つ関数
+  try {  // 割り込み例外に備える
+    Thread.sleep(milliseconds);  // スレッドを一時停止
   }
-  catch (InterruptedException e) {
-    Thread.currentThread().interrupt();
+  catch (InterruptedException e) {  // 割り込まれたら
+    Thread.currentThread().interrupt();  // 割り込み状態を復元
   }
 }
 
@@ -1900,19 +1901,19 @@ void sleepMs(int milliseconds) {
 // 終了処理
 // ==================================================
 
-void stop() {
-  if (kickAmp != null) kickAmp.setValue(0.0);
-  if (kickHarmonicAmp != null) kickHarmonicAmp.setValue(0.0);
-  if (cymNoiseAmp != null) cymNoiseAmp.setValue(0.0);
-  if (cymMetalAmp1 != null) cymMetalAmp1.setValue(0.0);
-  if (cymMetalAmp2 != null) cymMetalAmp2.setValue(0.0);
-  if (cymMetalAmp3 != null) cymMetalAmp3.setValue(0.0);
+void stop() {  // プログラム終了時の後始末関数
+  if (kickAmp != null) kickAmp.setValue(0.0);  // キック基音を無音化
+  if (kickHarmonicAmp != null) kickHarmonicAmp.setValue(0.0);  // キック倍音を無音化
+  if (cymNoiseAmp != null) cymNoiseAmp.setValue(0.0);  // シンバルノイズを無音化
+  if (cymMetalAmp1 != null) cymMetalAmp1.setValue(0.0);  // 金属倍音1を無音化
+  if (cymMetalAmp2 != null) cymMetalAmp2.setValue(0.0);  // 金属倍音2を無音化
+  if (cymMetalAmp3 != null) cymMetalAmp3.setValue(0.0);  // 金属倍音3を無音化
 
-  if (arduino != null) arduino.stop();
-  if (out != null) out.close();
-  if (minim != null) minim.stop();
+  if (arduino != null) arduino.stop();  // シリアルポートを閉じる
+  if (out != null) out.close();  // 音声出力を閉じる
+  if (minim != null) minim.stop();  // Minimを停止
 
-  super.stop();
+  super.stop();  // 親クラスの終了処理を呼ぶ
 }
 \end{lstlisting}
 
@@ -1921,61 +1922,61 @@ void stop() {
 \label{sec:lcdmatrix}
 LCD表示に必要なプログラムを以下に示す．
 \begin{lstlisting}[language=Java]
-#define DECODE_NEC
-#include <IRremote.hpp>
-#include <LiquidCrystal.h>
+#define DECODE_NEC  // IRremoteでNECプロトコルのデコードを有効化
+#include <IRremote.hpp>  // 赤外線受信ライブラリを読み込む
+#include <LiquidCrystal.h>  // LCD制御ライブラリを読み込む
 
-int childId = 0;
-const int PIN_IR_RECV = 6;
+int childId = 0;  // 自分の担当ビット番号
+const int PIN_IR_RECV = 6;  // 赤外線受光モジュールの入力ピン(D6)
 
 // LCD 1台のみ（EN=11）
-LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
+LiquidCrystal lcd(12, 11, 5, 4, 3, 2);  // LCDのピン接続を指定して初期化
 
 // ---- カエルのカスタム文字 ----
 // 左右共通（char 0-2: 上段固定, char 3-5: 下段口パク）
 
-byte frog0[8] = {
-  B00000, B00011, B00100, B01101,
-  B01100, B00111, B00111, B01111
+byte frog0[8] = {  // 左カエル上段左のドット絵(char0)
+  B00000, B00011, B00100, B01101,  // 上4行のドットパターン
+  B01100, B00111, B00111, B01111  // 下4行のドットパターン
 };
-byte frog1_open[8] = {
-  B11111, B11110, B11100, B11110,
-  B01111, B00001, B00000, B00000
+byte frog1_open[8] = {  // 左カエル下段左・口開き(char3)
+  B11111, B11110, B11100, B11110,  // 上4行のドットパターン
+  B01111, B00001, B00000, B00000  // 下4行のドットパターン
 };
-byte frog1_close[8] = {
-  B11111, B11100, B11111, B11111,
-  B01111, B00001, B00000, B00000
+byte frog1_close[8] = {  // 左カエル下段左・口閉じ(char3)
+  B11111, B11100, B11111, B11111,  // 上4行のドットパターン
+  B01111, B00001, B00000, B00000  // 下4行のドットパターン
 };
-byte frog2[8] = {
-  B00000, B10001, B01010, B01010,
-  B01110, B11111, B11111, B10101
+byte frog2[8] = {  // カエル上段中央のドット絵(char1)
+  B00000, B10001, B01010, B01010,  // 上4行のドットパターン
+  B01110, B11111, B11111, B10101  // 下4行のドットパターン
 };
-byte frog3_open[8] = {
-  B11111, B00000, B00000, B00000,
-  B00000, B11111, B00000, B00000
+byte frog3_open[8] = {  // カエル下段中央・口開き(char4)
+  B11111, B00000, B00000, B00000,  // 上4行のドットパターン
+  B00000, B11111, B00000, B00000  // 下4行のドットパターン
 };
-byte frog3_close[8] = {
-  B11111, B00000, B11111, B11111,
-  B11111, B11111, B00000, B00000
+byte frog3_close[8] = {  // カエル下段中央・口閉じ(char4)
+  B11111, B00000, B11111, B11111,  // 上4行のドットパターン
+  B11111, B11111, B00000, B00000  // 下4行のドットパターン
 };
-byte frog4[8] = {
-  B00000, B11000, B00100, B10110,
-  B00110, B11100, B11100, B11110
+byte frog4[8] = {  // カエル上段右のドット絵(char2)
+  B00000, B11000, B00100, B10110,  // 上4行のドットパターン
+  B00110, B11100, B11100, B11110  // 下4行のドットパターン
 };
-byte frog5_open[8] = {
-  B11111, B01111, B00111, B01111,
-  B11110, B10000, B00000, B00000
+byte frog5_open[8] = {  // カエル下段右・口開き(char5)
+  B11111, B01111, B00111, B01111,  // 上4行のドットパターン
+  B11110, B10000, B00000, B00000  // 下4行のドットパターン
 };
-byte frog5_close[8] = {
-  B11111, B00111, B11111, B11111,
-  B11110, B10000, B00000, B00000
+byte frog5_close[8] = {  // カエル下段右・口閉じ(char5)
+  B11111, B00111, B11111, B11111,  // 上4行のドットパターン
+  B11110, B10000, B00000, B00000  // 下4行のドットパターン
 };
 
 
 // ---- 歌詞テーブル ----
-#define TOTAL_TICKS 32
+#define TOTAL_TICKS 32  // 歌詞の総コマ数(1周32tick)
 
-const char* lyrics[TOTAL_TICKS] = {
+const char* lyrics[TOTAL_TICKS] = {  // tickごとに表示する歌詞テーブル
   "KA",   //  0
   "E",    //  1
   "RU",   //  2
@@ -2012,116 +2013,116 @@ const char* lyrics[TOTAL_TICKS] = {
 
 
 // ---- 状態変数 ----
-long localPos  = -1;
-bool frogOpen  = false;
+long localPos  = -1;  // 現在の楽譜位置(-1は未受信)
+bool frogOpen  = false;  // カエルの口の開閉状態
 
 // 歌詞エリア: 列3-12（幅10）× 2行
-#define LYRIC_COL_START 3
-#define LYRIC_WIDTH     10
+#define LYRIC_COL_START 3  // 歌詞表示エリアの開始列
+#define LYRIC_WIDTH     10  // 歌詞表示エリアの幅(列数)
 
-int displayCol = 0;
-int displayRow = 0;
+int displayCol = 0;  // 現在の歌詞書き込み列
+int displayRow = 0;  // 現在の歌詞書き込み行
 
 
 // ---- 関数 ----
 
 // カスタム文字3-5を口の開閉に合わせて更新し、左右カエルを再描画
-void updateFrogs(bool open) {
-  if (open) {
-    lcd.createChar(3, frog1_open);
-    lcd.createChar(4, frog3_open);
-    lcd.createChar(5, frog5_open);
-  } else {
-    lcd.createChar(3, frog1_close);
-    lcd.createChar(4, frog3_close);
-    lcd.createChar(5, frog5_close);
+void updateFrogs(bool open) {  // 口の開閉に合わせカエルを再描画する関数
+  if (open) {  // 口を開く場合
+    lcd.createChar(3, frog1_open);  // char3を口開きに登録
+    lcd.createChar(4, frog3_open);  // char4を口開きに登録
+    lcd.createChar(5, frog5_open);  // char5を口開きに登録
+  } else {  // 口を閉じる場合
+    lcd.createChar(3, frog1_close);  // char3を口閉じに登録
+    lcd.createChar(4, frog3_close);  // char4を口閉じに登録
+    lcd.createChar(5, frog5_close);  // char5を口閉じに登録
   }
   // createChar後はカーソルをホームに戻してから書き直す
   // 左カエル（列0）
-  lcd.setCursor(0, 0);
-  lcd.write(byte(0)); lcd.write(byte(1)); lcd.write(byte(2));
-  lcd.setCursor(0, 1);
-  lcd.write(byte(3)); lcd.write(byte(4)); lcd.write(byte(5));
+  lcd.setCursor(0, 0);  // 左カエル上段の先頭へカーソル移動
+  lcd.write(byte(0)); lcd.write(byte(1)); lcd.write(byte(2));  // 上段3文字を描画
+  lcd.setCursor(0, 1);  // 左カエル下段の先頭へ移動
+  lcd.write(byte(3)); lcd.write(byte(4)); lcd.write(byte(5));  // 下段3文字(口)を描画
   // 右カエル（列13）
-  lcd.setCursor(13, 0);
-  lcd.write(byte(0)); lcd.write(byte(1)); lcd.write(byte(2));
-  lcd.setCursor(13, 1);
-  lcd.write(byte(3)); lcd.write(byte(4)); lcd.write(byte(5));
+  lcd.setCursor(13, 0);  // 右カエル上段の先頭へ移動
+  lcd.write(byte(0)); lcd.write(byte(1)); lcd.write(byte(2));  // 上段3文字を描画
+  lcd.setCursor(13, 1);  // 右カエル下段の先頭へ移動
+  lcd.write(byte(3)); lcd.write(byte(4)); lcd.write(byte(5));  // 下段3文字(口)を描画
 }
 
 // 歌詞エリア（列3-12）だけをスペースで埋めてクリア
-void clearLyricArea() {
-  for (int row = 0; row < 2; row++) {
-    lcd.setCursor(LYRIC_COL_START, row);
-    for (int c = 0; c < LYRIC_WIDTH; c++) lcd.print(' ');
+void clearLyricArea() {  // 歌詞エリアだけを消去する関数
+  for (int row = 0; row < 2; row++) {  // 上下2行について
+    lcd.setCursor(LYRIC_COL_START, row);  // 歌詞エリア先頭へ移動
+    for (int c = 0; c < LYRIC_WIDTH; c++) lcd.print(' ');  // 幅の分だけ空白で埋める
   }
-  displayCol = 0;
-  displayRow = 0;
+  displayCol = 0;  // 書き込み列を先頭に戻す
+  displayRow = 0;  // 書き込み行を先頭に戻す
 }
 
-void showLyric(int pos) {
-  const char* word = lyrics[pos];
-  int len = strlen(word);
+void showLyric(int pos) {  // 指定位置の歌詞を表示する関数
+  const char* word = lyrics[pos];  // 表示する語を取得
+  int len = strlen(word);  // 語の文字数を求める
 
-  if (displayCol + len > LYRIC_WIDTH) {
-    if (displayRow == 0) {
-      displayRow = 1;
-      displayCol = 0;
-    } else {
-      clearLyricArea();
+  if (displayCol + len > LYRIC_WIDTH) {  // 現在行に収まらなければ
+    if (displayRow == 0) {  // まだ上段なら
+      displayRow = 1;  // 下段へ改行
+      displayCol = 0;  // 列を先頭に戻す
+    } else {  // すでに下段なら
+      clearLyricArea();  // エリアを消して先頭から書き直す
     }
   }
 
-  lcd.setCursor(LYRIC_COL_START + displayCol, displayRow);
-  lcd.print(word);
-  displayCol += len;
+  lcd.setCursor(LYRIC_COL_START + displayCol, displayRow);  // 書き込み位置へカーソル移動
+  lcd.print(word);  // 歌詞を表示
+  displayCol += len;  // 次の書き込み列へ進める
 }
 
 
-void setup() {
-  Serial.begin(115200);
-  lcd.begin(16, 2);
+void setup() {  // 起動時の初期化関数
+  Serial.begin(115200);  // シリアル通信を開始
+  lcd.begin(16, 2);  // 16桁2行のLCDを初期化
 
-  lcd.createChar(0, frog0);
-  lcd.createChar(1, frog2);
-  lcd.createChar(2, frog4);
-  lcd.createChar(3, frog1_close);
-  lcd.createChar(4, frog3_close);
-  lcd.createChar(5, frog5_close);
+  lcd.createChar(0, frog0);  // char0にカエル絵を登録
+  lcd.createChar(1, frog2);  // char1にカエル絵を登録
+  lcd.createChar(2, frog4);  // char2にカエル絵を登録
+  lcd.createChar(3, frog1_close);  // char3を口閉じで登録
+  lcd.createChar(4, frog3_close);  // char4を口閉じで登録
+  lcd.createChar(5, frog5_close);  // char5を口閉じで登録
 
-  lcd.clear();
-  updateFrogs(false);
+  lcd.clear();  // 画面を消去
+  updateFrogs(false);  // 口を閉じた状態でカエルを描画
 
-  IrReceiver.begin(PIN_IR_RECV);
-  Serial.println("setup OK");
+  IrReceiver.begin(PIN_IR_RECV);  // 赤外線受信をD6で開始
+  Serial.println("setup OK");  // 初期化完了をログ出力
 }
 
-void loop() {
-  if (!IrReceiver.decode()) return;
-  IrReceiver.printIRResultShort(&Serial);
+void loop() {  // メインループ
+  if (!IrReceiver.decode()) return;  // IRを受信していなければ戻る
+  IrReceiver.printIRResultShort(&Serial);  // 受信内容を簡易表示
 
-  if (IrReceiver.decodedIRData.protocol == NEC) {
-    uint8_t mask = IrReceiver.decodedIRData.command;
+  if (IrReceiver.decodedIRData.protocol == NEC) {  // NEC信号のときだけ処理
+    uint8_t mask = IrReceiver.decodedIRData.command;  // コマンド(参加マスク)を取り出す
 
-    if (mask & (1 << childId)) {
-      localPos++;
-      if (localPos >= TOTAL_TICKS) {
-        localPos = 0;
-        clearLyricArea();
+    if (mask & (1 << childId)) {  // 自分の担当ビットが立っていれば
+      localPos++;  // 楽譜位置を1進める
+      if (localPos >= TOTAL_TICKS) {  // 末尾を超えたら
+        localPos = 0;  // 先頭へ戻す
+        clearLyricArea();  // 歌詞エリアを消去
       }
 
-      showLyric((int)localPos);
-      Serial.println("kasiOK");
-      delay(10);
+      showLyric((int)localPos);  // 現在位置の歌詞を表示
+      Serial.println("kasiOK");  // 歌詞表示完了をログ出力
+      delay(10);  // 10ms待つ
 
-      frogOpen = !frogOpen;
-      updateFrogs(frogOpen);
-      Serial.println("kaoOK");
-      delay(10);
+      frogOpen = !frogOpen;  // 口の開閉を反転
+      updateFrogs(frogOpen);  // カエルを再描画(口パク)
+      Serial.println("kaoOK");  // 顔更新完了をログ出力
+      delay(10);  // 10ms待つ
     }
   }
 
-  IrReceiver.resume();
+  IrReceiver.resume();  // 次の受信に備えて再開
 }
 
 \end{lstlisting}
