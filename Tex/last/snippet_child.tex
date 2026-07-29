@@ -4,7 +4,7 @@
 
 譜面位置24以降は，1tickにつき2音を発音する倍速区間である．旋律の終盤にあたるこの区間では，1音あたりの音長を通常の0.40\,sから0.20\,sへ半分にし，2音目を直近の受信間隔の半分だけ遅らせて送信することで，16分音符相当の刻みを作る．待ち時間の基準となる受信間隔は受信のたびに計測するが，演奏の停止と再開のあいだに生じる大きな間隔をそのまま使うと待ち時間が膨らむため，極端な値は捨てて更新する．また，この待ち時間の間にも次のフレームは届きうるので，受信データは復号した直後に退避して受信器をすぐに再開し，待機中も受信を続けてtickの取りこぼしを防いでいる．このほか，親機の同期パルスの立ち上がり時刻を割り込みで記録し，赤外線の受信までの遅延をログへ出力する計測の仕組みも子機側に持たせている．子機の主要な関数を表\ref{tab:func_child}に，\texttt{loop}の処理の流れを図\ref{fig:flow_child}に示す．
 
-\begin{table}[H]
+\begin{table}[tb]
 \caption{子機Arduinoの主要関数}
 \label{tab:func_child}
 \begin{center}
@@ -23,7 +23,7 @@
 \end{center}
 \end{table}
 
-\begin{figure}[H]
+\begin{figure}[tb]
 \begin{center}
 \begin{tikzpicture}[
   term/.style={draw, rounded corners=7pt, minimum width=6em, minimum height=1.9em, align=center, font=\footnotesize},

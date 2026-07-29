@@ -4,7 +4,7 @@
 
 tick()では，まず参加予約と退場予約が発火するtickに到達したかを子機ごとに判定して参加状態を更新し，参加中の子機集合を表すマスクを組み立てる．参加中の子機が1台でもあるときは，遅延計測用の同期パルスを出力したのち，マスクをSony SIRC 12ビットの1フレームとして送信する．同期パルスは赤外線送信の直前に立ち上げており，子機側でこの立ち上がり時刻と受信復号の完了時刻を比較することで，\ref{sec:eval-latency}節で述べる片道遅延を計測できるようにしてある．loop()の末尾では子機ボタン横のLEDを参加状態と予約の有無に同期させ，予約の取消を含むどの操作でも表示が確実に切り替わるようにしている．
 
-\begin{table}[H]
+\begin{table}[tb]
 \caption{親機Arduinoの主要関数}
 \label{tab:func_parent}
 \begin{center}
@@ -26,7 +26,7 @@ tick()では，まず参加予約と退場予約が発火するtickに到達し�
 \end{center}
 \end{table}
 
-\begin{figure}[H]
+\begin{figure}[tb]
 \begin{center}
 \begin{tikzpicture}[
   term/.style={draw, rounded corners=8pt, minimum width=8em, minimum height=1.9em, align=center, font=\footnotesize},

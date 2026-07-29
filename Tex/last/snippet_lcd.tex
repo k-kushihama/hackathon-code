@@ -7,7 +7,7 @@
 
 表示子機が受信するフレームは演奏子機と同じものであり，\ref{sec:proto-compare}節で述べたSony SIRC 12ビットへの移行にあわせて受信処理も更新している．親機は参加中の子機が1台でもあれば毎tickフレームを送信するので，表示子機は演奏子機と同じ時間基準で歌詞と口パクを進められる．ただし表示子機も演奏子機と同様に受信回数で位置を数えるため，フレームを取りこぼすと歌詞の位置が1つ後方へずれたまま戻らない．この性質と対策は\ref{sec:disc-mask}節で演奏子機とあわせて論じる．
 
-\begin{table}[H]
+\begin{table}[tb]
 \caption{LCD表示の主要関数}
 \label{tab:lcd_func}
 \begin{center}
@@ -26,7 +26,7 @@
 \end{center}
 \end{table}
 
-\begin{figure}[H]
+\begin{figure}[tb]
 \begin{center}
 \begin{tikzpicture}[
   term/.style={draw, rounded corners=8pt, minimum width=9em, minimum height=2.2em, align=center, font=\footnotesize},
