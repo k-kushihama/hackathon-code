@@ -13,6 +13,15 @@
 \usepackage{pgfplots}
 \pgfplotsset{compat=1.18}
 \usepackage{float}
+
+% 図表をできるだけ出現位置に近いページの上下へ配置するための設定
+\renewcommand{\topfraction}{0.95}      % ページ上部を図表が占めてよい割合
+\renewcommand{\bottomfraction}{0.95}   % ページ下部を図表が占めてよい割合
+\renewcommand{\textfraction}{0.05}     % 本文が最低限占めるべき割合
+\renewcommand{\floatpagefraction}{0.85}% 図表専用ページと判定する閾値
+\setcounter{topnumber}{4}              % ページ上部に置ける図表数
+\setcounter{bottomnumber}{4}           % ページ下部に置ける図表数
+\setcounter{totalnumber}{6}            % 1ページあたりの図表数の上限
 \usetikzlibrary{shapes.geometric, calc, positioning, arrows.meta}
 
 \usepackage[dvipdfmx]{hyperref}
