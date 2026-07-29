@@ -124,7 +124,7 @@ Sony SIRC 15ビット & 21.0\,ms & なし & 余裕が小さい \\
 
 報告者が担当したピアノ音源については，音源データの再生（サンプリング），倍音の加算合成，および弦の振動を数値的に解く物理モデル合成の3方式を比較した．サンプリングは最も自然な音が得られるが，音源ファイルを外部から用意する必要があり，本課題の趣旨である「合成による音作り」から外れる．物理モデル合成は表現力が高い反面，実時間で微分方程式を解く計算量が必要であり，Processingで演奏に間に合わせるのは難しい．加算合成は，ピアノ弦の物理的性質を式として取り込みながら計算量を抑えられる中間的な方式である．
 
-ピアノの音色を特徴づける物理的性質として，弦の剛性によって倍音周波数が整数倍からわずかに高い方へずれるインハーモニシティが知られており，Fletcherらはピアノ音の倍音構造を実測してこの性質が音色の知覚に寄与することを示している\cite{fletcher}．また西口は，ピアノの発音機構と物理モデルを整理し，倍音ごとに減衰時定数が異なることを述べている\cite{nishiguchi}．本システムではこれらの知見を式(\ref{eq:inharmonicity})および式(\ref{eq:envelope})として加算合成に取り込んだ．実装の詳細は\ref{sec:piano}節で述べる．
+ピアノの音色を特徴づける物理的性質として，弦の剛性によって倍音周波数が整数倍からわずかに高い方へずれるインハーモニシティが知られている．Fletcherらはピアノ音の倍音構造を実測してこの性質が音色の知覚に寄与することを示し\cite{fletcher}，Youngはピアノ8台の測定から，インハーモニシティ係数$B$が中央ハで第2倍音のずれ約1.2\,centに相当する大きさとなり，中央ハより上では8半音ごとに倍になることを報告している\cite{young1952}．また西口は，ピアノの発音機構と物理モデルを整理し，倍音ごとに減衰時定数が異なることを述べている\cite{nishiguchi}．本システムではこれらの知見を式(\ref{eq:inharmonicity})および式(\ref{eq:envelope})として加算合成に取り込んだ．実装で採用した係数と文献値との差は\ref{sec:piano}節で述べる．
 
 \section{作成したシステムの概要}
 \label{sec:overview}
@@ -403,7 +403,13 @@ Processing側では，子機から「音高，音長，音量，譜面位置」�
 f_h = h f_s \sqrt{1 + B h^2}
 \label{eq:inharmonicity}
 \end{equation}
-で計算する．$B$は音域に応じて変え，中央ハ付近で$2\times10^{-4}$程度とした．倍音は10次まで重ね，$h$次倍音の振幅は$1/h^p$に比例させて高次ほど弱くする．指数$p$は低音域で0.9，高音域で1.4程度になるように基本周波数から連続的に決めた．
+で計算する．$B$は音域に応じて変える量であり，本実装では基本周波数$f_0$を用いて$B = 2\times10^{-4} \times (f_0/261.6)^{0.8}$とした．すなわち中央ハ（261.6\,Hz）で$2\times10^{-4}$である．
+
+この値は文献の実測値と比較しておく必要がある．Youngはグランドピアノとアップライトピアノ計8台を測定し，中央ハの第2倍音のずれが約1.2\,centになると報告している\cite{young1952}．これは$B \simeq 3.5\times10^{-4}$に相当し，本実装の値のおよそ1.8倍である．また音域依存についても，Youngは中央ハより上では8半音ごとに$B$が倍になる，すなわち1オクターブあたり約2.8倍になるとしているのに対し，本実装の$f_0^{0.8}$では1オクターブあたり約1.7倍にとどまる．
+
+つまり本実装は，実際のピアノよりも非調和性を弱く，かつ音域による変化を緩やかに設定している．これは試聴を繰り返して決めた値であり，文献値から導いたものではない．合成音を単独で聴く条件では，非調和性を強めると倍音の唸りが目立って濁って聞こえたためこの値に落ち着いた．文献値に近づけた場合の聴感を比較検証することは今後の課題である．
+
+倍音は10次まで重ね，$h$次倍音の振幅は$1/h^p$に比例させて高次ほど弱くする．指数$p$は低音域で0.9，高音域で1.4程度になるように基本周波数から連続的に決めた．
 
 減衰のエンベロープは，打鍵直後の速い減衰とその後の緩やかな減衰の2段階を重ねた形とし，時刻$t$での振幅係数を
 \begin{equation}
@@ -479,7 +485,7 @@ s_n = \frac{3\,s_{n-1} + v_n}{4}
 種別 & 対象 & 利用目的 & 検証の方法 \\
 \hline
 生成AI & 対話型の生成AI & ピアノ音源の合成コードの下書き，不具合の原因候補の列挙 & 文献による式の裏取り，実機での試聴，シリアルログによる動作確認 \\
-学術文献 & Fletcherら\cite{fletcher}，西口\cite{nishiguchi} & インハーモニシティと倍音減衰の物理的根拠の確認 & 式(\ref{eq:inharmonicity})として実装し試聴で妥当性を確認 \\
+学術文献 & Fletcherら\cite{fletcher}，Young\cite{young1952}，西口\cite{nishiguchi} & インハーモニシティと倍音減衰の物理的根拠の確認，係数$B$の実測値との照合 & 式(\ref{eq:inharmonicity})として実装し，係数を文献値と比較したうえで試聴により決定（\ref{sec:piano}節） \\
 仕様資料 & SB-ProjectsのIR解説\cite{necfmt,sircfmt} & NECとSony SIRCのフレーム長の算出 & 算出値と実測の片道遅延を突き合わせ（表\ref{tab:latency-breakdown}） \\
 ライブラリ文書 & IRremote\cite{irremote} & \texttt{sendSony}の引数仕様，プロトコル定数，フレーム終端判定の挙動 & 実機のシリアル出力で受信内容を確認 \\
 公式文書 & Arduino Documentation\cite{arduinodoc} & \texttt{millis}，\texttt{micros}，\texttt{attachInterrupt}，\texttt{analogRead}の仕様確認 & 実機の動作と照合 \\
@@ -1034,6 +1040,7 @@ MOP5については，動画のフレーム差分という手法の分解能が�
 %% 同期・音響に関する学術文献
 \bibitem{rasch} Rasch, R. A., ``Synchronization in performed ensemble music,'' Acustica, Vol.43, No.2, pp.121--131, 1979.
 \bibitem{fletcher} Fletcher, H., Blackham, E. D. and Stratton, R., ``Quality of Piano Tones,'' The Journal of the Acoustical Society of America, Vol.34, No.6, pp.749--761, 1962. \url{https://doi.org/10.1121/1.1918192}
+\bibitem{young1952} Young, R. W., ``Inharmonicity of Plain Wire Piano Strings,'' The Journal of the Acoustical Society of America, Vol.24, No.3, pp.267--273, 1952. \url{https://doi.org/10.1121/1.1906888}
 \bibitem{nishiguchi} 西口磯春，``ピアノの音響とその物理モデル,'' RISTニュース，一般財団法人高度情報科学技術研究機構，No.56，pp.25--35，2014. \url{https://www.rist.or.jp/rnews/56/56s4.pdf}
 \bibitem{arrighi} Arrighi, R., Alais, D. and Burr, D., ``Perceptual synchrony of audiovisual streams for natural and artificial motion sequences,'' Journal of Vision, Vol.6, No.3, Article 6, pp.260--268, 2006. \url{https://doi.org/10.1167/6.3.6}
 \bibitem{kuwahara2019} 桑原圭裕，``映像と音の同期 ---「動画先行の原則」の根拠と応用,'' 映像学，Vol.102，pp.54--74，2019. \url{https://doi.org/10.18917/eizogaku.102.0_54}
@@ -1042,7 +1049,7 @@ MOP5については，動画のフレーム差分という手法の分解能が�
 \bibitem{midi} 一般社団法人音楽電子事業協会（AMEI），``MIDI規格委員会,'' \url{https://amei.or.jp/midistandardcommittee/}，参照 2026年6月.
 \bibitem{necfmt} SB-Projects, ``IR Remote Control Theory: NEC Protocol,'' \url{https://www.sbprojects.net/knowledge/ir/nec.php}，参照 2026年5月.
 \bibitem{sircfmt} SB-Projects, ``IR Remote Control Theory: Sony SIRC,'' \url{https://www.sbprojects.net/knowledge/ir/sirc.php}，参照 2026年7月.
-\bibitem{irremote} Armin Joachimsmeyer et al., ``IRremote Arduino Library,'' \url{https://github.com/Arduino-IRremote/Arduino-IRremote}，参照 2026年5月.
+\bibitem{irremote} Shirriff, K.（原作），Joachimsmeyer, A.（保守），``IRremote Arduino Library,'' \url{https://github.com/Arduino-IRremote/Arduino-IRremote}，参照 2026年5月.
 \bibitem{minim} Di Fede, D., ``Minim: An audio library for Processing,'' \url{http://code.compartmental.net/minim/}，参照 2026年5月.
 \bibitem{arduinodoc} Arduino, ``Arduino Documentation,'' \url{https://docs.arduino.cc/}，参照 2026年5月.
 \bibitem{osrb} OptoSupply International Ltd., ``7.4$\times$6.2$\times$5.25\,mm Infrared Receiver Module OSRB38C9AA データシート,'' \url{https://akizukidenshi.com/goodsaffix/OSRB38C9AA.pdf}，参照 2026年6月.
