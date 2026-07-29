@@ -34,7 +34,7 @@
   \node[term] (start) {起動};
   \node[proc, below=of start] (init) {シリアル通信と赤外線受信を初期化し\\同期パルス割り込みを登録（\texttt{setup}）};
   \node[proc, below=of init] (wait) {赤外線フレームの受信を待ち\\マスクを退避して受信を再開};
-  \node[dec, below=of wait] (nec) {NECフォーマットか};
+  \node[dec, below=of wait] (nec) {Sony SIRCか};
   \node[dec, below=of nec] (mine) {自分の担当ビットが\\立っているか};
   \node[proc, below=of mine] (adv) {出番の回数\texttt{localPos}を1進める};
   \node[dec, below=of adv] (drum) {ドラム機か};

@@ -1,8 +1,11 @@
 \subsection{LCD表示の処理}
+\label{sec:lcd-impl}
 
-表示用の子機は，16文字2行のLCDキャラクタディスプレイ2枚を1台のArduinoで駆動し，1枚目にかえるの顔を，2枚目に歌詞を表示する．顔はHD44780のカスタム文字機能で作成した5$\times$8ドットのパターンを3列2行に並べて構成し，口の開閉は下段3文字を開いた絵柄と閉じた絵柄とで差し替えて表現する．歌詞は楽譜の32tickと1対1に対応する文字列テーブルとして保持し，上段に現在の歌詞を，下段に次の歌詞を表示して先読みできるようにした．
+表示用の子機は，16文字2行のLCDキャラクタディスプレイ1枚に，左右のカエル2体と中央の歌詞を同時に表示する．表示例は図\ref{fig:lcd}に示したとおりである．カエルはHD44780のカスタム文字機能で作成した5$\times$8ドットのパターンを3列2行に並べて構成し，上段の3文字は固定の絵柄，下段の3文字を口の開いた絵柄と閉じた絵柄とで差し替えることで口パクを表現する．左のカエルを列0〜2に，右のカエルを列13〜15に配置し，その間の列3〜12の2行を歌詞表示エリアとした．HD44780が同時に登録できるカスタム文字は8種類までであるため，左右のカエルで同じ6種類の文字を共有し，2体の口が常に同じ形で動く構成としている．
 
-表示の進行は親機の赤外線tickに同期させる．受信したマスクの担当ビットが立ったtickでのみ歌詞を1つ進めて口パクを行う．歌詞位置localPosは受信フレームに載ったtick番号の下位8ビットtickLowから復元するため，受信を取りこぼしても次の受信で正しい位置へ自己修復する．描画では，HD44780のCGRAMを書き換えると表示中の文字の形も即座に変わる性質を利用し，顔の位置が変わらないtickでは画面を消去せずに口のパターン3文字だけを書き換えることで，全再描画によるチラつきを避けている．口パク2回ごとに顔を1マス右へ移動させ，このときだけ全体を描き直す．顔が右端に達したら左端へ戻して繰り返す．主要な関数を表\ref{tab:lcd_func}に，処理の流れを図\ref{fig:flow_lcd}に示す．
+表示の進行は親機の赤外線tickに同期させる．受信したマスクのうち担当ビットが立ったtickでのみ歌詞位置\texttt{localPos}を1つ進め，対応する語を表示すると同時に口の開閉を反転させる．歌詞は楽譜1周分の32\,tickと1対1に対応する文字列テーブルとして保持している．1語を書き込むたびに書き込み列を語長だけ進め，残り幅に収まらなくなったら下段へ改行し，下段も埋まったら歌詞エリアだけを空白で消去して先頭から書き直す．画面全体を消去せずエリアを限定して消すのは，カエルの絵柄を保持したまま歌詞だけを更新するためである．口パクの更新では，CGRAMを書き換えると表示中の文字の形も即座に変わるHD44780の性質を利用し，カーソルを左右のカエルの下段へ移動して6文字を書き直すだけで2体の口を同時に動かしている．主要な関数を表\ref{tab:lcd_func}に，処理の流れを図\ref{fig:flow_lcd}に示す．
+
+なお，表示子機のスケッチは親機がNECフォーマットを用いていた時期に作成したものであり，受信の判定もNECのままである．\ref{sec:proto-compare}節で述べた第9週のSony SIRCへの移行に表示子機が追従できておらず，最終構成では表示子機の受信処理をSIRCへ更新する必要がある．この統合上の不整合については\ref{sec:disc-limit}節で改めて述べる．
 
 \begin{table}[H]
 \caption{LCD表示の主要関数}
@@ -13,11 +16,11 @@
 \hline
 関数名 & 役割 & 概要 \\
 \hline
-setup & 初期化 & LCD2枚を初期化してかえるのカスタム文字を登録し，待機画面を表示する \\
-loop & 受信と振り分け & 赤外線フレームを受信し，担当tickの判定と各表示処理の呼び出しを行う \\
-showLyric & 歌詞表示 & LCD2の上段に現在の歌詞を，下段に次の歌詞を書き込む \\
-drawFrogFull & 顔の全再描画 & 口の開閉に応じたカスタム文字を登録し直し，画面を消去して指定位置に顔を描き直す \\
-setMouth & 口パクの更新 & CGRAMの口パターン3文字だけを書き換え，再描画なしで口を開閉する \\
+\texttt{setup} & 初期化 & シリアル通信とLCDを初期化してカエルのカスタム文字6種を登録し，口を閉じた状態で描画したうえで赤外線受信を開始する \\
+\texttt{loop} & 受信と進行 & 赤外線フレームを受信し，担当ビットが立っていれば歌詞位置を1つ進めて歌詞表示と口パクを実行する \\
+\texttt{showLyric} & 歌詞表示 & 指定位置の語を歌詞エリアへ書き込み，行幅に収まらない場合は改行またはエリアの消去を行う \\
+\texttt{clearLyricArea} & 歌詞エリアの消去 & 列3〜12の2行だけを空白で埋め，書き込み位置を先頭へ戻す \\
+\texttt{updateFrogs} & 口パクの更新 & 開閉に応じた口のパターンをCGRAMへ登録し直し，左右のカエル6文字を書き直す \\
 \hline
 \end{tabular}
 \end{center}
@@ -31,33 +34,32 @@ setMouth & 口パクの更新 & CGRAMの口パターン3文字だけを書き換
   dec/.style={draw, diamond, aspect=2.2, align=center, font=\footnotesize, inner sep=1.5pt},
   lbl/.style={font=\footnotesize},
   >=Stealth, node distance=0.55cm]
-  \node[term] (start) {親機からの赤外線フレームを受信};
-  \node[proc, below=of start] (save) {受信フレームからmaskとtickLowを退避し\\受信を再開する};
-  \node[dec, below=of save] (dec1) {新規のNEC\\フレームか};
+  \node[term] (start) {起動};
+  \node[proc, below=of start] (init) {LCDを初期化してカエルのカスタム文字を登録し，\\口を閉じた状態で描画して赤外線受信を開始};
+  \node[term, below=of init] (wait) {赤外線フレームの受信を待つ};
+  \node[dec, below=of wait] (dec1) {フレームを\\受信したか};
   \node[dec, below=of dec1] (dec2) {maskの担当\\ビットが1か};
-  \node[proc, below=of dec2] (pos) {tickLowとjoinBaseの差から\\歌詞位置localPosを復元する};
-  \node[proc, below=of pos] (lyric) {showLyricでLCD2の上段に現在の歌詞を，\\下段に次の歌詞を表示する};
-  \node[proc, below=of lyric] (flip) {口の開閉フラグfrogOpenを反転し，\\stepCountを加算する};
-  \node[dec, below=of flip] (dec3) {stepCountが\\2に達したか};
-  \node[proc, below=of dec3] (move) {stepCountを0に戻してfrogXを1マス進め，\\drawFrogFullでかえるの顔を全再描画する};
-  \node[proc, right=0.8cm of dec3] (monly) {setMouthでCGRAMの\\口パターンのみ書き換える};
-  \node[term, below=of move] (fin) {次のフレームを待つ};
-  \coordinate (lane) at (6.6, 0);
-  \draw[->] (start) -- (save);
-  \draw[->] (save) -- (dec1);
+  \node[proc, below=of dec2] (pos) {歌詞位置\texttt{localPos}を1つ進める};
+  \node[dec, below=of pos] (dec3) {\texttt{localPos}が\\32\,tickに達したか};
+  \node[proc, below=of dec3] (lyric) {\texttt{showLyric}で歌詞エリアに次の語を書き込み\\（行幅を超える場合は改行）};
+  \node[proc, below=of lyric] (flip) {口の開閉フラグ\texttt{frogOpen}を反転し，\\\texttt{updateFrogs}で左右のカエルの口を書き換える};
+  \node[proc, right=0.9cm of dec3] (reset) {\texttt{localPos}を0に戻し\\歌詞エリアを消去};
+  \coordinate (lane) at (6.9, 0);
+  \draw[->] (start) -- (init);
+  \draw[->] (init) -- (wait);
+  \draw[->] (wait) -- (dec1);
   \draw[->] (dec1) -- node[lbl, right] {Yes} (dec2);
   \draw[->] (dec2) -- node[lbl, right] {Yes} (pos);
-  \draw[->] (pos) -- (lyric);
+  \draw[->] (pos) -- (dec3);
+  \draw[->] (dec3) -- node[lbl, right] {No} (lyric);
   \draw[->] (lyric) -- (flip);
-  \draw[->] (flip) -- (dec3);
-  \draw[->] (dec3) -- node[lbl, right] {Yes} (move);
-  \draw[->] (dec3) -- node[lbl, above] {No} (monly);
-  \draw[->] (move) -- (fin);
-  \draw[->] (dec1.east) -- node[lbl, above] {No（破棄）} (lane |- dec1.east) -- (lane |- fin.east) -- (fin.east);
-  \draw (dec2.east) -- node[lbl, above] {No（待機）} (lane |- dec2.east);
-  \draw (monly.south) |- (fin.east);
+  \draw[->] (dec3.east) -- node[lbl, above] {Yes} (reset.west);
+  \draw[->] (reset.south) |- (lyric.east);
+  \draw[->] (dec1.west) -- node[lbl, above] {No} ++(-1.6,0) |- (wait.west);
+  \draw[->] (dec2.west) -- node[lbl, above] {No} ++(-1.6,0) |- (wait.west);
+  \draw[->] (flip.east) -- (lane |- flip.east) -- (lane |- wait.east) -- (wait.east);
 \end{tikzpicture}
 \end{center}
-\caption{LCD表示の処理フロー}
+\caption{LCD表示子機の処理フロー}
 \label{fig:flow_lcd}
 \end{figure}
